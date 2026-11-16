@@ -52,10 +52,12 @@ test("actual reception effect coalesces return events after a fast reply and pre
   // Wait for real initial requests, not a synthetic simultaneous-event shortcut.
   await page.waitForLoadState("networkidle");
   const before = { ...counts };
+  await page.clock.setFixedTime(new Date());
+  const firstRefresh = page.waitForResponse(response => response.url().includes("/reception/queue?"));
   await page.evaluate(() => { document.dispatchEvent(new Event("visibilitychange")); });
-  await expect.poll(() => counts.queue).toBe(before.queue + 1);
+  await (await firstRefresh).finished();
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   await page.evaluate(() => { window.dispatchEvent(new Event("focus")); });
-  await page.waitForLoadState("networkidle");
   expect(counts).toEqual({ calendar: before.calendar + 1, queue: before.queue + 1 });
   await page.getByRole("button", { name: "접수/예약 새로고침", exact: true }).click();
   await expect.poll(() => counts.queue).toBe(before.queue + 2);

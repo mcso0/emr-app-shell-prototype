@@ -5,7 +5,7 @@ import { useFulfillmentInstruction } from "./use-fulfillment-instruction";
 import { syntheticInstruction } from "./instruction-fixtures";
 import type { InstructionCommand } from "@/features/fulfillment/instruction-contract";
 
-type Scenario = "retry" | "conflict" | "late-read" | "late-write";
+type Scenario = "retry" | "conflict" | "late-read" | "late-write" | "late-write-return";
 let requests: InstructionCommand[] = [];
 let release: (() => void) | undefined;
 const workspace = "synthetic-instruction-transport";
@@ -36,6 +36,7 @@ function TransportExample({ scenario: _scenario }: { scenario: Scenario }) {
         연속 저장
       </button>
       <button onClick={() => setSelected("second")}>다른 지시서</button>
+      <button onClick={() => setSelected("first")}>원래 지시서</button>
       <button onClick={controller.refresh}>다시 조회</button>
     </div>
   );
@@ -66,7 +67,7 @@ const meta = {
       };
       if (init?.method === "PATCH") {
         requests.push(JSON.parse(String(init.body)) as InstructionCommand);
-        if (args.scenario === "late-write")
+        if (args.scenario === "late-write" || args.scenario === "late-write-return")
           await new Promise<void>((resolve) => {
             release = resolve;
           });
@@ -176,6 +177,24 @@ export const OldSaveCannotReplaceSelection: Story = {
     await expect(canvas.getByLabelText("지시서")).toHaveTextContent(
       "두 번째 지시서",
     );
+    await expect(requests).toHaveLength(1);
+  },
+};
+
+export const OldSaveCannotReplaceRevisitedSelection: Story = {
+  args: { scenario: "late-write-return" },
+  play: async ({ canvas }) => {
+    await waitFor(() => expect(canvas.getByLabelText("조회 상태")).toHaveTextContent("조회 완료"));
+    await userEvent.click(canvas.getByRole("button", { name: "연속 저장" }));
+    await waitFor(() => expect(release).toBeDefined());
+    await userEvent.click(canvas.getByRole("button", { name: "다른 지시서" }));
+    await waitFor(() => expect(canvas.getByLabelText("지시서")).toHaveTextContent("두 번째 지시서"));
+    await userEvent.click(canvas.getByRole("button", { name: "원래 지시서" }));
+    await waitFor(() => expect(canvas.getByLabelText("조회 상태")).toHaveTextContent("조회 완료"));
+    release?.();
+    await waitFor(() => expect(canvas.getByLabelText("저장 상태")).toHaveTextContent("대기"));
+    await expect(canvas.getByLabelText("지시서")).toHaveTextContent("첫 번째 지시서");
+    await expect(canvas.getByLabelText("지시서")).not.toHaveTextContent("저장된");
     await expect(requests).toHaveLength(1);
   },
 };

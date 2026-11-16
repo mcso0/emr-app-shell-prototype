@@ -1,5 +1,6 @@
 "use client";
 
+import { EmrPageLoadingBoundary } from "./page-loading-boundary";
 import {
   useCallback,
   useEffect,
@@ -83,7 +84,7 @@ export function EmrProfilePanel({
       )}
       {...props}
     >
-      <TabGroup
+      <EmrPageLoadingBoundary loading={loading}><TabGroup
         value={value}
         onValueChange={(next) => {
           if (
@@ -173,7 +174,7 @@ export function EmrProfilePanel({
         >
           {children}
         </EmrRightPanel>
-      </TabGroup>
+      </TabGroup></EmrPageLoadingBoundary>
     </section>
   );
 }

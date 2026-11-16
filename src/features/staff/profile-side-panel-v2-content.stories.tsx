@@ -7,7 +7,7 @@ import { getRouter } from "@storybook/nextjs-vite/navigation.mock";
 import { toast } from "sonner";
 import { getBrowserSupabaseClient } from "@/lib/supabase/client";
 import { PERSONAL_PROFILE_CHANGED_KEY } from "@/features/auth/personal-profile-session";
-import { StaffOperationalProfilePanel } from "./staff-operational-profile-drawer";
+import { StaffOperationalProfilePanel, StaffProfileLoading } from "./staff-operational-profile-drawer";
 import { clearWorkspaceStaffPresenceState, getWorkspaceStaffPresenceSnapshot, publishWorkspaceStaffPresenceState } from "./workspace-staff-presence";
 import type { StaffOperationalProfile } from "./server-operational-profile-core";
 import type { StaffAssignedWorkItem } from "./server-staff-assigned-work-items-core";
@@ -354,5 +354,15 @@ export const WorkStatusStates: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "다시 시도" }));
     await waitFor(() => expect(canvas.getByRole("heading", { name: "합성 업무 항목" })).toBeVisible());
     await expect(canvas.queryByRole("alert")).not.toBeInTheDocument();
+  },
+};
+
+
+export const MeasuredProfileLoading: Story = {
+  render: () => <div className="w-[348px] p-4"><StaffProfileLoading /></div>,
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelector('[skullet-loading]')).toHaveAttribute("aria-hidden", "true");
+    await expect(profileWrites).toHaveLength(0);
+    await expect(avatarUploads).toHaveLength(0);
   },
 };

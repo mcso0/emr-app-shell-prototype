@@ -14,6 +14,7 @@ import type { Invoice, InvoicePaymentState, InvoiceStatus, Payment, PaymentMetho
 export type BillingPaymentStatusAction = "select_payment_method" | "mark_unpaid" | "complete_payment";
 
 export type BillingPaymentStatusInput = {
+  expectedUpdatedAt?: string;
   action?: BillingPaymentStatusAction;
   invoiceId?: string;
   paymentMethod?: PaymentMethod;
@@ -21,6 +22,7 @@ export type BillingPaymentStatusInput = {
 };
 
 type NormalizedBillingPaymentStatusInput = {
+  expectedUpdatedAt?: string;
   action: BillingPaymentStatusAction;
   invoiceId: string;
   paymentMethod: PaymentMethod;
@@ -42,7 +44,7 @@ export type BillingPaymentStatusPayload = {
 export type BillingPaymentStatusGatewayResult =
   | ({ ok: true } & BillingPaymentStatusPayload)
   | { ok: false; status: 403; denialReason: "permission_missing" }
-  | { ok: false; status: 409; denialReason: "billing_review_required" | "invoice_unavailable" }
+  | { ok: false; status: 409; denialReason: "billing_review_required" | "invoice_unavailable" | "invoice_revision_conflict" | "payment_in_progress" | "billing_change_pending" }
   | { ok: false; status: 500; error: "db_read_failed" | "db_write_failed" };
 
 export type BillingPaymentStatusGateway = {
@@ -65,7 +67,7 @@ export type BillingPaymentStatusReadResult =
     } & BillingPaymentStatusPayload)
   | { ok: false; status: 400; error: "invalid_input"; fieldErrors: Partial<Record<"invoiceId", string>> }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "billing_review_required" | "invoice_unavailable" }
+  | { ok: false; status: 409; denialReason: "billing_review_required" | "invoice_unavailable" | "invoice_revision_conflict" | "payment_in_progress" | "billing_change_pending" }
   | { ok: false; status: 500; error: "db_read_failed" | "supabase_client_missing" };
 
 export type BillingPaymentStatusSaveResult =
@@ -81,7 +83,7 @@ export type BillingPaymentStatusSaveResult =
       fieldErrors: Partial<Record<"action" | "invoiceId" | "paymentMethod" | "unpaidReason", string>>;
     }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "billing_review_required" | "invoice_unavailable" }
+  | { ok: false; status: 409; denialReason: "billing_review_required" | "invoice_unavailable" | "invoice_revision_conflict" | "payment_in_progress" | "billing_change_pending" }
   | { ok: false; status: 500; error: "db_write_failed" | "supabase_client_missing" };
 
 const paymentStatusStore = new Map<string, BillingPaymentStatusPayload>();
@@ -267,6 +269,7 @@ export type SupabaseBillingPaymentStatusRpcClient = {
     p_action: BillingPaymentStatusAction;
     p_payment_method: PaymentMethod;
     p_unpaid_reason: string | null;
+    p_expected_updated_at: string | null;
   }): Promise<{ data: unknown; error: { message?: string } | null }>;
 };
 
@@ -290,6 +293,7 @@ export function createSupabaseBillingPaymentStatusGateway(
         p_action: input.action,
         p_payment_method: input.paymentMethod,
         p_unpaid_reason: input.unpaidReason ?? null,
+        p_expected_updated_at: input.expectedUpdatedAt ?? null,
       });
       if (error) return mapPaymentStatusError(error.message, "db_write_failed");
       return mapPaymentStatusPayload(data, "db_write_failed");
@@ -424,6 +428,7 @@ function normalizePaymentStatusInput(input: BillingPaymentStatusInput) {
 
   return {
     action,
+    expectedUpdatedAt: trimToUndefined(input.expectedUpdatedAt),
     invoiceId: trimToUndefined(input.invoiceId) ?? "",
     paymentMethod,
     unpaidReason: trimToUndefined(input.unpaidReason) ?? null,
@@ -456,6 +461,9 @@ function mapPaymentStatusError(
 ): BillingPaymentStatusGatewayResult {
   if (message?.includes("current_assignee_required") || message?.includes("permission_missing") || message?.includes("actor_mismatch")) return { ok: false, status: 403, denialReason: "permission_missing" };
   if (message?.includes("billing_review_required")) return { ok: false, status: 409, denialReason: "billing_review_required" };
+  for (const denialReason of ["invoice_revision_conflict", "payment_in_progress", "billing_change_pending"] as const) {
+    if (message?.includes(denialReason)) return { ok: false, status: 409, denialReason };
+  }
   if (message?.includes("invoice_unavailable")) return { ok: false, status: 409, denialReason: "invoice_unavailable" };
   return { ok: false, status: 500, error: fallback };
 }

@@ -960,7 +960,7 @@ test("order draft route stays server-owned and secret-free", () => {
   );
 });
 
-test("denied or cross-workspace draft saves cannot read runtime context before chart permissions preflight", () => {
+test("draft save retains catalog permission without duplicate runtime reads", () => {
   const routeSource = readFileSync(
     "src/app/api/workspaces/[workspaceId]/chart/order-drafts/route.ts",
     "utf8",
@@ -974,19 +974,18 @@ test("denied or cross-workspace draft saves cannot read runtime context before c
     'requiredPermission: "chart:view"',
     patchStart,
   );
-  const runtimeResolver = routeSource.indexOf(
-    "resolveConsultationRuntimeRows({",
+  const catalogPermissionPreflight = routeSource.indexOf(
+    'requiredPermission: "service_catalog:view"',
     patchStart,
   );
+  const save = routeSource.indexOf("return saveChartOrderDraft({", patchStart);
   expect(patchStart).toBeGreaterThanOrEqual(0);
   expect(permissionPreflight).toBeGreaterThan(patchStart);
   expect(viewPermissionPreflight).toBeGreaterThan(permissionPreflight);
-  expect(runtimeResolver).toBeGreaterThan(viewPermissionPreflight);
-  expect(routeSource.slice(runtimeResolver, runtimeResolver + 500)).toContain(
-    "workspaceId",
-  );
-  expect(routeSource.slice(runtimeResolver, runtimeResolver + 500)).toContain(
-    "encounterId",
+  expect(catalogPermissionPreflight).toBeGreaterThan(viewPermissionPreflight);
+  expect(save).toBeGreaterThan(catalogPermissionPreflight);
+  expect(routeSource).not.toMatch(
+    /resolveConsultationRuntimeRows|searchOrderCatalogForChart|previewOrderSet|createSupabaseChartPreconsultationContextGateway/,
   );
 });
 

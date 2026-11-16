@@ -258,6 +258,7 @@ export type FulfillmentDownstreamSyncSummary = {
     | "billable_price_required"
     | "encounter_unavailable"
     | "invoice_anchor_conflict"
+    | "explicit_billing_request_required"
     | "not_completed_status"
     | "invoice_unavailable"
     | "order_unavailable"
@@ -272,6 +273,7 @@ export type FulfillmentGatewayResult =
       status: 409;
       denialReason:
         | "encounter_unavailable"
+        | "instruction_ack_required"
         | "invalid_transition"
         | "treatment_medication_link_required"
         | "treatment_medication_link_invalid"
@@ -1903,7 +1905,9 @@ async function syncDownstreamFromFulfillmentUpdate({
 
   let billingCandidates: BillingInvoiceCandidateLine[] = [];
   if (requestedStatus === "completed") {
-    if (updatedWorkItem.sourceSnapshot.billingReflectionEnabled === false) {
+    if (["dispensing", "treatment"].includes(updatedWorkItem.queueType)) {
+      summary.billingSkippedReason = "explicit_billing_request_required";
+    } else if (updatedWorkItem.sourceSnapshot.billingReflectionEnabled === false) {
       summary.billingSkippedReason = "billing_reflection_disabled";
     } else if (requiresVetReviewBeforeBilling(updatedWorkItem.queueType)) {
       summary.billingSkippedReason = "vet_review_required";
@@ -2782,6 +2786,7 @@ function mapGatewayError(
     return { ok: false, status: 409, denialReason: "treatment_medication_link_invalid" };
   if (message?.includes("encounter_unavailable"))
     return { ok: false, status: 409, denialReason: "encounter_unavailable" };
+  if (message?.includes("instruction_ack_required")) return { ok: false, status: 409, denialReason: "instruction_ack_required" };
   if (message?.includes("invalid_transition"))
     return { ok: false, status: 409, denialReason: "invalid_transition" };
   if (message?.includes("order_unavailable"))

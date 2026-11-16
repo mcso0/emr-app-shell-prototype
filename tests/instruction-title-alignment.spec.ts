@@ -24,7 +24,7 @@ const cases = [
 ] as const;
 
 for (const item of cases) {
-  test(`${item.name} title keeps chart density and exposes disabled output actions`, async ({ page }) => {
+  test(`${item.name} title keeps chart density and exposes document actions`, async ({ page }) => {
     await page.goto(item.path);
 
     const titleBar = page.locator('[data-slot="instruction-header-title-bar"] [data-slot="emr-page-header"]');
@@ -53,18 +53,22 @@ for (const item of cases) {
     expect(geometry.moreSize).toBe(28);
     expect(geometry.overflows).toBe(false);
 
-    const layout = await page.locator('[data-slot="instruction-header-stack"]').evaluate((stack) => {
-      const root = stack.parentElement!;
-      const title = stack.querySelector('[data-slot="emr-page-header"]')!;
+    const layout = await titleBar.evaluate((title) => {
+      const documentSurface = title.closest('[data-testid="workspace-document"]');
+      const stack = (documentSurface?.querySelector('[data-slot="instruction-header-stack"]')
+        ?? title.closest('[data-slot="instruction-header-stack"]'))!;
+      const body = stack.parentElement!;
+      const root = documentSurface ?? body;
       const history = title.querySelector('button[aria-label*="이력 패널"]')!;
       const info = stack.querySelector('[data-slot="instruction-info-card"]')!;
       const filters = stack.querySelector('[data-slot="instruction-header-filters"]');
-      const result = root.querySelector('[data-slot="instruction-result-scroll-content"]')!;
+      const result = body.querySelector('[data-slot="instruction-result-scroll-content"]')!;
       const rootRect = root.getBoundingClientRect();
       const titleRect = title.getBoundingClientRect();
       const infoRect = info.getBoundingClientRect();
       const resultStyle = getComputedStyle(result);
       return {
+        inDocumentToolbar: Boolean(documentSurface),
         titleInset: [titleRect.x - rootRect.x, titleRect.y - rootRect.y],
         historyInset: history.getBoundingClientRect().x - rootRect.x,
         infoInset: [infoRect.x - rootRect.x, infoRect.y - titleRect.bottom],
@@ -76,19 +80,20 @@ for (const item of cases) {
         resultInset: result.getBoundingClientRect().x - rootRect.x + parseFloat(resultStyle.paddingLeft),
         resultTopPadding: resultStyle.paddingTop,
         resultSectionGap: resultStyle.rowGap,
-        bottomPadding: getComputedStyle(root).paddingBottom,
+        bottomPadding: getComputedStyle(body).paddingBottom,
       };
     });
+    const contentInset = layout.inDocumentToolbar ? 0 : 16;
     expect(layout.titleInset).toEqual([0, 0]);
-    expect(layout.historyInset).toBe(16);
-    expect(layout.infoInset).toEqual([16, 0]);
+    expect(layout.historyInset).toBe(contentInset);
+    expect(layout.infoInset).toEqual([contentInset, 0]);
     expect(layout.infoHeight).toBeGreaterThanOrEqual(72);
     expect(layout.firstCellInset).toBe("0px");
     expect(layout.lastCellInset).toBe("0px");
-    expect(layout.filterInset).toBe(item.name === "영상검사" ? null : 16);
+    expect(layout.filterInset).toBe(item.name === "영상검사" ? null : contentInset);
     expect(layout.filterTopGap).toBe(item.name === "영상검사" ? null : "12px");
-    expect(layout.resultInset).toBe(16);
-    expect(layout.resultTopPadding).toBe("16px");
+    expect(layout.resultInset).toBe(contentInset);
+    expect(layout.resultTopPadding).toBe(item.name === "조제/처치" ? "12px" : "16px");
     expect(layout.resultSectionGap).toBe("16px");
     expect(layout.bottomPadding).toBe("8px");
 
@@ -97,11 +102,17 @@ for (const item of cases) {
     }
 
     await titleBar.getByRole("button", { name: "문서 추가 작업" }).click();
-    await expect(page.getByRole("menuitem", { name: "PDF 다운로드" })).toBeDisabled();
-    await expect(page.getByRole("menuitem", { name: "출력하기" })).toBeDisabled();
+    const firstMenuItem = item.name === "조제/처치" ? "오더 차트로 이동" : "PDF 다운로드";
+    await expect(page.getByRole("menuitem", { name: firstMenuItem })).toBeDisabled();
+    if (item.name === "조제/처치") {
+      await expect(page.getByRole("menuitem", { name: "지시서 링크 복사" })).toBeEnabled();
+      await expect(page.getByRole("menuitem")).toHaveCount(2);
+    } else {
+      await expect(page.getByRole("menuitem", { name: "출력하기" })).toBeDisabled();
+    }
     await page.keyboard.press("Escape");
     await titleBar.getByRole("button", { name: "문서 추가 작업" }).focus();
     await page.keyboard.press("Enter");
-    await expect(page.getByRole("menuitem", { name: "PDF 다운로드" })).toBeDisabled();
+    await expect(page.getByRole("menuitem", { name: firstMenuItem })).toBeDisabled();
   });
 }

@@ -46,7 +46,7 @@ test("actual dispense override stays behind chart:update", async () => {
       ],
       users: [{ id: "user-front-desk", status: "active" }],
     }),
-    reason: "포장 단위 보정",
+    mode: "manual" as const,
     workspaceId,
   });
 
@@ -67,7 +67,7 @@ test("actual dispense mock replays identical commands and rejects changed payloa
     gateway,
     idempotencyKey: "actual-dispense-command-0001",
     orderId,
-    reason: "포장 단위 보정",
+    mode: "manual" as const,
     workspaceId,
   };
   const first = await saveOrderActualDispense(input);
@@ -90,7 +90,7 @@ test("actual dispense mock replays identical commands and rejects changed payloa
   });
 });
 
-test("actual dispense gateway preserves actor, workspace, CAS, reason, and idempotency", async () => {
+test("actual dispense gateway preserves actor, workspace, CAS, explicit mode, and idempotency without a reason", async () => {
   const calls: Array<{ functionName: string; args: Record<string, unknown> }> = [];
   const client = {
     async rpc(functionName: string, args: Record<string, unknown>) {
@@ -119,20 +119,20 @@ test("actual dispense gateway preserves actor, workspace, CAS, reason, and idemp
     expectedOrderUpdatedAt,
     idempotencyKey: "actual-dispense-command-0002",
     orderId,
-    reason: "포장 단위 보정",
+    mode: "manual" as const,
     workspaceId,
   });
 
   expect(calls).toEqual([
     {
-      functionName: "clair_save_order_actual_dispense_override",
+      functionName: "clair_save_order_dispense_request",
       args: {
         p_actual_quantity: 1.5,
         p_actor_user_id: "user-vet",
         p_expected_order_updated_at: expectedOrderUpdatedAt,
         p_idempotency_key: "actual-dispense-command-0002",
         p_order_id: orderId,
-        p_reason: "포장 단위 보정",
+        p_mode: "manual" as const,
         p_workspace_id: workspaceId,
       },
     },
@@ -150,7 +150,7 @@ test("actual dispense route authenticates and returns an append-only command res
       actualQuantity: 1.5,
       expectedOrderUpdatedAt,
       idempotencyKey: "actual-dispense-route-0001",
-      reason: "포장 단위 보정",
+      mode: "manual" as const,
     },
     headers: { "x-clair-demo-session-user-id": "user-vet" },
   });

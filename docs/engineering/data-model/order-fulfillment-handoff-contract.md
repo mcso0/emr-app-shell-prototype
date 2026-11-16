@@ -21,7 +21,7 @@ related_work:
   - DEN-349
 supersedes: []
 superseded_by: []
-last_updated: 2026-10-27
+last_updated: 2026-11-03
 ---
 
 # Order Fulfillment Handoff Engineering Contract
@@ -29,6 +29,234 @@ last_updated: 2026-10-27
 This document defines the engineering contract for Project 08, `Clinical Order Fulfillment Handoff Persistence`. It bridges existing chart/order/billing persistence with downstream lab, imaging, dispensing, and treatment queue persistence.
 
 `DEN-235` defined the contract. `DEN-236` adds the initial local-first route/core/gateway and migration contract. `DEN-237` connects chart order confirmation to fulfillment sync. `DEN-238` connects lab and imaging screens to fulfillment queue read/status mutation. `DEN-239` connects dispensing and treatment screens to fulfillment queue read/status mutation. `DEN-240` syncs fulfillment status changes back to order lifecycle and billing candidates. `DEN-241` adds end-to-end replay coverage. `DEN-242` closes out the project and records staging readiness boundaries. Remote staging migration remains gated by dry-run and explicit approval.
+
+## Confirmed order editing — local candidate, 2026-11-03
+
+The confirmed single-order editing candidate is implemented locally. Migrations
+`20261103100000_confirmed_order_edit.sql`,
+`20261103101000_confirmed_order_edit_workflow.sql`,
+`20261103102000_partial_order_work.sql`,
+`20261103103000_selected_order_billing_request.sql`, and
+`20261103104000_pre_payment_order_changes.sql` are not applied remotely.
+
+- Clinical changes reuse the authoritative prescription calculation and task
+  mutation owner. Pending tasks are amended; started/completed work gets a new
+  attempt. Previous results and append-only partial-work notes remain available.
+- Clinical revisions require the performer to acknowledge the current version
+  and remaining work scope. Changed clinical inputs through the existing mutation
+  RPC also create this version. Current performer and original requester receive
+  the existing deduplicated change notice; the editor does not receive a self notice.
+- Financial-only edits do not change fulfillment state or clinical notifications.
+  Effective prices and tax overrides remain separate from immutable confirmation
+  snapshots. Chart reads project approved values through `preBillingOverride`.
+- Before explicit 수납 요청, financial edits update the candidate. After request,
+  proposals preserve the current invoice line until its current billing assignee
+  approves. Proposals use current invoice quantity; they do not undo earlier
+  billing edits. Version checks and invoice-line snapshots reject stale approvals.
+- Merely opening checkout does not lock financial editing. A proposal expires
+  linked `prepared` sessions under the invoice lock. `payment_pending` and paid
+  sessions still lock edits. Payment and checkout preparation cannot proceed with a pending proposal.
+  Both payment RPCs require the exact invoice `updatedAt` shown with its monetary
+  snapshot. Their former callable signatures are revoked; old confirmations fail
+  after approval. The UI refreshes lines and payment snapshots together after
+  mutation or a changed review result, including approval from another tab.
+  Paid amounts cannot be edited directly. Clinical changes may retain a proposed
+  correction for the existing reversal/refund path; nonfinancial assignment
+  changes remain allowed on already-paid invoices.
+- Dispensing/treatment completion does not create or link an invoice. Explicit
+  chart billing request remains required. The chart POST requires explicit,
+  nonempty, unique `orderIds`. The selected-order RPC validates every ID, limits
+  unfinished-work acknowledgement and authority freezing to that selection, and
+  includes the sorted selection in the idempotency fingerprint. A failed member
+  rejects the whole request. Billing navigation follows successful persistence.
+  Other queue policies are unchanged.
+- Authenticated RPCs enforce workspace/chart scope and existing permissions.
+  Billing values are hidden without `billing:view`; private tables are not
+  directly writable. Stable command IDs make retries idempotent.
+
+Evidence and local/runtime limits are recorded in
+[CLINICAL-FULFILLMENT-PR-010](../../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#confirmed-order-editing--2026-11-03-local-implementation).
+
+## Prework assignment candidate — 2026-11-02
+
+Local implementation; migration `20261102100000_fulfillment_prework_assignment.sql`
+is not applied remotely. Work/evidence: [CLINICAL-FULFILLMENT-PR-010](../../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#prework-context-and-assignment--2026-11-02-local-implementation).
+
+- Requested-only 조제/처치 shows shared chart patient context, read-only prescribed
+  values, item instructions, current assignee and prior queue history.
+- Claim/takeover assigns ownership without recording a start. Claim enters the
+  instruction; the designated owner can start directly from prework. Existing
+  paused/started/terminal workflows retain the instruction screen.
+- Taking another assigned request requires a reason and the current revision.
+  The transaction records assignment history and a deduplicated notification to
+  the requesting veterinarian. It retains actor/workspace and queue permissions.
+- A dispensing/treatment set request has one intended owner. Only the set parent
+  exposes draft assignment. Child intended-assignee RPCs reject separate changes.
+  Eligible set owners must be eligible for every active child destination.
+  At confirmation the root owner takes precedence over old child draft values;
+  all children start unassigned when the root is unassigned. Executors may diverge
+  after request through the existing instruction assignment command.
+- Mixed sets retain separate 조제 and 처치 documents, scoped state, starts and
+  notifications. This candidate does not introduce combined queue execution.
+- Requester-veterinarian completion, result entry/review, explicit set completion,
+  cancellation and billing safeguards remain in place.
+- Browser evidence uses mocked HTTP and synthetic data. SQL evidence uses real
+  intended-assignee RPCs and the confirmation assignment trigger in an isolated
+  scoped schema. Full confirmation/catalog/billing replay and hosted parity are
+  not verified by these tests.
+
+## Start waiting dispensing and treatment work on assignment — 2026-11-07
+
+- Confirming 담당하기 on an entirely waiting 조제 or 처치 document sends one
+  revision-checked assignment command with `startWork: true`. The transaction
+  saves the assignee and starts the work in the selected queue. It records the
+  start, and the returned instruction opens as 진행중.
+- Taking over an assigned request requires a reason. The same transaction
+  records the handoff and notifies the requesting veterinarian. A failed start
+  rolls back the assignment, audit and notification.
+- The 조제/처치 entry confirmation shows the assignee transition to the current
+  user and the order names in the selected document. Takeover also shows the
+  required reason field. The designated assignee starts with one click on
+  `업무 시작하기`. Required instruction acknowledgement still opens before start.
+- The server still checks the current actor, workspace, queue permission,
+  instruction acknowledgement and any required medication link. Claim preserves
+  existing child executors, and a mixed set keeps its other queue's work state.
+- A queue refresh for the same selected document must retain a successful entry
+  response. Older reads cannot restore its waiting state. Selecting another
+  document (including leaving and returning), unmounting, or a denied/removed
+  document read invalidates the pending response instead.
+- Assignment-only commands remain available to existing callers. The follow-up
+  migration is verified in a scoped local PostgreSQL fixture.
+
+## Return released dispensing and treatment work to waiting — 2026-11-09
+
+- After a successful 담당 취소, a released item keeps its exact selection.
+  A first attempt appears as 대기중 in both queue views and opens prework
+  when its remaining items are unassigned and at least one item is paused.
+  A released replacement attempt uses the same entry screen and displays 재요청.
+- Confirming 담당하기 on that screen assigns and starts the remaining items in
+  one command and opens the instruction. Existing timestamps and completed
+  items are preserved. The flow uses the existing instruction acknowledgement
+  and treatment medication-link checks.
+- An assigned paused item still belongs to 진행중. The start command leaves
+  separately assigned work and the other queue in a mixed set in their
+  existing scope. The migration changes the instruction command only.
+
+## Shared order entry presentation — 2026-11-03
+
+Local UI implementation uses the unchanged chart preconsultation layout as its
+visual reference. Dispensing, treatment, lab, imaging and persisted open billing
+invoices share a white entry frame, patient context and confirmation dialog. The
+workspace context bar, document toolbar and work side panels remain hidden before
+entry. Completed/started workflows and provisional billing candidates keep their
+existing screen. Legacy mock-sales fixtures keep their existing direct entry.
+
+- Own-assignee entry uses `업무 시작하기` in every category. Lab and billing enter
+  locally without a start or assignment command; imaging and dispensing/treatment
+  retain their existing start commands and instruction acknowledgement checks.
+- Unassigned confirmation calls the existing revision-checked claim command, then
+  opens the work screen when the current actor owns it. Claim never records start.
+- Taking another assignee's requested work remains limited to the existing
+  dispensing/treatment takeover command and its required reason. Lab, imaging and
+  billing show the handoff explanation without adding mutation authority.
+- Entry intent is local to the actor, workspace and exact work item/invoice. A
+  selection change or loss of assignment invalidates it. Billing checkout prepare
+  remains gated until entry; payment confirmation and server checks are unchanged.
+- Shared UI lives in `EmrWorkEntryPage` and `EmrWorkEntryAction`. Patient context is
+  composed by `PatientOrderPrework`; chart source files remain unchanged. The new
+  shell presentation flag applies only to these order modules.
+
+Work and synthetic local verification:
+[CLINICAL-FULFILLMENT-PR-010](../../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#order-prework-screen-alignment--2026-11-03-approved-local-implementation).
+No new API, role policy, migration or remote data change belongs to this UI slice.
+
+## Dispensing and treatment prework layout — 2026-11-07
+
+- The header uses the 32px work entry action and a completion menu for users with existing completion authority. The menu opens the existing result and confirmation flow. Order cancellation stays in the chart workflow.
+- Order information shows the first item and remaining count, request time, requester, and assignee. The read-only table reuses instruction row disclosure. The per-item assignee column appears when an item differs from the set assignee. Dispensing prework shows the route in the table.
+- Applicable instructions appear below the order table. The scope labels are 전체 지시, 조제 지시 or 처치 지시, and 세트 지시. A required review opens through the existing start or completion flow.
+- Below vitals, the prework history reuses the chart timeline with Seoul dates, timestamps, and order names. It starts with the latest three past orders for the selected category and expands when more are available.
+
+## Dispensing and treatment re-request continuity — 2026-11-09
+
+- A requested or released (paused and unassigned) replacement attempt appears as 재요청 on the patient card and in the order queue group. The card retains the original request time and requester.
+- A re-request with prior work and a current main assignee keeps the instruction open. The scoped instruction read returns the earliest start time of the displayed items across their attempts. Waiting work with no main assignee opens prework even when an earlier attempt has a start time.
+- The instruction table shows changed rows under 수정된 오더. The re-request leaves the current attempt pending. When 업무 계속하기 opens the review, acknowledging the latest changes continues the same start or claim-and-start command. The order moves to 진행중 when the command succeeds.
+- When 변경 내용 보기 or 변경이력 보기 opens the review, acknowledgement records the reviewed version. The order keeps its current work status.
+- After releasing a replacement attempt, the selected prework screen displays 재요청 beside the request time. It stays open on reload. 담당하기 checks the latest instructions and claims and starts the existing attempt for an eligible assignee. When that action requires acknowledgement, confirming the review continues the assignment. Opening 변경 내용 보기 from prework records acknowledgement without assigning or starting work. The earlier start remains in the instruction history.
+
+For a dispensing replacement attempt, the order-change banner names the item
+and previews the first two changes. The review shows saved before and after
+values, including the request quantity and unit, followed by the recorded reason.
+The UI combines values and reason only for a uniquely matched order and revision.
+Otherwise the original instruction text remains available. The review hides
+empty request or completion entries and keeps saved instructions and recorded
+partial work accessible. Opening or closing the review does not acknowledge the
+revision.
+
+## Reopening a completed dispensing or treatment instruction
+
+- In the instruction workspace, the toolbar shows the start time, assignee,
+  width control, and `조제 완료` or `처치 완료` in that order. The current
+  status badge appears beside the request timestamp in the summary below the
+  toolbar. When completion and other actions are both allowed, the arrow
+  beside the completion button opens the available actions. The document menu
+  next to the title shows `오더 차트로 이동` and `지시서 링크 복사` in that order.
+  Chart navigation uses the selected work item's encounter and origin chart IDs
+  through existing workspace navigation. The chart context read checks existing
+  chart permissions when the encounter is outside the live queue. An unavailable
+  source chart shows an error. Without an origin chart ID, the action is disabled.
+  Link copying preserves the selected instruction. Available record
+  tools appear below these two actions.
+- Dispensing and treatment cards show the `수정이력` button and its divider
+  only when the dialog can show a change for an item in the card or for the
+  set's common instruction. The dialog shows those changes.
+- The finalized instruction body keeps filters, sorting, density, disclosures,
+  and access to available history. Row completion and assignment controls are disabled.
+- Inside each order card, the order group filter uses the table section labels
+  `추가된 오더`, `수정된 오더`, `기존 오더`, `완료 오더`, and `취소된 오더`.
+  Menu counts and filtered rows use the same groups as the table.
+  `취소된 오더` includes returned items. The card shows every item by default.
+  When a group is selected, the filter's trailing `×` button (`필터 해제`)
+  restores the full list. The sort menu orders items
+  by name within each section. Choosing `기본순` restores the original order
+  and keeps the group filter. The completion count uses all items in the card.
+- The header's `완료 ⌄` offers `진행 중으로 변경` when the server reports an
+  eligible completed item. A set confirmation submits one selected item through
+  the existing revision-checked `reopen` command. Other items and queue types
+  keep their state and results. In an unfinished set, the same header menu
+  offers `완료 항목 다시 진행` for eligible completed items.
+- After reopening, the existing `담당 취소` command is available in the header
+  when the server permits it. A released first attempt follows the waiting
+  flow above. Order cancellation remains a chart action.
+- Completed execution history opens in read-only mode from the body. Existing
+  authorized record corrections and common instruction edits open explicitly
+  from the header document menu. Current server permission, instruction
+  acknowledgement, billing lock, and command retry rules apply.
+
+## Chart navigation to a dispensing or treatment instruction — 2026-11-09
+
+- A confirmed executable order with a current dispensing or treatment work item
+  offers `지시서 ›` in the Plan/Order name cell. Pointer hover and keyboard
+  focus reveal the action. Touch keeps the action visible.
+- The dialog names the order and destination. `취소` closes it and returns
+  focus to the order action. `지시서로 이동` reads the exact work item under
+  the existing workspace permission and uses its operating date. The shell
+  runs its existing save guard before switching screens.
+- The destination scrolls to and focuses the exact item in the instruction
+  document or the prework order table. The row keeps its standard background
+  and shows a focus outline when keyboard focus is visible. For a set, it
+  identifies the clicked child by work item ID. A missing or denied target shows
+  a recovery message.
+
+## Dispensing and treatment order cancellation authority — 2026-11-09
+
+Cancelling a confirmed dispensing or treatment order, including a set containing
+either type, requires an active veterinarian in the order's workspace and the
+existing order-update permission. The chart uses server-read authority to show
+the cancellation action. Both chart mutation entry points enforce the same
+rule before writing or replaying a cancellation. Assigned technicians can
+complete work using the existing execution-result requirements.
 
 ## Dispensing/treatment instruction candidate — 2026-10-27
 
@@ -63,6 +291,47 @@ Migrations `20261027091000` through `20261027095000` must be reviewed/applied
 as one candidate before enabling its live caller. Local isolated SQL tests use
 synthetic schema fixtures; clinical calculations and invoice internals remain
 separate dependencies. This is not a full hosted-schema or real-data proof.
+
+## Instruction review candidate — 2026-10-31
+
+`20261031120000_instruction_review_fixes.sql` is a local follow-up candidate;
+remote application and deployment still require 승욱's confirmation.
+
+- Claim assigns and starts eligible unfinished items in the same transaction.
+  Completed/cancelled/returned items and other executors' assignments remain intact.
+  Claim after unassignment resumes eligible paused work. An unassigned child cannot
+  be started through either item or group start/resume commands.
+- The requesting-vet completion exception is explicitly retained. Opening history
+  or completion input never changes status. Authorized instruction execution saves
+  may complete requested/paused work without taking ownership; actual results,
+  revision/plan checks, private completion scope and timestamps remain mandatory.
+- Completion UI collects missing results before explicit set finalization. Each
+  actual-result save already completes its item. The card menu retains execution
+  history/correction; modification history is enabled only for displayable changes.
+- The instruction name reader supports confirmed `inHospitalOrderName` then
+  `standardOrderName`, preserving existing display aliases and empty-value fallback.
+  Patient demographics use the same profile reader and labels as the context bar.
+- Instruction notes use explicit clinical/memo fields, excluding calculation
+  selectors and internal identifiers. Treatment quantities and units remain visible.
+  The oral infobar depends only on nonblank current text; stored audit/snapshots
+  are retained. No historical data repair is part of this candidate.
+
+## Complete dispensing and treatment as ordered — 2026-11-09
+
+The dispensing and treatment instruction screens use the confirmed order as the
+work plan. The authorized performer confirms completion without re-entering
+quantities, procedures, or outcomes. Item completion and explicit set
+finalization use the existing instruction commands and record the actor and
+completion time. Existing result history remains available for review and
+authorized correction.
+
+Migration `20261109053938_fulfillment_complete_as_ordered.sql` changes the
+instruction read and the task completion trigger. The trigger accepts completion
+without an actual result only for dispensing and treatment tasks with the
+existing transaction-scoped instruction completion capability. The command
+still checks workspace, actor, revision, and current instruction acknowledgement.
+Treatment medication validation and explicit billing requests still apply.
+Apply the migration before deploying the completion screen.
 
 ## Current Inventory
 
@@ -340,17 +609,20 @@ SOAP charts. Missing patient identities stay task-specific. Names are display
 labels only. Type/status/search counts retain their existing task semantics.
 Urgency is independent of lifecycle status. Patient priority/latest sorting
 uses raw priority/status and immutable request creation time; equal task ranks
-use the chosen request/assignee/wait sort. Paused belongs to 진행중 filtering.
+use the chosen request/assignee/wait sort. Assigned paused items belong to
+진행중. Unassigned paused dispensing and treatment items appear as 대기중.
 Assignment filtering uses assignedToUserId, not whether a display name resolves.
 
 Selection still uses exact lab result, imaging study, or fulfillment queue
 item/work item IDs. Switching views never writes or replaces the selected
 task. Filtering out the selection retains its detail and provides a condition
-reset action. A private realtime event still triggers the existing API refetch;
-only newly returned stable IDs produce a new-work notice. The current reading
-anchor remains until the user requests 목록에서 보기. Authentication or
-permission denial clears cached queue rows; network failures retain their
-existing recovery behavior. No synthetic scenario controls enter the app.
+reset action. Private realtime events trigger the existing API refetch. New
+tasks appear according to the current filters and sort without a new-work
+banner. Keep the selected task and the visible scroll anchor during the refresh.
+Show 재요청 on each affected task card. Patient group headings show the visible
+task count and any urgent count. Authentication or permission denial clears
+cached queue rows. Network failures retain their existing recovery behavior.
+No synthetic scenario controls enter the app.
 
 The additive v2 projection returns nullable originChartId and
 originChartCreatedAt from the exact workspace/encounter/order/soap_notes joins.
@@ -379,6 +651,28 @@ for synthetic proofs, verification, and delivery evidence.
 - Queue reads project the actual assignee name and actor-bound `canManage`. UI feedback does not substitute for DB authorization. Billing ownership uses workspace realtime refresh plus a bounded visible-page fallback.
 - Migration `20261012054346_current_assignee_mutation_boundary.sql` is a local candidate. Apply it before the app candidate. No remote apply, real data, payment execution or Production delivery is verified. Rollback must restore the prior affected function definitions; retain invoice assignment fields/events and saved results rather than deleting history.
 
+
+## Chart oral instruction candidate — 2026-10-27
+
+Migration `20261027130000_chart_oral_instructions.sql` adds separate private
+revision and task-evidence tables. Hosted application is approved for this
+bounded release; the work item records application and verification evidence.
+Session-bound `clair_get_chart_oral_instruction` and
+`clair_save_chart_oral_instruction` validate active membership, chart view/update
+permissions, encounter status, chart identity and signed-chart lockout. Saving
+serializes on the chart and compares the expected revision; clients never supply
+an actor identity. Each change stores the authenticated actor and timestamp.
+
+The existing authorized fulfillment read includes `oralInstruction` only for a
+matching current-chart oral document. Queue row revisions wake existing readers
+through the existing private queue broadcast. Order status, quantities, results,
+and parent/individual instruction storage are unchanged. Task triggers capture
+request and completion evidence; old evidence is not overwritten or backfilled.
+The tables have no direct client grants. API errors never fall back to demo data.
+
+The UI retains a loaded same-item document on transient refresh failure, blocks
+mutations until refresh succeeds, and withdraws it on 401/403/404. Endpoint scope
+and request-generation checks prevent late responses replacing another card.
 ## RLS Helper Execution Grant (2026-10-27)
 
 Authenticated direct reads of `order_fulfillment_work_items` require EXECUTE on
@@ -388,3 +682,109 @@ policy; it adds no table write rights or anonymous access.
 [DB-PR-002](../../work/engineering/ENGINEERING-DB-PR-002-fulfillment-rls-helper-grant.md)
 tracks the local forward migration and isolated regression; remote application
 is not recorded.
+
+## Local Course Dispense Request Candidate (2026-10-31)
+
+Migration `20261031090000_dispense_request_quantities.sql` is a local candidate.
+No remote apply or deployment is authorized by this follow-up. See
+[CLINICAL-FULFILLMENT-PR-010](../../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#approved-local-follow-up--2026-10-31-dispense-request-quantities)
+for approval and verification evidence.
+
+For dispensing orders, `theoreticalDispenseQuantity` is the per-administration
+product quantity; `theoreticalTotalQuantity` is its course total.
+`actualDispenseQuantity`, `plannedPracticalTotalQuantity` and
+`totalRequiredDispenseQuantity` contain the final course request when
+`dispenseRequestSchemaVersion=1` and `preparationQuantityScope=course_total`.
+Execution-result quantities remain a separate contract. Product-unit billing
+uses the final course request; fixed-order/set pricing keeps its existing basis.
+
+In the confirmed dispensing order dialog, `총량` shows the saved theoretical
+total as a read-only value, with the saved legacy total as a fallback. The
+separate `요청 조제량` shows the final course request and its calculation mode.
+Open manual adjustment explicitly. A change that affects the course quantity
+requires reconfirming a manual request or returning it to automatic calculation
+before saving. Use the existing server calculation on save. The instruction
+table and its change history show the saved course request and unit under
+`요청 조제량`, falling back to the saved total for older instructions.
+
+The server captures a frozen `orders.dispense_request_rule_snapshot` on insert.
+It contains source, version, product key and rule. Updates and draft upserts
+retain that snapshot. Rule precedence is manual order value, product exception,
+unit-specific hospital default, then exact theoretical total. Product identity
+uses the source medication product; catalog-local identity is retained when no
+reliable product reference exists. Rule edits affect subsequently added orders.
+Rules apply only to the course total and do not change the per-administration
+quantity. Display precision never rounds a persisted request.
+
+The legacy `clair_save_order_actual_dispense_override` rejects new dispensing
+commands at the DB boundary. Its non-dispensing behavior and previously completed
+idempotent results remain unchanged. Dispensing callers must use the course-total
+writer, so the old entry point cannot bypass the source authority's quantity bounds.
+
+`clair_save_order_dispense_request` supports `manual`, `automatic`, and
+`reconfirm`. Manual edits require no reason and need not match the automatic
+rounding step. Existing product bounds, workspace membership, `chart:update`,
+row version, idempotency and append-only history remain enforced. Existing
+amendment/re-request reasons and historical reason values remain unchanged.
+The dispensing request, prescription dose and duration cells use text inputs
+without number steppers. Valid changed values save on Enter or blur. Invalid
+numeric text is retained locally and never submitted; required empty values,
+existing range rules and integer-only duration are also checked. Invalid cells
+use an error border with focus/hover feedback and linked screen-reader text,
+without changing row height. Invalid local inputs block table confirmation,
+including the parent of an included set child.
+There are no adjacent save/manual/reconfirm/reset controls. Unchanged manual
+requests acknowledge a prescription change only on Enter, guided by focused
+cell feedback; blur alone does not acknowledge it. The table has no automatic
+reset command. The existing revision dialog and server modes remain available.
+
+Dispensing unit choices and edits share a snapshot-based conversion resolver
+across the table, detail sheet and amendment/re-request dialog. A unit switch
+updates `dose` and `doseUnit` together, preserving the physical product quantity
+and the existing dose basis. Decimal display does not round the input, including
+values small enough for JavaScript exponent notation. Invalid local dose text
+blocks a unit switch. Missing/ambiguous conversions never relabel a saved dose.
+
+Supported standard dimensions are mcg/mg/g and mL/L, with legacy ml aliases.
+Table, detail and re-request selectors normalize only their comparison/display
+values for these aliases. Opening a selector neither rewrites persisted units
+nor marks a supported legacy alias invalid.
+Product strength connects the reference ingredient to the product/output unit.
+Tablet/capsule counts use their product strength; drop/spray/pipette/application
+ratios need explicit product-specific conversions. Supplied ratios may be used
+in reverse and combined with SI scales; conflicting paths are rejected. A
+reference ingredient is required for ingredient/strength conversion. A product-
+only configuration may use product-unit scales without inventing strength.
+
+A powder such as 10 mg/g has two different mass meanings. The exact historical
+numerator (mg) retains ingredient meaning; ambiguous alternate mass units are
+blocked. Supporting both meanings needs a separate explicit input-kind contract.
+Body-surface-area dosing remains unsupported. kg dosing uses the encounter-
+scoped weight; a unit-only switch never changes the basis or applies weight twice.
+Quantity-unit choices retain the configured product/output unit.
+
+The additive local migration `20261101010000_dispensing_prescription_units.sql`
+extends only dispensing unit enums and wraps the request calculator. It converts
+scratch inputs to product quantity before the existing weight/occurrence/rule
+pipeline. Original prescription inputs, pinned authority, prior confirmed
+snapshots and old calculator bodies are preserved. It normalizes both individual
+and set-child scratch authority without modifying the exact B3 source snapshot.
+
+Equivalent unit edits reuse the prior product quantity within a relative 1e-12
+numeric tolerance, before dispensing rounding. The semantic fingerprint uses
+physical quantity, basis, other instructions, authority, rule and weight. A
+unit-only change preserves a manual request and its acknowledged state. A real
+quantity/context change retains the manual request but requires reconfirmation.
+Pre-existing results without the new semantic context conservatively require
+reconfirmation on their next recalculation. No historical backfill is performed.
+
+Prescription changes retain a manual course quantity and require reconfirmation;
+an incomplete calculation also preserves it. Historical per-administration
+manual quantities are converted using their previous course count/total, never
+a newly edited count. Missing historical scope is blocked instead of guessed.
+
+Hospital rule writes use existing `service_catalog:manage`; reads use
+`service_catalog:view`. Direct authenticated writes are revoked and reads are
+workspace-filtered by RLS. The settings route has no successful mock persistence
+fallback. The approved follow-up leaves drug-group defaults, product-strength
+editing/renaming and per-dose splitting policy unresolved.

@@ -363,6 +363,7 @@ test("payment status Supabase gateway keeps actor, workspace, invoice, action, a
       invoiceId: "00000000-0000-4000-8000-000000000401",
       paymentMethod: "card",
       unpaidReason: null,
+      expectedUpdatedAt: "2026-11-03T07:00:00.123456+00:00",
     },
   });
 
@@ -376,6 +377,7 @@ test("payment status Supabase gateway keeps actor, workspace, invoice, action, a
         p_action: "complete_payment",
         p_payment_method: "card",
         p_unpaid_reason: null,
+        p_expected_updated_at: "2026-11-03T07:00:00.123456+00:00",
       },
     },
   ]);

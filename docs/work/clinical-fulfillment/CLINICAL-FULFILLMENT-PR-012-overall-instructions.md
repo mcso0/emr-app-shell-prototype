@@ -1,0 +1,147 @@
+---
+id: CLINICAL-FULFILLMENT-PR-012
+title: Overall instructions implementation
+status: human_review
+area: clinical-fulfillment
+priority: P0
+last_updated: "2026-11-02"
+---
+
+# Overall instructions implementation
+
+## Goal and authorization
+
+User instruction: `구현 계획 세웠으면 구현 작업들어가고` (2026-11-01). Implement the linked plan locally, with relevant non-destructive verification. This authorizes application code, additive migration files, and isolated synthetic SQL/browser tests. It does not authorize remote DB changes, real data, real notifications, publishing, merge, or deployment. Record unresolved product decisions before dependent implementation.
+
+Base: `e3b7923a05d160b240e6beb330121cd14b5b66cd` (`origin/main`). Work in the isolated `codex/overall-instructions` checkout; preserve the source checkout's unrelated WIP.
+
+## Scope
+
+- Multi-scope append-only instructions and atomic/idempotent saves; workspace/chart permissions, current state and conflict checks.
+- v45 authoring dialog, current/history/delete/undo/retry behavior and focused stories.
+- Effective task instructions, immutable snapshots, explicit acknowledgement and authoritative transition guards.
+- Persisted in-app change notification producer, dedupe, authorized navigation.
+- Synthetic fixtures and focused checks; no external data/provider writes.
+
+## Sources
+
+- [PRD](../../product/features/chart/overall-instructions-prd.md)
+- [Screen specification](../../design/screens/chart/specs/overall-instructions.md)
+- [Implementation plan](../../engineering/architecture/overall-instructions-implementation-plan.md)
+
+## Done criteria
+
+Approved behavior works through UI/API/DB with synthetic evidence. Required checks pass; limitations and remaining release gates are documented. Preserve role policy, historical PO applicability, existing task outcomes and billing values. Human review is separate from implementation completion.
+
+## Product decisions approved (2026-11-01)
+
+- Legacy PO text retains its original applicability until a veterinarian explicitly applies it as a new dispensing instruction. Preserve historical rows and snapshots.
+- A chart with no unfinished confirmed orders is read-only, including mixed completed/cancelled orders. Newly confirmed unfinished work restores editing, subject to existing chart permissions/status.
+- Reuse explicit acknowledgement for the same actor, chart and relevant instruction-version vector. Preserve existing requester completion rights; viewing, closing and notification reads do not acknowledge.
+- Other plan gaps will be resolved from owning contracts or raised only when materially consequential.
+
+## Local implementation and verification — 2026-11-01
+
+At the local verification checkpoint, the approved implementation was ready for human review and uncommitted in `codex/overall-instructions`; no remote DB, PR, merge, deployment, real notifications or clinical data had changed. The subsequent delivery authorization and live release record are below.
+
+### Implemented behavior
+
+- The actual Plan/Order entry now opens the v45 authoring dialog. Multiple scopes save atomically with per-scope conflict checks, append-only changes/deletions, command replay, history comparison and failure recovery. The chart store's existing navigation guard includes unsaved instructions.
+- The current legacy PO value appears in the same dispensing field. Viewing it is not a dirty edit. Applying it explicitly promotes the content to dispensing; the field explains that consequence. Old PO revisions and snapshots retain their original meaning, and the old writer is retired only after promotion.
+- Dispensing/treatment, lab/imaging, actual-result dialogs and chart-only result entry share effective instruction reads and explicit review. X, dialog close, notification read and ordinary reads do not acknowledge. A deleted instruction remains a version requiring review. A later relevant version shows a hidden bar again. When only the overall instruction applies, the same actor can reuse that review across categories; a category revision or deletion adds its own version.
+- The DB checks the actual actor's current version at instruction, generic transition, direct-result and chart-only result writers. Immediate completion at task INSERT also checks acknowledgement. Persisted order review supports confirmation before a task exists. Requester completion rights remain intact; amendments do not masquerade as new performance.
+- Immutable request/completion snapshots retain task, attempt and request-cycle identity. Historical attempts remain readable after re-request; an outdated attempt cannot acknowledge. Missing historical evidence is shown separately from an empty-instruction snapshot. The read model also includes frozen old PO snapshots, labeled with their original applicability. The obsolete PO capture trigger is retired; its table and read API remain. No historical backfill invents prior instructions.
+- One in-app event per successful apply/chart/recipient is inserted in the save transaction. Recipients are the existing active individual assignees and set main assignee, with terminal/unrelated tasks excluded. Unassigned work does not broadcast. Navigation includes the real queue selector and Seoul operating date. The actor and scope are rechecked by the destination's existing permissions.
+- Chart wrappers, instruction saves, acknowledgement and performing work share the encounter ownership advisory before row locks. The old PO writer uses the same order. Review found and fixed lock inversion, wrong lab/imaging selection keys, omitted notification dates, historical-attempt reads and encounter editability mismatch.
+
+### Verified evidence
+
+| Check | Result and limits |
+| --- | --- |
+| Contract tests | `npx playwright test --config playwright.catalog-contract.config.ts tests/overall-instructions-contract.spec.ts`: 19 passed. Covers scopes, explicit delete, no-op, legacy promotion, UTF16 length, conflicts, replay payload identity, forged acknowledgement fields, task/order response identity and error mapping. RPC transport is synthetic. |
+| SQL migration and writers | `node scripts/test-dispensing-instruction-sql.mjs --overall-instructions`: passed in a temporary network-disabled PostgreSQL container, removed afterward. Includes actual migration and canonical writer bodies, atomic rollback, no-op events, requester completion, direct/chart-only results, immediate completion, stale acknowledgement, historical attempts, signed/terminal/encounter state, private table/function ACLs and anonymous/authenticated role checks. |
+| Concurrent SQL sessions | Passed stale acknowledgement versus apply; chart-wrapper versus apply lock ordering; completion snapshot versus later apply; existing concurrent claim regression. These are local transactions, not hosted performance measurements. |
+| Actual component stories | 43 passed across authoring (11), task review (7), execution result (7), chart actual history (4), and lifecycle actions (14). Includes actual chart adapter/store navigation, explicit legacy promotion, close/X versus acknowledgement, double click, stale version recovery, deletion, late responses, failed reads and existing completion/amendment flows. |
+| Static/build checks | Full `npx tsc --noEmit`, focused ESLint, Next production build, Storybook production build, docs check and `git diff --check` passed. The existing large chart module produces a Babel size notice; no lint errors or warnings remain. |
+| Visual checks | Existing authoring dialog: stable 560×560px, 496px add trigger/menu, no document overflow at 320px. New review dialog: 288px width/scrollWidth at 320px viewport; no document overflow. Restored viewport after inspection. Screenshots stay local in `output/overall-instructions/`. |
+
+One existing amendment story was timing-sensitive while typing a Korean reason. Its fixture now sends a controlled change event and asserts the complete value before saving; the combined run then passed. The final 43-story run also covers legacy PO snapshot display. The initial response-identity regression exposed duplicate task responses being accepted; the adapter now rejects duplicate/missing identities and the regression passes.
+
+### Evidence boundaries and remaining delivery gates
+
+- SQL tests use the real changed functions against an isolated structural fixture. Membership/permission, clinical-validation, billing and some list/context dependencies are synthetic; this is not a replay of the entire Supabase migration history or proof of hosted RLS parity.
+- Browser evidence uses actual components and the chart navigation store with synthetic transport. No authenticated hospital workflow or production acceptance is claimed. Existing modules without a performing UI are not newly created by this work; instruction scope follows canonical order/task categories at the DB boundary.
+- The candidate migration is `supabase/migrations/20261101140000_overall_instructions.sql`. It depends on the existing oral/instruction workflow migrations. A hosted read-only preflight, exact release candidate, approved migration apply and authenticated scoped smoke remain release work.
+- Do not enable the app candidate against a database missing the migration. After the new guards or dispensing promotion are in use, a rollback to an app with no acknowledgement path is not a valid operational rollback. Retain an acknowledgement-capable app or roll forward; preserve all revisions, snapshots and acknowledgement records. No destructive down migration is proposed.
+- Human acceptance is pending. No remote actions were required to finish the authorized local implementation.
+
+### Follow-up reconciliation — 2026-11-01
+
+The user reaffirmed all three recommended policies and requested remaining implementation/verification. Reconciliation found no pending local implementation stage. Updated stale pre-implementation approval/status wording in the PRD, screen specification and plan so it agrees with the implemented policy table and local evidence. No application behavior or delivery authorization changed. `npm run docs:check` passed for 1,082 docs/agent markdown files; `git diff --check` passed. Earlier application checks were not rerun because this follow-up changed documentation only.
+
+## Authorized delivery — 2026-11-01
+
+Direct user instruction: create the PR, apply the remote DB change and deploy, including only this overall-instructions feature while preserving existing WIP. This is bounded authorization for the feature PR, one scoped migration, exact-head main merge and Production delivery after required checks. No unrelated migration, data backfill, real clinical/provider action or paid-resource change is included.
+
+[PR #1033](https://github.com/mcso0/emr-app-shell-prototype/pull/1033) is the release record for the exact candidate, required checks, migration version, Preview/Production source and smoke results. This work item retains the implementation evidence and boundaries; the PR records current delivery status. Local screenshots and evidence remain outside the PR. The shared Supabase target is verified as the existing CLAiR demo project; its historical staging name does not imply Preview data isolation. Preview and Production smoke will use only existing documented synthetic context, with no instruction, order or notification writes. Remote migration preflight/readback use schema catalogs. Preserve old PO rows and snapshots.
+
+## Earlier authoring checkpoint
+
+Before the three policy decisions were answered, the standalone editor/API preparation passed 13 contracts and 9 authoring stories. At that checkpoint there was no RPC or app integration. The later implementation and evidence above supersede that partial state.
+
+## Approved performer-card follow-up — 2026-11-01
+
+User approved the Figma-based HTML card, shared Plan/Order history UI and collapse/expand, then authorized deployment after verification. Scope is the shared performer card and history extraction only. Preserve other WIP, DB schema, permissions and explicit acknowledgement/transition rules. Reuse this bounded conditional approval for PR/main/Production after the release gates pass.
+
+Implementation uses the existing chart history GET on demand; its `chart:view` gate remains authoritative. Module-only readers receive the existing permission error. History reads and card controls never call acknowledgement. Workspace/chart/version keys reset presentation on new relevant versions, abort closed history requests and prevent late results from reopening a dialog. Legacy PO and new dispensing revision sequences remain separate when selecting the preceding history entry.
+
+Focused synthetic verification: 31 stories passed across authoring, shared history, performer review and card. Includes collapse/restore, version reappearance, no acknowledgement on history reads, 403, retry, wrong chart rejection, late history completion, explicit acknowledgement and existing conflict/deletion flows. Storybook MCP focused tests also passed. Desktop DOM measurements match 98px expanded / 68px collapsed; history button 126×32px; fold/X 32×32px; exact padding/colors/type values. The 320px viewport has no document overflow. This is local component/transport evidence; hosted smoke is recorded in the follow-up PR. Related execution-result, chart-history and lifecycle regression stories also passed (56 total). Full lint, TypeScript, production build, secret scan, UX copy check, docs check and diff check passed. No DB or clinical writes are needed for this UI release.
+
+
+## Local callout badge correction — 2026-11-01
+
+User requested removal of the lower `변경됨 · 변경 내용 확인` row and a title-adjacent `변경됨` badge only after the initial instruction. This follow-up authorizes local UI changes and synthetic verification; it does not authorize delivery.
+
+- The actual shared callout derives its badge from applicable instruction revisions greater than 1, independent of acknowledgement. Multiple scope entries at revision 1 remain unbadged. The right-side history action remains available.
+- Explicit acknowledgement and server transition guards remain unchanged. History reads do not acknowledge; the badge persists after acknowledgement.
+- Focused browser stories: 19 passed across callout and actual review/controller components, including initial versus subsequent revisions, post-acknowledgement badge, collapse/restore, historical snapshot access, failed reads and conflicts.
+- Full type check, focused ESLint, docs links and diff whitespace checks passed. Local Storybook screenshots visually verified the initial unbadged card and revised title-adjacent badge (`output/playwright/instruction-badge-initial.png`, `output/playwright/instruction-badge-revised.png`). This is synthetic local component evidence, not hosted app verification.
+
+Delivery authorization: the user requested a PR containing only this badge correction, merge to main after checks pass, and Production verification. This supersedes the local-only delivery limit for this follow-up. Keep local screenshots, browser artifacts and unrelated work out of the PR. Use exact-head protection; preserve existing instruction acknowledgement and data boundaries.
+
+
+## Local inline expansion and Figma spacing — 2026-11-01
+
+User approved Figma node `28979:21113` dimensions and the proposed inline expand/collapse behavior, preserving the changed badge and unrelated work. Scope is local implementation and visual verification; this follow-up does not authorize another release.
+
+- Icon box 46×46px; title/body gap 6px; main gap 16px; right controls 166px (126px history, 8px gap, 32px hide). Single-line card height 70px.
+- Each instruction retains a one-line summary. Overflow or multiline content offers an inline `펼치기` button, then `접기` with full text and original line breaks. Short text has no toggle. Resize and font-ready checks update overflow without reserving toggle width during measurement.
+- Changed badge, history, hide/restore and explicit acknowledgement boundaries remain intact. No API or persistence changes.
+
+Verification: 23 focused browser stories passed across the actual callout and review controller. Covers keyboard expansion, one-line summary retention, unchanged revision badge, short text, multiline text, independent scope expansion, 320px overflow, width changes, new-version reset, hide/restore, history and acknowledgement regressions. Local browser measurements confirmed 46×46px icon box, 6px title/body gap, 166px actions and 70px single-line card. Summary/expanded/short/320px screenshots retained locally under `output/playwright/instruction-expand/`. Focused ESLint, type check, docs links and diff checks passed. No remote data or deployment changes.
+
+Follow-up: hide `변경이력 보기` when all applicable instructions are initial revisions. Show it only for revision > 1; release its reserved width and restore focus to hide when history is absent. The proposed unread-only badge policy is not approved or implemented.
+
+Follow-up verification: 23 focused browser stories passed with initial-revision history absence, revised-history availability, and focus restoration. Local screenshot confirmed no history button or reserved gap for the initial revision. Focused ESLint, TypeScript, docs links, and diff checks passed. No deployment performed.
+
+## Instruction card delivery — 2026-11-01
+
+User authorized a scoped PR for the card changes, merge to main after successful checks, and Production verification. This supersedes the local-only limit above for this card follow-up. Included: inline expansion, 46px icon box and 6px title/body spacing, history visibility for revised instructions only, and changed-badge text #1D4ED8/background #EFF6FF. Preserve badge text and revision-based visibility, acknowledgement behavior, API/data contracts, and unrelated work. Local screenshots and other evidence remain untracked and excluded.
+
+Release baseline and rollback candidate: main `0bce2fea244b46ea97375c5ade3629262446060c`, Ready Production `dpl_4oSyfn9nVA5DUiZDMr3y72jaB6fD`. Scoped smoke: `/login`, deployed card assets, and read-only card rendering in an existing synthetic/demo workflow when an authenticated session is available. No instruction writes, acknowledgements, task transitions, DB/provider changes, or automation-setting changes. Stop for failed or unknown required checks, missing Ready Preview, unexpected source SHA, or failed scoped smoke.
+
+## Local authoring-dialog UX follow-up — 2026-11-02
+
+User approved local implementation of the category-selection, loading and mounted-session reopening plan, with implementation followed by independent parent review. Scope is the actual chart dialog, its synthetic adapter/stories, and this owning screen contract. No new permission policy, API/DB behavior, remote data writes, PR, merge or deployment is authorized by this follow-up.
+
+- Initial scope selection and `지시 추가` retain all remaining canonical categories in contract order. Only server-eligible scopes can be selected. Unavailable categories stay visible, expose `해당 분류의 오더가 없습니다` on hover/keyboard focus/attempted interaction, and cannot add a field. Selected/deletion-pending scopes remain excluded from the add menu.
+- The chooser omits the entire footer and its grid track. The editor/read-only screen retains history and existing actions. The prior horizontal-padding fix (no reserved scrollbar gutter) is preserved.
+- First reads use the existing CLAiR rotating loader with an accessible status. Reopening the same mounted client/target immediately restores the last successful read/save and revalidates with a compact indicator. Drafts discarded on cancel never enter the cache. There is no global cache, persistent storage or prefetch.
+- Revalidation locks mutation until success and uses refreshed content, eligibility and permission. Transient failure retains cached read-only content with retry; save failures retain drafts without a load-retry action. Explicit unauthenticated/read-denial/unavailable-target responses clear cached content. Client identity changes reset the session; closing aborts reads before late responses can update its cache.
+- Save failure, conflict resolution, uncertain-result command replay, duplicate-save guards and chart navigation guards retain their existing contracts.
+
+Focused verification: all 20 authoring stories passed through local Storybook MCP using actual dialog/chart-adapter components and synthetic/in-memory transport. Nine added stories cover canonical dispensing-only selection and keyboard/click tooltips in both selection surfaces, first delayed loader, immediate cached reopen, cancelled draft, refreshed content/eligibility/permissions, save/reopen and duplicate-click history count, transient refresh failure/retry, explicit read denial and login expiry, client/chart switch, and closed late loads. Existing authoring, legacy promotion, navigation, conflict and uncertain-save stories also pass. All 19 instruction contract tests, full TypeScript, focused ESLint, docs links and diff whitespace checks pass. Independent parent visual review and full local release preflight remain separate from these synthetic component checks; hosted data/permission parity and deployment are not proven by this follow-up.
+
+Parent review: the final code and synthetic browser behavior passed independent review. Desktop and 320px captures confirm all categories, eligible-only selection, tooltip feedback, absent chooser footer and visible rotating loader. The editor and add button retain equal 32px desktop insets; the 320px chooser fits without horizontal overflow. Reopening immediately displays the last successful instruction with read-only inputs and disabled add/apply actions until refresh succeeds. Local full lint, production build and secret scan pass. Full lint reports four warnings in pre-existing untracked browser-evidence scripts; the build reports an unrelated dynamic filesystem-tracing warning in `src/lib/prd-viewer/doc-reader.ts`. No application errors were reported. The local change is ready for scoped PR/Preview review; exact-candidate CI, Ready Preview and Production approval remain required before delivery. No commit, push, PR or deployment was performed.
+
+Delivery authorization — 2026-11-02: the user explicitly authorized a PR containing only this dialog follow-up, followed by main merge and Production verification after automatic checks and Preview review pass. This supersedes the local-only delivery limit for these six scoped files. The release branch starts from main `815b0196c6eeff87275d4d7c8600e7f2de61f03f`; previous Ready Production `dpl_EdoofSZuNRbgeTn8chc8qdwVmeFp` is the rollback candidate. Preview/Production smoke is limited to `/login`, deployed dialog assets and read-only dialog interactions in the existing documented synthetic workspace. Do not apply instructions, acknowledge instructions, change clinical data or alter deployment-protection settings. Preserve other WIP and keep screenshots, test-account details and local evidence out of the PR. The PR records the final source SHA, automatic checks, Preview review and delivery results.

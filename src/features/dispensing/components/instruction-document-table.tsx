@@ -1,7 +1,15 @@
 "use client";
 
-import React, { useState, useRef, useLayoutEffect } from "react";
+import { formatInstructionValue } from "../instruction-view-model";
+
+import React, { useEffect, useState, useRef, useLayoutEffect } from "react";
+import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
+import { CircleCloseFillIcon } from "@/components/icons";
+import { EmrTableFilterTrigger } from "@/components/emr/table-filter-trigger";
+import { EmrTableCellText, EmrTableColumnResizeHandle } from "@/components/emr/table-primitives";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { usePagePortalVisibility } from "@/components/emr/page-loading-boundary";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Table,
@@ -17,6 +25,10 @@ import {
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
   DropdownMenuItem,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
@@ -39,45 +51,271 @@ const Icon = ({ name }: { name: string }) => (
     dangerouslySetInnerHTML={{ __html: icons[name as keyof typeof icons] }}
   />
 );
-const routeLabels: Record<string, string> = {
-  PO: "경구",
-  topical: "외용",
-  ophthalmic: "점안",
-  otic: "점이",
+export function InstructionRowDisclosure({ name, expanded, onToggle, controls }: {
+  name: string;
+  expanded: boolean;
+  onToggle: () => void;
+  controls?: string;
+}) {
+  return (
+    <Button
+      variant="ghost"
+      className="fd-row-arrow"
+      aria-label={name + (expanded ? " 지시 접기" : " 지시 펼치기")}
+      aria-expanded={expanded}
+      aria-controls={controls}
+      onClick={onToggle}
+    >
+      <span className={expanded ? "fd-row-glyph" : "fd-row-glyph fd-rotate"}>
+        <Icon name="row-arrow" />
+      </span>
+    </Button>
+  );
+}
+
+export function InstructionItemRow({ focused, ...props }: React.ComponentProps<typeof TableRow> & { focused: boolean }) {
+  const rowRef = useRef<HTMLTableRowElement>(null);
+  const { hidden } = usePagePortalVisibility();
+  useEffect(() => {
+    if (!focused || hidden) return;
+    const frame = requestAnimationFrame(() => {
+      const row = rowRef.current;
+      row?.focus({ preventScroll: true });
+      row?.scrollIntoView({ block: "center", inline: "nearest" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [focused, hidden]);
+
+  return <TableRow {...props} ref={rowRef} tabIndex={focused ? -1 : undefined} data-instruction-target={focused || undefined} />;
+}
+
+export function InstructionRowNote({ children, modified = false }: {
+  children: React.ReactNode;
+  modified?: boolean;
+}) {
+  return (
+    <div className={modified ? "fd-info fd-info-modified" : "fd-info"}>
+      <Icon name={modified ? "info-modified" : "info"} />
+      <div className="fd-detail-content">{children}</div>
+    </div>
+  );
+}
+
+const orderGroupLabels = {
+  added: "추가된 오더",
+  modified: "수정된 오더",
+  existing: "기존 오더",
+  completed: "완료 오더",
+  cancelled: "취소된 오더",
 };
-const storageLabels: Record<string, string> = {
-  room_temp: "실온",
-  room_temp_light_protected: "실온·차광",
-  refrigerated: "냉장",
-  refrigerated_light_protected: "냉장·차광",
+type OrderGroup = keyof typeof orderGroupLabels;
+
+function getOrderGroup(item: Item): OrderGroup {
+  if (item.status === "returned") return "cancelled";
+  if (item.status === "completed" || item.status === "cancelled") return item.status;
+  return item.change;
+}
+
+type InstructionFilter = "all" | OrderGroup;
+
+const orderGroupChipColors: Record<OrderGroup, string> = {
+  added: "var(--clair-color-atomic-blue-400)",
+  modified: "var(--clair-color-atomic-orange-400)",
+  existing: "var(--clair-color-atomic-gray-500)",
+  completed: "var(--clair-color-atomic-green-400)",
+  cancelled: "var(--clair-color-atomic-red-400)",
 };
-const groups = [
-  ["added", "추가된 오더"],
-  ["modified", "수정된 오더"],
-  ["existing", "기존 오더"],
-  ["completed", "완료 오더"],
-  ["cancelled", "취소된 오더"],
-];
-const group = (i: Item) =>
-  i.status === "returned"
-    ? "cancelled"
-    : ["completed", "cancelled"].includes(i.status)
-      ? i.status
-      : i.change;
+
+const sortLabels = {
+  default: "기본순",
+  ascending: "항목명 오름차순",
+  descending: "항목명 내림차순",
+};
+type InstructionSort = keyof typeof sortLabels;
+
+const itemNameCollator = new Intl.Collator("ko", { numeric: true });
+
+function matchesFilter(item: Item, filter: InstructionFilter) {
+  return filter === "all" || getOrderGroup(item) === filter;
+}
+
+function sortItems(items: Item[], sort: InstructionSort) {
+  if (sort === "default") return items;
+  const direction = sort === "ascending" ? 1 : -1;
+  return [...items].sort((left, right) => {
+    if (!left.name || !right.name) return Number(!left.name) - Number(!right.name);
+    return direction * itemNameCollator.compare(left.name, right.name);
+  });
+}
+
+function InstructionOrderGroupFilter({
+  items,
+  trigger,
+  value,
+  onChange,
+}: {
+  items: Item[];
+  trigger: React.ReactElement;
+  value: InstructionFilter;
+  onChange: (value: OrderGroup) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger render={trigger} />
+      <DropdownMenuContent
+        align="end"
+        sideOffset={6}
+        className="w-[201px] min-w-0 max-w-(--available-width) rounded-[var(--clair-radius-md)] border border-border bg-[var(--clair-color-atomic-common-100)] shadow-[var(--clair-shadow-md)] ring-0"
+      >
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="flex h-8 items-center px-2 leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-neutral-600)]">
+            오더 그룹 필터
+          </DropdownMenuLabel>
+          <DropdownMenuRadioGroup value={value} onValueChange={(next) => onChange(next as OrderGroup)}>
+            {(Object.keys(orderGroupLabels) as OrderGroup[]).map((option) => (
+              <DropdownMenuRadioItem
+                key={option}
+                value={option}
+                closeOnClick
+                className="fd-order-filter-option h-8 gap-2 rounded-[var(--clair-radius-sm)] px-2 py-1.5 font-medium leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-neutral-900)] opacity-80"
+              >
+                <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                  <span
+                    aria-hidden="true"
+                    className="size-2.5 shrink-0 rounded-[var(--clair-radius-xs)]"
+                    style={{ backgroundColor: orderGroupChipColors[option] }}
+                  />
+                  <span className="truncate">{orderGroupLabels[option]}</span>
+                  <Badge
+                    aria-hidden="true"
+                    variant="secondary"
+                    className="min-w-5 rounded-[var(--clair-radius-atomic-6)] border-0 bg-[var(--clair-color-atomic-black-alpha-4)] px-1.5 leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-900)] tabular-nums"
+                  >
+                    {items.filter((item) => matchesFilter(item, option)).length}
+                  </Badge>
+                </span>
+                <span aria-hidden="true" className="fd-order-filter-check size-4 shrink-0" />
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function InstructionChoiceMenu<T extends string>({
+  label,
+  trigger,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  trigger: React.ReactElement;
+  options: Record<T, string>;
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger render={trigger} />
+      <DropdownMenuContent align="end" sideOffset={6} className="w-max min-w-40">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="px-2">{label}</DropdownMenuLabel>
+          <DropdownMenuRadioGroup value={value} onValueChange={(next) => onChange(next as T)}>
+            {(Object.keys(options) as T[]).map((option) => (
+              <DropdownMenuRadioItem key={option} value={option} closeOnClick className="min-h-8 gap-3 pl-2">
+                {options[option]}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function getItemColumnWidth(handle: HTMLButtonElement) {
+  return handle.closest("tr")?.querySelector(".fd-col-1")?.getBoundingClientRect().width;
+}
+
+function InstructionItemResizeHandle({ onResize }: {
+  onResize: (width: number | undefined) => void;
+}) {
+  const drag = useRef<{ pointerId: number; x: number; width: number } | null>(null);
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeTo = (width: number) => onResize(Math.min(520, Math.max(120, Math.round(width))));
+
+  return (
+    <EmrTableColumnResizeHandle
+      aria-label="항목 컬럼 너비 조절"
+      className="left-1/2 right-auto -translate-x-1/2 before:left-1/2 before:top-1.5 before:h-3 before:-translate-x-1/2"
+      isResizing={isResizing}
+      onPointerDown={(event) => {
+        if (!event.isPrimary || event.button !== 0) return;
+        const width = getItemColumnWidth(event.currentTarget);
+        if (width === undefined) return;
+        event.currentTarget.setPointerCapture(event.pointerId);
+        drag.current = { pointerId: event.pointerId, x: event.clientX, width };
+        setIsResizing(true);
+      }}
+      onPointerMove={(event) => {
+        const start = drag.current;
+        if (start?.pointerId !== event.pointerId) return;
+        resizeTo(start.width + event.clientX - start.x);
+      }}
+      onLostPointerCapture={(event) => {
+        if (drag.current?.pointerId !== event.pointerId) return;
+        drag.current = null;
+        setIsResizing(false);
+      }}
+      onDoubleClick={() => onResize(undefined)}
+      onKeyDown={(event) => {
+        if (event.key === "Home") {
+          event.preventDefault();
+          onResize(undefined);
+          return;
+        }
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        const width = getItemColumnWidth(event.currentTarget);
+        if (width === undefined) return;
+        event.preventDefault();
+        const step = event.shiftKey ? 24 : 8;
+        resizeTo(width + (event.key === "ArrowRight" ? step : -step));
+      }}
+    />
+  );
+}
+
 type Props = {
   orders: Order[];
   events: FlowEvent[];
   names: Record<string, string>;
   eligibleAssignees: string[];
   busy?: boolean;
+  focusedItemId?: string;
+  openExecutionHistory?: () => void;
+  editSetInstruction?: () => void;
+  refresh?: () => void;
   act: (id: string, type: Action["type"], extra?: Partial<Action>) => void;
-  history: (id: string, item?: string) => void;
+  history: (itemIds: readonly string[] | null) => void;
   notify: (message: string) => void;
 };
 export function InstructionDocumentTable(p: Props) {
+  const documentRef = useRef<HTMLDivElement>(null);
+  function resizeItemColumn(width: number | undefined) {
+    const style = documentRef.current?.style;
+    if (width === undefined) {
+      style?.removeProperty("--fd-item-column-resized-width");
+    } else {
+      style?.setProperty("--fd-item-column-resized-width", `${width}px`);
+    }
+  }
+
   return (
     <TooltipProvider delay={200}>
-      <div className="figma-document">
+      <div className="figma-document" ref={documentRef}>
         {[
           ["PO", "경구제 오더 그룹"],
           ["other", "기타 오더 그룹"],
@@ -100,7 +338,7 @@ export function InstructionDocumentTable(p: Props) {
             <React.Fragment key={route}>
               <div className="fd-group-label">{title}</div>
               {orders.map((o) => (
-                <OrderCard key={o.id} {...p} order={o} />
+                <OrderCard key={o.id} {...p} order={o} onItemColumnResize={resizeItemColumn} />
               ))}
             </React.Fragment>
           ) : null;
@@ -118,12 +356,30 @@ function OrderCard({
   names,
   eligibleAssignees,
   busy,
-}: Props & { order: Order }) {
+  focusedItemId,
+  openExecutionHistory,
+  editSetInstruction,
+  refresh,
+  onItemColumnResize,
+}: Props & { order: Order; onItemColumnResize: (width: number | undefined) => void }) {
+  const readOnly = o.status === "completed";
   const [collapsed, setCollapsed] = useState(false),
     [density, setDensity] = useState(40),
-    [sort, setSort] = useState(false),
-    [pending, setPending] = useState(false),
+    [sort, setSort] = useState<InstructionSort>("default"),
+    [filter, setFilter] = useState<InstructionFilter>("all"),
     [hidden, setHidden] = useState<string[]>([]);
+  const filterTriggerRef = useRef<HTMLButtonElement>(null);
+  const visibleItems = filter === "all" ? o.items : o.items.filter((item) => matchesFilter(item, filter));
+  const historyItemIds = o.items.map(item => item.id);
+  if (o.set) historyItemIds.push(o.id);
+  const showHistory = events.some(event =>
+    event.orderId === o.id && event.changes.some(change => historyItemIds.includes(change.itemId)),
+  );
+
+  function clearFilter() {
+    setFilter("all");
+    filterTriggerRef.current?.focus();
+  }
 
   async function copy(link: boolean) {
     try {
@@ -148,7 +404,19 @@ function OrderCard({
   useLayoutEffect(() => {
     const element = root.current;
     if (!element) return;
+    const unitLabels = element.querySelectorAll<HTMLElement>("[data-fd-unit]");
     const measure = () => {
+      const unitWidths = { dose: 0, total: 0 };
+      unitLabels.forEach((label) => {
+        const column = label.dataset.fdUnit === "dose" ? "dose" : "total";
+        const cell = getComputedStyle(label.parentElement!);
+        const width = label.getBoundingClientRect().width
+          + parseFloat(cell.paddingLeft) + parseFloat(cell.paddingRight);
+        unitWidths[column] = Math.max(unitWidths[column], Math.ceil(width));
+      });
+      element.style.setProperty("--fd-dose-unit-width", `${unitWidths.dose}px`);
+      element.style.setProperty("--fd-total-unit-width", `${unitWidths.total}px`);
+
       const fields = new Set<string>();
       element
         .querySelectorAll<HTMLElement>(".fd-change-measure")
@@ -156,11 +424,14 @@ function OrderCard({
           const cell = n.closest("td");
           if (!cell) return;
           const c = getComputedStyle(cell);
+          const badgePadding = n.dataset.field === "frequency"
+            ? 2 * parseFloat(c.getPropertyValue("--fd-frequency-change-padding-inline"))
+            : 0;
           const available =
             cell.clientWidth -
             parseFloat(c.paddingLeft) -
             parseFloat(c.paddingRight) -
-            (n.dataset.field === "frequency" ? 16 : 0);
+            badgePadding;
           if (n.getBoundingClientRect().width > available)
             fields.add(n.dataset.field!);
         });
@@ -168,17 +439,20 @@ function OrderCard({
       setCompact((old) => (old.join() === next.join() ? old : next));
     };
     const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    unitLabels.forEach((label) => observer.observe(label));
     element
       .querySelectorAll(".fd-change-measure,td[data-label]")
       .forEach((n) => observer.observe(n));
     measure();
     return () => observer.disconnect();
-  }, [o.items, density, collapsed]);
+  }, [o.items, density, collapsed, filter]);
+  const totalLabel = o.kind === "조제" ? "요청 조제량" : "총 용량";
   const fieldLabels: Record<string, string> = {
     dose: "1회 용량",
     doseUnit: "용량 단위",
-    total: "총 용량",
-    totalUnit: "총량 단위",
+    total: totalLabel,
+    totalUnit: o.kind === "조제" ? "요청 조제량 단위" : "총량 단위",
     frequency: o.kind === "처치" ? "수행 주기" : "복용 주기",
     days: "일수",
     route: "투여 경로",
@@ -192,23 +466,10 @@ function OrderCard({
         i.previous?.[k as keyof Item] !== undefined &&
         String(i.previous[k as keyof Item]) !== String(i[k as keyof Item]),
     );
-  const formatted = (k: string, v: unknown) =>
-    k === "medicationGuide"
-      ? {
-          before_meal: "식전",
-          after_meal: "식후",
-          with_meal: "식사와 함께",
-          any_time: "시간 무관",
-        }[String(v)] || String(v)
-      : k === "route"
-        ? routeLabels[String(v)] || String(v)
-        : k === "storage"
-          ? storageLabels[String(v)] || String(v)
-          : String(v ?? "없음");
   const value = (i: Item, k: keyof Item) => {
-    const current = formatted(k, i[k]);
+    const current = formatInstructionValue(k, i[k]);
     if (!changedFields(i).includes(k)) return current;
-    const before = formatted(k, i.previous?.[k]);
+    const before = formatInstructionValue(k, i.previous?.[k]);
     const recent = [...events]
       .reverse()
       .find(
@@ -273,6 +534,7 @@ function OrderCard({
       ref={root}
       id={`instruction-${o.id}`}
       className={`fd-card ${o.set ? "fd-card-set" : "fd-card-single"}`}
+      data-dispensing={o.kind === "조제" || undefined}
       style={{ "--fd-row-height": `${density}px` } as React.CSSProperties}
     >
       <header className="fd-toolbar">
@@ -296,24 +558,59 @@ function OrderCard({
           {o.items.length} 작업완료
         </span>
         <div className="grow" />
-        <Button
-          variant="outline"
-          className="fd-tool"
-          aria-pressed={pending}
-          onClick={() => setPending((v) => !v)}
-        >
-          <Icon name="filter" />
-          <span className="fd-button-label">{pending ? "미완료" : "필터"}</span>
-        </Button>
-        <Button
-          variant="outline"
-          className="fd-tool"
-          aria-pressed={sort}
-          onClick={() => setSort((v) => !v)}
-        >
-          <Icon name="sort" />
-          <span className="fd-button-label">{sort ? "이름순" : "정렬"}</span>
-        </Button>
+        <div className="fd-filter-control" data-active={filter !== "all" || undefined}>
+          <InstructionOrderGroupFilter
+            items={o.items}
+            value={filter}
+            onChange={setFilter}
+            trigger={
+              <EmrTableFilterTrigger
+                ref={filterTriggerRef}
+                activeCount={filter === "all" ? 0 : 1}
+                aria-label={filter === "all" ? "필터" : `필터, ${orderGroupLabels[filter]}, 조건 1개 적용 중`}
+                className="fd-tool fd-choice"
+              />
+            }
+          />
+          {filter !== "all" && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="fd-filter-clear"
+                    aria-label="필터 해제"
+                    onClick={clearFilter}
+                  />
+                }
+              >
+                <CircleCloseFillIcon className="size-3.5" aria-hidden="true" />
+              </TooltipTrigger>
+              <TooltipContent>필터 해제</TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+        <InstructionChoiceMenu
+          label="항목 정렬"
+          options={sortLabels}
+          value={sort}
+          onChange={setSort}
+          trigger={
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="fd-tool fd-choice"
+              data-sort-active={sort !== "default" || undefined}
+              aria-label={`정렬, ${sortLabels[sort]}`}
+            >
+              <CdsUtilitiesSortIcon size={14} aria-hidden="true" />
+              <span className="fd-button-label">{sort === "default" ? "정렬" : sortLabels[sort]}</span>
+            </Button>
+          }
+        />
         <DropdownMenu>
           <DropdownMenuTrigger
             render={<Button variant="outline" className="fd-tool fd-density" />}
@@ -343,17 +640,21 @@ function OrderCard({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-        <span className="fd-toolbar-divider">
-          <Icon name="toolbar-divider" />
-        </span>
-        <Button
-          variant="outline"
-          className="fd-tool fd-history"
-          onClick={() => history(o.id)}
-        >
-          <Icon name="history" />
-          <span className="fd-button-label">수정이력</span>
-        </Button>
+        {showHistory && (
+          <>
+            <span className="fd-toolbar-divider">
+              <Icon name="toolbar-divider" />
+            </span>
+            <Button
+              variant="outline"
+              className="fd-tool fd-history"
+              onClick={() => history(o.kind === "조제" ? historyItemIds : null)}
+            >
+              <Icon name="history" />
+              <span className="fd-button-label">수정이력</span>
+            </Button>
+          </>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
@@ -367,6 +668,9 @@ function OrderCard({
             <Icon name="more" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            {openExecutionHistory && <DropdownMenuItem disabled={busy || !o.items.some((item) => item.hasResult)} onClick={openExecutionHistory}>수행기록</DropdownMenuItem>}
+            {editSetInstruction && <DropdownMenuItem disabled={busy} onClick={editSetInstruction}>{o.set ? "세트 공통 지시 수정" : "오더 지시 수정"}</DropdownMenuItem>}
+            {refresh && <DropdownMenuItem onClick={refresh}>지시서 새로고침</DropdownMenuItem>}
             <DropdownMenuItem onClick={() => copy(false)}>
               내용 복사
             </DropdownMenuItem>
@@ -378,14 +682,19 @@ function OrderCard({
       </header>
       {!collapsed && (
         <div className="fd-sections">
-          {groups.map(([key, title]) => {
-            let rows = o.items.filter(
-              (i) =>
-                group(i) === key &&
-                (!pending || !["completed", "cancelled"].includes(i.status)),
-            );
-            if (sort)
-              rows = [...rows].sort((a, b) => a.name.localeCompare(b.name));
+          <p className="sr-only" role="status">
+            {filter === "all" ? "전체" : orderGroupLabels[filter]} · {visibleItems.length}개 항목 · {sortLabels[sort]}
+          </p>
+          {!visibleItems.length && (
+            <div className="flex flex-col items-center gap-2 p-6">
+              <p className="text-sm text-muted-foreground">조건에 맞는 항목이 없어요.</p>
+              <Button type="button" variant="outline" size="sm" onClick={clearFilter}>
+                필터 초기화
+              </Button>
+            </div>
+          )}
+          {Object.entries(orderGroupLabels).map(([key, title]) => {
+            const rows = sortItems(visibleItems.filter((item) => getOrderGroup(item) === key), sort);
             if (!rows.length) return null;
             return (
               <section key={key} className={`fd-section fd-${key}`}>
@@ -403,8 +712,8 @@ function OrderCard({
                   >
                     <colgroup>
                       {[
-                        24, 280, 21, 0, 88, 88, 0, 88, 21, 72, 72, 21, 88, 88,
-                        24,
+                        28, 280, 21, 0, 0, 88, 0, 0, 21, 72, 72, 21, 88, 88,
+                        28,
                       ].map((w, n) => (
                         <col key={n} style={w ? { width: w } : undefined} />
                       ))}
@@ -418,7 +727,7 @@ function OrderCard({
                           "1회 용량",
                           "단위",
                           o.kind === "처치" ? "수행 주기" : "복용 주기",
-                          "총 용량",
+                          totalLabel,
                           "단위",
                           "",
                           "복약지도",
@@ -428,9 +737,13 @@ function OrderCard({
                           "작업 여부",
                           "",
                         ].map((text, n) => (
-                          <TableHead key={n} className={`fd-col-${n}`}>
-                            {[2, 8, 11].includes(n) ? (
+                          <TableHead key={n} className={`fd-col-${n}${n === 2 && o.kind === "조제" ? " relative" : ""}`}>
+                            {n === 2 && o.kind === "조제" ? (
+                              <InstructionItemResizeHandle onResize={onItemColumnResize} />
+                            ) : [2, 8, 11].includes(n) ? (
                               <Icon name="cell-divider" />
+                            ) : n === 4 || n === 7 ? (
+                              <span data-fd-unit={n === 4 ? "dose" : "total"}>{text}</span>
                             ) : (
                               text
                             )}
@@ -445,36 +758,26 @@ function OrderCard({
                           o.status === "cancelled";
                         const changes = changedFields(i);
                         const hasDetails =
-                          Boolean(i.note) || changes.length > 0;
+                          Boolean(i.note || i.setInstruction) || changes.length > 0;
                         const expanded = hasDetails && !hidden.includes(i.id);
                         return (
                           <React.Fragment key={i.id}>
-                            <TableRow data-item={i.id}>
+                            <InstructionItemRow data-item={i.id} focused={i.id === focusedItemId}>
                               <TableCell>
                                 {hasDetails && (
-                                  <Button
-                                    variant="ghost"
-                                    className="fd-row-arrow"
-                                    aria-label={`${i.name} 지시 ${expanded ? "접기" : "펼치기"}`}
-                                    aria-expanded={expanded}
-                                    onClick={() =>
-                                      setHidden((s) =>
-                                        expanded
-                                          ? [...s, i.id]
-                                          : s.filter((id) => id !== i.id),
-                                      )
-                                    }
-                                  >
-                                    <span
-                                      className={`fd-row-glyph ${expanded ? "" : "fd-rotate"}`}
-                                    >
-                                      <Icon name="row-arrow" />
-                                    </span>
-                                  </Button>
+                                  <InstructionRowDisclosure
+                                    name={i.name}
+                                    expanded={expanded}
+                                    onToggle={() => setHidden((items) =>
+                                      expanded ? [...items, i.id] : items.filter((id) => id !== i.id),
+                                    )}
+                                  />
                                 )}
                               </TableCell>
                               <TableCell className="fd-name">
-                                {i.name}
+                                <EmrTableCellText tooltipOnOverflow>
+                                  {i.name}
+                                </EmrTableCellText>
                               </TableCell>
                               <TableCell>
                                 <Icon name="cell-divider" />
@@ -486,7 +789,7 @@ function OrderCard({
                                 {value(i, "dose")}
                               </TableCell>
                               <TableCell data-label="단위">
-                                {value(i, "doseUnit")}
+                                <span data-fd-unit="dose">{value(i, "doseUnit")}</span>
                               </TableCell>
                               <TableCell
                                 data-label={
@@ -501,13 +804,13 @@ function OrderCard({
                                 </span>
                               </TableCell>
                               <TableCell
-                                data-label="총 용량"
+                                data-label={totalLabel}
                                 className="fd-number"
                               >
                                 {value(i, "total")}
                               </TableCell>
                               <TableCell data-label="단위">
-                                {value(i, "totalUnit")}
+                                <span data-fd-unit="total">{value(i, "totalUnit")}</span>
                               </TableCell>
                               <TableCell>
                                 <Icon name="cell-divider" />
@@ -554,7 +857,7 @@ function OrderCard({
                                           variant="ghost"
                                           className="fd-assignee"
                                           aria-label={`${i.name} 담당 선택`}
-                                          disabled={busy || !i.canAssign}
+                                          disabled={busy || readOnly || !i.canAssign}
                                         />
                                       }
                                     >
@@ -576,6 +879,7 @@ function OrderCard({
                                           checked={i.assignees.includes(id)}
                                           disabled={
                                             busy ||
+                                            readOnly ||
                                             !i.canAssign ||
                                             i.assignees.includes(id)
                                           }
@@ -591,7 +895,8 @@ function OrderCard({
                                         </DropdownMenuCheckboxItem>
                                       ))}
                                       <DropdownMenuItem
-                                        onClick={() => history(o.id, i.id)}
+                                        disabled={busy || !events.some((event) => event.changes.some((change) => change.itemId === i.id))}
+                                        onClick={() => history([i.id])}
                                       >
                                         이 오더 이력
                                       </DropdownMenuItem>
@@ -603,16 +908,11 @@ function OrderCard({
                                 <Button
                                   variant="outline"
                                   className={`fd-complete ${i.status === "completed" ? "is-complete" : ""}`}
-                                  aria-label={`${i.name} ${i.status === "completed" ? "완료 해제" : "완료"}`}
+                                  aria-label={`${i.name} 완료`}
                                   aria-pressed={i.status === "completed"}
-                                  disabled={
-                                    busy ||
-                                    (i.status === "completed"
-                                      ? !i.canReopen
-                                      : !i.canComplete)
-                                  }
+                                  disabled={busy || readOnly || i.status === "completed" || !i.canComplete}
                                   onClick={() =>
-                                    act(o.id, "toggle_complete", {
+                                    act(o.id, "complete", {
                                       itemId: i.id,
                                     })
                                   }
@@ -630,54 +930,44 @@ function OrderCard({
                                 </Button>
                               </TableCell>
                               <TableCell />
-                            </TableRow>
+                            </InstructionItemRow>
                             {expanded && (
                               <TableRow className="fd-info-row">
                                 <TableCell colSpan={15}>
-                                  <div
-                                    className={`fd-info ${changes.length ? "fd-info-modified" : ""}`}
-                                  >
-                                    <Icon
-                                      name={
-                                        changes.length
-                                          ? "info-modified"
-                                          : "info"
-                                      }
-                                    />
-                                    <div className="fd-detail-content">
-                                      {changes.length > 0 && (
-                                        <ul className="fd-change-details">
-                                          {changes.map((k) => (
-                                            <li key={k}>
-                                              <span>{fieldLabels[k]}: </span>
-                                              <span className="fd-before">
-                                                {formatted(
+                                  <InstructionRowNote modified={changes.length > 0}>
+                                    {i.setInstruction && <p className="fd-current-instruction mb-1">{i.setInstruction}</p>}
+                                    {changes.length > 0 && (
+                                      <ul className="fd-change-details">
+                                        {changes.map((k) => (
+                                          <li key={k}>
+                                            <span>{fieldLabels[k]}: </span>
+                                            <span className="fd-before">
+                                              {formatInstructionValue(
+                                                k,
+                                                i.previous?.[k as keyof Item],
+                                              )}{" "}
+                                              →{" "}
+                                            </span>
+                                            {k === "note" ? (
+                                              value(i, "note")
+                                            ) : (
+                                              <span className="fd-after">
+                                                {formatInstructionValue(
                                                   k,
-                                                  i.previous?.[k as keyof Item],
-                                                )}{" "}
-                                                →{" "}
+                                                  i[k as keyof Item],
+                                                )}
                                               </span>
-                                              {k === "note" ? (
-                                                value(i, "note")
-                                              ) : (
-                                                <span className="fd-after">
-                                                  {formatted(
-                                                    k,
-                                                    i[k as keyof Item],
-                                                  )}
-                                                </span>
-                                              )}
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      )}
-                                      {i.note && !changes.includes("note") && (
-                                        <div className="fd-current-instruction">
-                                          {value(i, "note")}
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
+                                            )}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    )}
+                                    {i.note && !changes.includes("note") && (
+                                      <div className="fd-current-instruction">
+                                        {value(i, "note")}
+                                      </div>
+                                    )}
+                                  </InstructionRowNote>
                                 </TableCell>
                               </TableRow>
                             )}

@@ -11,6 +11,8 @@ import {
   executionErrorMessage, getExecutionResultFields, isExecutionRecord, parseExecutionContext, parseExecutionPayload,
   type ExecutionContext, type ExecutionResultPayload, type ExecutionMeasurement,
 } from "../execution-result-contract";
+import { useTaskInstructionReview } from "../use-task-instruction-review";
+import { TaskInstructionReview } from "./task-instruction-review";
 import { FulfillmentWorkLifecycleAction } from "./work-lifecycle-action";
 
 const localTimeInput = (iso: string) => {
@@ -24,6 +26,7 @@ const displayValue = (value: unknown) => value === null || value === undefined ?
 type ExecutionResultDialogProps = {
   workspaceId: string; workItemId: string; taskId?: string; open: boolean;
   ownershipAllowed?: boolean; ownershipKey?: string; authorityStatus?: string;
+  /** Instruction completion may save directly from requested/paused; the server checks roles. */
   onOpenChange: (open: boolean) => void; onSaved: () => Promise<void>;
 };
 export function ExecutionResultDialog(props: ExecutionResultDialogProps) {
@@ -43,8 +46,15 @@ function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, o
   const [amendmentReason, setAmendmentReason] = useState("");
   const [amending, setAmending] = useState(false);
   const scope = useRef(0);
+  const mounted = useRef(false);
+  const pendingSave = useRef(false);
   const command = useRef<{ fingerprint: string; id: string } | null>(null);
   const endpoint = `/api/workspaces/${encodeURIComponent(workspaceId)}/fulfillment/work-items/${encodeURIComponent(workItemId)}/execution`;
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
   useEffect(() => {
     const generation = ++scope.current;
@@ -66,6 +76,7 @@ function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, o
     return () => { scope.current = generation + 1; abort.abort(); };
   }, [endpoint, refreshKey, taskId, workItemId, workspaceId, ownershipKey]);
 
+  const instructionReview = useTaskInstructionReview(workspaceId, context ? [context.taskId] : [], ownershipKey);
   const fields = context ? getExecutionResultFields(context) : [];
   const payload: ExecutionResultPayload = {};
   for (const field of fields) {
@@ -82,29 +93,37 @@ function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, o
   const valid = context && parseExecutionPayload(context.clinicalOrderType, payload, context.planSnapshot) && performedAt &&
     Number.isFinite(new Date(performedAt).getTime()) && (!amending || amendmentReason.trim());
   const save = async () => {
-    if (!context || !canWrite || !valid || saving) return;
+    if (!context || !canWrite || !valid || pendingSave.current) return;
     const generation = scope.current;
     const body = { expectedRevision: context.workItemRevision, expectedPlanSha256: context.planSha256,
       expectedResultVersion: context.results.length, performedAt: new Date(performedAt).toISOString(), payload,
       varianceReason: varianceReason.trim() || null, amendmentReason: amending ? amendmentReason.trim() : null };
     const fingerprint = JSON.stringify(body);
+    if (!amending && command.current?.fingerprint !== fingerprint && !await instructionReview.check()) return;
+    if (!mounted.current || scope.current !== generation) return;
     if (command.current?.fingerprint !== fingerprint) command.current = { fingerprint, id: crypto.randomUUID() };
+    pendingSave.current = true;
     setSaving(true); setError(null); setNotice(null);
     try {
       const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...body, commandId: command.current.id }) });
       const result: unknown = await response.json();
-      if (scope.current !== generation) return;
+      if (!mounted.current) return;
       if (!response.ok || !isExecutionRecord(result) || result.ok !== true) {
+        if (isExecutionRecord(result) && result.error === "instruction_ack_required") { instructionReview.requireReview(); command.current = null; return; }
         setError(executionErrorMessage(isExecutionRecord(result) && typeof result.error === "string" ? result.error : "request_failed")); return;
       }
       const saved = parseExecutionContext(result.context, workspaceId, workItemId);
       if (!saved) { setError(executionErrorMessage("invalid_execution_response")); return; }
-      setContext(saved); setAmending(false); setDraft({}); setDeviceParameters([]); setPerformedAt(""); command.current = null;
+      // A same-item ownership refresh may overtake this POST. Reconcile the
+      // successful save, but never replace newer read authority with its reply.
+      if (scope.current === generation) setContext(saved);
+      setRefreshKey(key => key + 1);
+      setAmending(false); setDraft({}); setDeviceParameters([]); setPerformedAt(""); command.current = null;
       setNotice("수행기록을 저장했습니다. 확정 계획과 이전 기록은 그대로 남아 있습니다.");
-      try { await onSaved(); } catch { if (scope.current === generation) setNotice("기록은 저장됐지만 업무 목록을 새로고침하지 못했습니다. 목록을 다시 불러와 주세요."); }
-    } catch { if (scope.current === generation) setError(executionErrorMessage("request_failed")); }
-    finally { if (scope.current === generation) setSaving(false); }
+      try { await onSaved(); } catch { if (mounted.current) setNotice("기록은 저장됐지만 업무 목록을 새로고침하지 못했습니다. 목록을 다시 불러와 주세요."); }
+    } catch { if (mounted.current) setError(executionErrorMessage("request_failed")); }
+    finally { pendingSave.current = false; if (mounted.current) setSaving(false); }
   };
   const details = context && isExecutionRecord(context.planSnapshot.detailInputs) ? context.planSnapshot.detailInputs : {};
   const calculations = context && isExecutionRecord(context.planSnapshot.calculationOutputs) ? context.planSnapshot.calculationOutputs : {};
@@ -117,11 +136,12 @@ function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, o
     ["예정 사용량", details.plannedAmount], ["예정 사용 단위", details.plannedAmountUnit],
     ["장비 프로토콜", details.deviceProtocol], ["관찰 항목", details.observationDomains],
   ].filter(([, value]) => value !== undefined);
-  return <Dialog open={open} onOpenChange={onOpenChange}>
+  return <Dialog open={open} onOpenChange={(next) => { if (!pendingSave.current) onOpenChange(next); }}>
     <EmrDialogShell variant="wide-form" title="실제 수행기록" description="확정된 계획과 실제 수행값을 구분해서 기록해 주세요. 정정은 이전 기록을 남기고 새 버전으로 저장됩니다."
-      secondaryAction={<Button variant="outline" onClick={() => onOpenChange(false)}>닫기</Button>}
+      secondaryAction={<Button variant="outline" disabled={saving} onClick={() => onOpenChange(false)}>닫기</Button>}
       primaryAction={canWrite ? <Button disabled={!valid || saving} onClick={() => void save()}>{saving ? "저장 중" : amending ? "정정 저장" : "수행기록 저장 및 완료"}</Button> : null}>
       <div className="space-y-4" data-testid="execution-result-dialog">
+        <TaskInstructionReview controller={instructionReview} />
         {loading ? <p role="status">확정 계획과 수행기록을 불러오는 중입니다.</p> : null}
         {error ? <div role="alert" className="space-y-2"><p>{error}</p><Button variant="outline" onClick={() => {
           setContext(null); setError(null); setNotice(null); setDraft({}); setDeviceParameters([]); setPerformedAt(""); setVarianceReason("");

@@ -162,6 +162,10 @@ export const User: Story = { args: { kind: "user" } };
 export const Loading: Story = {
   args: { state: "loading" },
   play: async ({ canvasElement }) => {
+    const panel = canvasElement.querySelector('[data-slot="emr-profile-panel"]')!;
+    await expect(panel).toBeVisible();
+    expect(getComputedStyle(panel).borderTopWidth).toBe("1px");
+    expect(parseFloat(getComputedStyle(panel).borderTopLeftRadius)).toBeGreaterThan(0);
     expect(
       canvasElement.querySelector('[data-slot="emr-profile-loading"]'),
     ).toBeInTheDocument();

@@ -6,6 +6,11 @@ import {
   type Route,
 } from "@playwright/test";
 
+import { resolveDispensingDoseFactor } from "../src/features/chart/dispensing-unit-conversion";
+import { createEditableDispenseRow } from "../src/features/chart/dispense-edit.stories.fixture";
+import type { PlanOrderAuthorityConfig } from "../src/features/chart/plan-order-authority-domain";
+import { syntheticInstruction } from "../src/features/dispensing/instruction-fixtures";
+
 import chartWidthVisualFixture from "./fixtures/chart-width-visual.json";
 
 import { createMockOrderCatalogGateway } from "../src/features/hospital-admin/server-order-catalog-core";
@@ -608,7 +613,7 @@ test("waiting chart saves and clears only today's vital values through the dialo
 
   await expect(
     lockedState.getByLabel(
-      "환자 바이탈 표, 좁은 화면에서는 가로로 스크롤할 수 있습니다",
+      "환자 바이탈 표",
     ),
   ).toContainText("—");
   expect(writes).toHaveLength(2);
@@ -779,7 +784,7 @@ test("chart vital history follows workspace omission and re-add without rewritin
   );
   const vitalTable = page
     .getByTestId("chart-start-locked-state")
-    .getByLabel("환자 바이탈 표, 좁은 화면에서는 가로로 스크롤할 수 있습니다");
+    .getByLabel("환자 바이탈 표");
   await expect(vitalTable).not.toContainText("심박수");
   await expect(vitalTable).not.toContainText("88 bpm");
   expect(historicalVital.heartRateBpm).toBe(88);
@@ -1531,8 +1536,8 @@ test("chart Plan/Order keeps the approved pinned region and scrolls detail colum
 
   // The left pinned span includes the terminal 8px boundary gap. The visible
   // divider is drawn at its trailing edge and the scroll layer starts after it.
-  expect(referenceMetrics.leftPinnedWidth).toBe(408);
-  expect(referenceMetrics.scrollRegionWidth).toBe(1130);
+  expect(referenceMetrics.leftPinnedWidth).toBe(392);
+  expect(referenceMetrics.scrollRegionWidth).toBe(1146);
   await expect(
     orderTable
       .locator("[data-slot='table-body'] [data-slot='table-row']")
@@ -1561,7 +1566,7 @@ test("chart Plan/Order keeps the approved pinned region and scrolls detail colum
   });
 
   await expect(selectionHeader).toHaveCSS("width", "28px");
-  await expect(statusHeader).toHaveCSS("width", "96px");
+  await expect(statusHeader).toHaveCSS("width", "104px");
 
   const selectionCheckboxBox = await selectionCheckbox.boundingBox();
   const statusSortButtonBox = await statusSortButton.boundingBox();
@@ -1816,9 +1821,12 @@ test("chart Order all tab renders the approved order confirmation and work-state
     "횟수",
     "총횟수",
     "head/kg당",
-    "1회당",
+    "처방 용량",
+    "용량 단위",
+    "1회 조제량",
     "성분량",
-    "조제량",
+    "총 조제량",
+    "실 조제량",
     "보관",
     "투여/복약",
     "단가",
@@ -1920,12 +1928,12 @@ test("chart Order all tab renders the approved order confirmation and work-state
 
 const actualDispenseUiCases = [
   {
-    title: "chart saves a constrained actual dispense override with an anchored reason",
+    title: "chart saves arbitrary actual dispense without a reason and keeps text drafts",
     authoritySource: "applied",
     rowType: "individual",
   },
   {
-    title: "chart saves a set-child constrained actual dispense override from dedicated authority",
+    title: "chart saves a set-child actual dispense without a reason from dedicated authority",
     authoritySource: "dedicated",
     rowType: "set_child",
   },
@@ -1959,7 +1967,7 @@ async function verifyActualDispenseUiCase(
       denominatorUnit: "mL",
     },
     preparationPolicy: {
-      increment: 0.1,
+      increment: 0.5,
       roundingMode: "nearest",
       displayPrecision: 1,
       noReasonTolerance: 0.1,
@@ -2056,7 +2064,24 @@ async function verifyActualDispenseUiCase(
     status: "requested",
     updatedAt: firstUpdatedAt,
   };
+  const parentRow = actualDispenseUiCase.rowType === "set_child" ? {
+    ...currentRow, orderId: currentRow.parentOrderId!, parentOrderId: null, rowType: "set", detailInputs: {},
+    workspaceCatalogItemId: null, sourceSetRevisionItemId: null, dispensingAuthoritySnapshot: {},
+    calculationOutputs: {}, calculationInputs: {},
+    instruction: null,
+    // Hosted reads keep amountBasis in the price snapshot and reconstruct
+    // selection from items. A template instruction is not a patient edit.
+    appliedPriceSnapshot: { amountBasis: "included_order_sum" },
+    appliedSnapshot: { inHospitalOrderName: "합성 조제 세트", displayName: "합성 조제 세트", clinicalOrderType: "dispensing",
+      internalInstruction: "합성 세트 기본 지시",
+      items: [{ revisionItemId: currentRow.sourceSetRevisionItemId!, selected: true, quantity: 1 }] },
+  } : null;
+  const readRows = () => parentRow ? [parentRow, currentRow] : [currentRow];
+  const preservedParent = JSON.stringify(parentRow);
   const patchBodies: Array<Record<string, unknown>> = [];
+  const prescriptionPatches: Array<Record<string, unknown>> = [];
+  let unitEditing = false;
+  let unexpectedDraftWrites = 0;
   await page.route(
     "**/api/workspaces/clair-demo/chart/encounter-charts?*",
     async (route) => {
@@ -2084,10 +2109,23 @@ async function verifyActualDispenseUiCase(
   await page.route(
     "**/api/workspaces/clair-demo/chart/order-drafts*",
     async (route) => {
-      if (route.request().method() !== "GET") {
-        await route.continue();
+      if (unitEditing && route.request().method() === "PATCH") {
+        const body = route.request().postDataJSON() as { rows: Array<{ orderId: string; detailInputs: typeof detailInputs;
+          childInputs?: Array<{ revisionItemId: string; detailInputs: typeof detailInputs }> }> };
+        const candidate = parentRow ? body.rows.find(row => row.orderId === parentRow.orderId)?.childInputs?.find(child =>
+          child.revisionItemId === currentRow.sourceSetRevisionItemId) : body.rows.find(row => row.orderId === orderId);
+        expect(candidate).toBeTruthy();
+        const details = candidate!.detailInputs;
+        const conversion = resolveDispensingDoseFactor(authority as PlanOrderAuthorityConfig, details.doseUnit, details.doseBasis);
+        expect(conversion.ok).toBe(true);
+        if (!conversion.ok) throw new Error("Unsupported synthetic unit patch");
+        expect(details.dose * conversion.factor).toBeCloseTo(1, 12);
+        prescriptionPatches.push({ ...details });
+        currentRow = { ...currentRow, detailInputs: details, updatedAt: savedUpdatedAt };
+        await route.fulfill({ status: 200, json: { ok: true, status: 200, rows: readRows(), etag: `"${"a".repeat(64)}"` } });
         return;
       }
+      if (route.request().method() !== "GET") { unexpectedDraftWrites++; await route.fulfill({status:500,json:{ok:false,error:"unexpected_initial_write"}}); return; }
       await route.fulfill({
         contentType: "application/json",
         headers: { ETag: `"${"a".repeat(64)}"` },
@@ -2095,29 +2133,32 @@ async function verifyActualDispenseUiCase(
         json: {
           etag: `"${"a".repeat(64)}"`,
           ok: true,
-          rows: [currentRow],
+          rows: readRows(),
           status: 200,
         },
       });
     },
   );
+  let saveAttempts = 0;
   await page.route(
     `**/api/workspaces/clair-demo/chart/orders/${orderId}/actual-dispense`,
     async (route) => {
       const body = route.request().postDataJSON() as Record<string, unknown>;
+      saveAttempts++;
+      if (saveAttempts === 1) {
+        await route.fulfill({ status: 503, json: { ok: false, error: "network_error" } });
+        return;
+      }
+      await new Promise(resolve => setTimeout(resolve, 150));
       patchBodies.push(body);
-      const actualQuantity = Number(body.actualQuantity);
+      const actualQuantity = body.mode === "automatic" ? 1 : Number(body.actualQuantity);
       currentRow = {
         ...currentRow,
         calculationOutputs: {
           ...currentRow.calculationOutputs,
-          actualDispenseOverride: {
-            reason: body.reason,
-            reasonRequired: true,
-            versionNo: 1,
-          },
+          actualDispenseOverride: body.mode === "automatic" ? null : { versionNo: 1 },
           actualDispenseQuantity: actualQuantity,
-          actualDispenseSource: "manual_override",
+          actualDispenseSource: body.mode === "automatic" ? "preparation_policy" : "manual_override",
           totalRequiredDispenseQuantity: actualQuantity,
         },
         updatedAt: savedUpdatedAt,
@@ -2132,7 +2173,7 @@ async function verifyActualDispenseUiCase(
             actualDispenseOverride:
               currentRow.calculationOutputs.actualDispenseOverride,
             actualDispenseQuantity: actualQuantity,
-            actualDispenseSource: "manual_override",
+            actualDispenseSource: body.mode === "automatic" ? "preparation_policy" : "manual_override",
             actualDispenseUnit: "mL",
             orderId,
             overrideId: "override-smoke-1",
@@ -2153,30 +2194,67 @@ async function verifyActualDispenseUiCase(
   await kongQueueItem.click();
   await expect(kongQueueItem).toHaveAttribute("aria-pressed", "true");
   await expect(page).toHaveURL(/chartId=soap-kong-260501/);
-  const input = page.getByRole("spinbutton", {
-    name: "Maropitant 16mg T 준비 예정량",
+  const input = page.getByRole("textbox", {
+    name: "Maropitant 16mg T 실 조제량",
   });
-  await expect(input).toHaveValue("1", { timeout: 20_000 });
+  await expect(input).toHaveValue("1.0", { timeout: 20_000 });
+  await expect(input).toHaveAttribute("type", "text");
+  await expect(page.getByRole("button", { name: "Maropitant 16mg T 실 조제량 저장" })).toHaveCount(0);
+  await input.fill("abc");
+  await expect(input).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByRole("alert").filter({ hasText: "숫자만 입력해 주세요." })).toBeVisible();
+  await input.press("Enter");
+  await input.press("Tab");
+  expect(saveAttempts).toBe(0);
+  await input.fill("0");
+  await expect(page.getByRole("alert").filter({ hasText: "0보다 큰 숫자를 입력해 주세요." })).toBeVisible();
+  await input.fill("");
+  await expect(page.getByRole("alert").filter({ hasText: "실 조제량을 입력해 주세요." })).toBeVisible();
   await input.fill("1.2");
-  await page
-    .getByRole("button", { name: "Maropitant 16mg T 준비 예정량 저장" })
-    .click();
-  const reasonPopover = page.getByText("준비 예정량 변경 사유가 필요해요");
-  await expect(reasonPopover).toBeVisible();
-  await page.getByRole("button", { name: "계량 단위 보정" }).click();
+  await expect(input).toHaveAttribute("aria-invalid", "false");
+  await input.press("Tab");
+  await expect(page.getByText("실 조제량을 저장하지 못했어요.", { exact: true })).toBeVisible();
+  await expect(input).toHaveValue("1.2");
+  await input.focus();
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("실 조제량 변경 사유가 필요해요")).toHaveCount(0);
 
   await expect.poll(() => patchBodies.length).toBe(1);
   expect(patchBodies[0]).toMatchObject({
     actualQuantity: 1.2,
     expectedOrderUpdatedAt: firstUpdatedAt,
-    reason: "계량 단위 보정",
+    mode: "manual",
   });
   await expect(input).toHaveValue("1.2");
-  await expect(
-    page.getByRole("button", {
-      name: "Maropitant 16mg T 준비 예정량 변경 사유",
-    }),
-  ).toBeVisible();
+  expect(patchBodies[0]).not.toHaveProperty("reason");
+  expect(saveAttempts).toBe(2);
+  await expect(page.getByRole("button", { name: /Maropitant 16mg T.*(재확인|되돌리기)/ })).toHaveCount(0);
+  await page.reload();
+  await expect(input).toHaveValue("1.2", { timeout: 20_000 });
+  await input.fill("9.5");
+  await input.press("Escape");
+  await expect(input).toHaveValue("1.2");
+  expect(patchBodies).toHaveLength(1);
+  expect(unexpectedDraftWrites).toBe(0);
+  await expect(page.getByRole("status", { name: "" }).filter({ hasText: /^저장 실패$/ })).toHaveCount(0);
+  unitEditing = true;
+  const unit = page.getByRole("combobox", { name: "Maropitant 16mg T 단위", exact: true });
+  const dose = page.getByRole("textbox", { name: "Maropitant 16mg T 용량", exact: true });
+  await unit.focus(); await unit.press("Enter");
+  await page.getByRole("option", { name: "mL", exact: true }).click();
+  await expect.poll(() => prescriptionPatches.length).toBe(1);
+  expect(prescriptionPatches[0]).toMatchObject({ dose: 1, doseUnit: "mL" });
+  await expect(dose).toHaveValue("1"); await expect(input).toHaveValue("1.2");
+  await page.reload();
+  await expect(unit).toHaveText("mL", { timeout: 20_000 });
+  await expect(dose).toHaveValue("1"); await expect(input).toHaveValue("1.2");
+  await unit.focus(); await unit.press("Enter");
+  await page.getByRole("option", { name: "mg", exact: true }).click();
+  await expect.poll(() => prescriptionPatches.length).toBe(2);
+  expect(prescriptionPatches[1]).toMatchObject({ dose: 16, doseUnit: "mg" });
+  await expect(dose).toHaveValue("16"); await expect(input).toHaveValue("1.2");
+  expect(JSON.stringify(parentRow)).toBe(preservedParent);
 }
 
 for (const actualDispenseUiCase of actualDispenseUiCases) {
@@ -5268,6 +5346,107 @@ test("chart preconsultation read error uses the shared recovery empty state", as
   await expect(page).not.toHaveURL(/encounterId=/);
 });
 
+test("preconsultation vitals fit available width and preserve comparison settings", async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  const encounterId = "encounter-haru-260430";
+  let includePrior = true;
+  let configuredUnits = false;
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  const current = {
+    id: "synthetic-vital-current", encounterId, measuredAt: "2026-11-02T08:00:00Z",
+    weightKg: 123.45, temperatureC: 39.8, heartRateBpm: 185, respiratoryRateRpm: 128,
+    bloodPressureSystolicMmhg: 189, bloodPressureDiastolicMmhg: 123,
+  };
+  const previous = {
+    id: "synthetic-vital-prior", encounterId: "synthetic-prior-encounter", measuredAt: "2026-10-31T08:00:00Z",
+    weightKg: 99.99, temperatureC: 38.2, heartRateBpm: 120, respiratoryRateRpm: 28,
+    bloodPressureSystolicMmhg: 123, bloodPressureDiastolicMmhg: 81,
+  };
+  await page.route("**/api/workspaces/*/vital-settings", async (route) => {
+    const snapshot = createDefaultWorkspaceVitalSettingsSnapshot();
+    if (configuredUnits) snapshot.items = snapshot.items.map((item) => ({
+      ...item, enabled: !["heart_rate", "respiratory_rate"].includes(item.key),
+      displayUnit: item.key === "weight" ? "g" : item.key === "temperature" ? "°F" : item.displayUnit,
+    }));
+    await route.fulfill({ json: snapshot });
+  });
+  const queueRecord = createLiveChartQueueRecord({ encounterId, patientName: "합성 환자", sortOrder: 0 });
+  queueRecord.encounter = { ...queueRecord.encounter, workspaceId: "clair-demo", status: "waiting", startedAt: undefined };
+  queueRecord.patient.workspaceId = "clair-demo";
+  if (queueRecord.primaryGuardian) queueRecord.primaryGuardian.workspaceId = "clair-demo";
+  queueRecord.queueEntry = { ...queueRecord.queueEntry, workspaceId: "clair-demo", status: "waiting" };
+  await page.route("**/api/workspaces/clair-demo/chart/live-queue**", (route) => fulfillLiveChartQueue(route, [queueRecord]));
+  await page.route("**/api/workspaces/clair-demo/chart/encounter-charts**", (route) => route.fulfill({ json: { ok: true, status: 200, charts: [] } }));
+  await page.route("**/api/workspaces/clair-demo/chart/completion?*", (route) => route.fulfill({ json: { ok: true, status: 200, completion: { encounterId, workspaceId: "clair-demo", status: "waiting", updatedAt: queueRecord.encounter.updatedAt } } }));
+  await routePreconsultationContext(page, () => ({
+    encounter: { id: encounterId, encounterNo: "SYN-001", receptionType: "walk_in", checkedInAt: "2026-04-30T16:05:00+09:00", status: "waiting", visitPurpose: "합성 검진" },
+    queue: { id: "queue-haru-consultation", status: "waiting" },
+    patient: { id: "patient-haru", patientNo: "SYN-P001", name: "합성 환자", species: "cat", sex: "female" },
+    guardian: { id: "synthetic-guardian", name: "합성 보호자" },
+    priorEncounterCount: 1, vitals: includePrior ? [current, previous] : [current], history: [],
+  }));
+  const panel = page.getByTestId("chart-start-locked-state");
+  const section = panel.locator('section[aria-labelledby="preconsultation-vitals"]');
+  const table = section.getByRole("table", { name: "오늘 및 직전 방문 바이탈 비교" });
+  async function expectContentsFit() {
+    await expect(table).toHaveCount(1);
+    const overflow = await table.evaluate((element) => {
+      const wrapper = element.parentElement!;
+      const failures: string[] = [];
+      if (wrapper.scrollWidth > wrapper.clientWidth + 1) failures.push("table wrapper");
+      for (const cell of element.querySelectorAll("th,td")) {
+        const bounds = cell.getBoundingClientRect();
+        const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
+        while (walker.nextNode()) {
+          const node = walker.currentNode;
+          if (!node.textContent?.trim()) continue;
+          const range = document.createRange(); range.selectNodeContents(node);
+          for (const rect of range.getClientRects()) {
+            if (rect.left < bounds.left - 1 || rect.right > bounds.right + 1 || rect.top < bounds.top - 1 || rect.bottom > bounds.bottom + 1) failures.push(`${node.textContent} in ${cell.textContent} (${Math.round(bounds.width)}px cell, ${Math.round(rect.right - bounds.right)}px right, ${Math.round(rect.bottom - bounds.bottom)}px bottom)`);
+          }
+        }
+      }
+      return failures;
+    });
+    expect(overflow).toEqual([]);
+    await expect(section.getByRole("button", { name: "오늘 바이탈 수정" })).toBeVisible();
+  }
+  for (const [width, modulePanel] of [[1600, "open"], [1386, "open"], [1341, "open"], [1340, "open"], [1280, "open"], [1101, "open"], [1100, "open"], [1024, "open"], [900, "open"], [1386, "closed"], [1024, "closed"]] as const) {
+    await page.setViewportSize({ width, height: 870 });
+    await page.goto(`/w/clair-demo/treatment?modulePanel=${modulePanel}&aside=closed&encounterId=${encounterId}`);
+    await expect(panel).toBeVisible({ timeout: 20_000 });
+    await expect(table).toContainText("123.45 kg");
+    await expect(table).toContainText("189/123 mmHg");
+    await expect(table).toContainText("혈압(수축/이완)");
+    await expect(table.getByLabel(/^혈압 변화:/)).toHaveCount(1);
+    await section.screenshot({ path: testInfo.outputPath(`vitals-${width}-${modulePanel}.png`) });
+    await expectContentsFit();
+    if (width === 1386 && modulePanel === "open") await page.screenshot({ path: testInfo.outputPath("vitals-app-1386.png") });
+  }
+  await page.setViewportSize({ width: 900, height: 870 });
+  await page.goto(`/w/clair-demo/treatment?modulePanel=open&aside=closed&encounterId=${encounterId}`);
+  await expect(table.getByRole("columnheader", { name: "항목", exact: true })).toBeVisible();
+  await expect(table.getByRole("rowheader")).toHaveCount(5);
+  includePrior = false;
+  await page.reload();
+  await expect(table).toContainText("기록 없음");
+  await expect(table.getByLabel(/변화:/)).toHaveCount(0);
+  await expectContentsFit();
+  await section.screenshot({ path: testInfo.outputPath("vitals-without-prior.png") });
+  configuredUnits = true;
+  includePrior = true;
+  await page.reload();
+  await expect(table).toContainText("123450 g");
+  await expect(table).toContainText("103.6 °F");
+  await expect(table).not.toContainText("심박수");
+  await expect(table).not.toContainText("호흡수");
+  await expect(table.getByRole("rowheader")).toHaveCount(3);
+  await expectContentsFit();
+  await section.screenshot({ path: testInfo.outputPath("vitals-configured-units.png") });
+  expect(pageErrors).toEqual([]);
+});
+
 test("chart consultation CTA moves from call to start before chart completion", async ({
   page,
 }) => {
@@ -5883,9 +6062,7 @@ test("chart consultation CTA moves from call to start before chart completion", 
       "rgb(250, 250, 250)",
     );
   }
-  const vitalTable = lockedState.getByLabel(
-    "환자 바이탈 표, 좁은 화면에서는 가로로 스크롤할 수 있습니다",
-  );
+  const vitalTable = lockedState.getByRole("table", { name: "오늘 및 직전 방문 바이탈 비교" });
   await expect(vitalTable).not.toContainText("현재");
   const weightDelta = vitalTable.getByLabel("체중 변화: 0.06 증가");
   await expect(weightDelta).toContainText("(0.06)");
@@ -5917,8 +6094,8 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(
     currentVitalDateCell.getByText("(26.06.25)", { exact: true }),
   ).toBeVisible();
-  await expect(vitalTable.locator("table")).toHaveCSS("min-width", "960px");
-  await expect(currentVitalDateCell).toHaveCSS("height", "52px");
+  await expect(vitalTable).toHaveCSS("min-width", "0px");
+  await expect(currentVitalDateCell).toHaveCSS("height", "66px");
   await expect(currentVitalDateCell).toHaveCSS(
     "background-color",
     "rgb(255, 255, 255)",
@@ -7794,6 +7971,253 @@ test("chart safety context identifies the patient while order review shows only 
   await expect(orderConfirmDialog).not.toContainText("공유 Draft");
   await expect(orderConfirmDialog).not.toContainText("재요청 포함");
 });
+
+for (const [actor, canCancel] of [["user-tech", false], ["user-vet", true]] as const) {
+  test(`chart shows dispensing and treatment cancellation only to the veterinarian (${actor})`, async ({ page }) => {
+    const dispensing = {
+      ...createEditableDispenseRow("clair-demo", kongEncounterId, "soap-kong-260501"),
+      orderConfirmationStatus: "confirmed",
+      status: "confirmed",
+    };
+    const treatment = {
+      ...dispensing,
+      orderId: "synthetic-treatment-order",
+      orderType: "treatment",
+      clinicalOrderType: "treatment",
+      destinationModule: "treatment",
+      detailInputs: {},
+      appliedSnapshot: {
+        ...dispensing.appliedSnapshot,
+        billingName: "합성 처치",
+        inHospitalOrderName: "합성 처치",
+        clinicalOrderType: "treatment",
+        destinationModule: "treatment",
+        orderType: "treatment",
+      },
+    };
+    await page.route("**/chart/order-drafts?**", route => route.fulfill({
+      json: { ok: true, status: 200, etag: `"${"a".repeat(64)}"`, rows: [dispensing, treatment] },
+    }));
+    await page.route("**/chart/order-execution?**", async route => {
+      const response = await route.fetch({ headers: {
+        ...route.request().headers(),
+        "x-clair-demo-session-user-id": actor,
+      } });
+      await route.fulfill({ response });
+    });
+    await page.goto(kongScenarioUrl);
+    await page.getByRole("button", { name: /^예약 콩이 · 김하늘/ }).first().click();
+    for (const order of [dispensing, treatment]) {
+      const row = page.getByTestId(`chart-order-row-${order.orderId}`);
+      await expect(row).toHaveAttribute("data-order-confirmation", "confirmed");
+      await row.hover();
+      await row.getByTestId(`chart-order-more-${order.orderId}`).click();
+      const cancel = page.getByRole("menuitem", { name: "취소", exact: true });
+      if (canCancel) {
+        await cancel.click();
+        const dialog = page.getByRole("dialog", { name: /오더 취소/ });
+        await expect(dialog).toBeVisible();
+        await dialog.getByRole("button", { name: "취소", exact: true }).click();
+      } else {
+        await expect(page.getByRole("menuitem", { name: "이력", exact: true })).toBeVisible();
+        await expect(cancel).toHaveCount(0);
+        await page.keyboard.press("Escape");
+      }
+    }
+  });
+}
+
+for (const [queueType, label, waiting] of [
+  ["dispensing", "조제", false],
+  ["dispensing", "조제", true],
+  ["treatment", "처치", false],
+  ["treatment", "처치", true],
+] as const) {
+  test(`Plan/Order confirms navigation to the exact ${queueType} instruction item (${waiting ? "waiting" : "started"})`, async ({ page }) => {
+    const workspaceId = "clair-demo";
+    const name = waiting
+      ? `합성 ${label} 세트의 오더명이 길어도 버튼과 전체 이름을 확인할 수 있는지 검증하는 대상 오더`
+      : "SYNTHETICCOMPOUNDINGORDERWITHAVERYLONGUNBROKENNAME20261109".repeat(2);
+    const createdAt = "2026-05-01T00:00:00Z";
+    const dueAt = "2026-05-02T16:00:00Z";
+    const chartRow = createEditableDispenseRow(workspaceId, kongEncounterId, "soap-kong-260501");
+    const order = {
+      ...chartRow,
+      orderType: queueType,
+      clinicalOrderType: queueType,
+      destinationModule: queueType,
+      orderConfirmationStatus: "confirmed",
+      status: "confirmed",
+      appliedSnapshot: { ...chartRow.appliedSnapshot, inHospitalOrderName: name, clinicalOrderType: queueType, destinationModule: queueType, orderType: queueType },
+    };
+    const unlinkedOrder = { ...order, orderId: "synthetic-unlinked-order", appliedSnapshot: { ...order.appliedSnapshot, inHospitalOrderName: "합성 지시서 미연결 오더" } };
+    const draftOrder = { ...unlinkedOrder, orderId: "synthetic-unconfirmed-order", orderConfirmationStatus: "draft", status: "requested", appliedSnapshot: { ...order.appliedSnapshot, inHospitalOrderName: "합성 미확정 오더" } };
+    const workItemId = "97090000-0000-4000-8000-000000000003";
+    const priorWorkItemId = "97090000-0000-4000-8000-000000000001";
+    const siblingId = "97090000-0000-4000-8000-000000000002";
+    const task = {
+      taskId: "synthetic-instruction-current-task", orderId: order.orderId, parentTaskId: "synthetic-set-task",
+      taskRole: "execution", clinicalOrderType: queueType, destinationModule: queueType,
+      attemptNo: 2, status: waiting ? "pending" : "in_progress", priority: "normal",
+      reRequestedFromTaskId: "synthetic-instruction-prior-task", effectiveSnapshot: {},
+      resultSnapshot: null, startedAt: null, completedAt: null, cancelledAt: null, createdAt, updatedAt: createdAt,
+    };
+    const priorTask = { ...task, taskId: task.reRequestedFromTaskId, attemptNo: 1, status: "returned", reRequestedFromTaskId: null };
+    const item = {
+      ...syntheticInstruction.items[0], id: workItemId, orderId: order.orderId,
+      name, taskId: task.taskId, attemptNo: task.attemptNo, status: waiting ? "requested" : "in_progress",
+    };
+    const sibling = { ...item, id: siblingId, orderId: "synthetic-sibling-order", taskId: "synthetic-sibling-task", name: waiting ? "합성 같은 세트 오더" : name };
+    const workItems = [sibling, item].map(row => ({
+      id: row.id, orderId: row.orderId, taskId: row.taskId, taskAttemptNo: row.attemptNo, rowRevision: 1,
+      encounterId: kongEncounterId, workspaceId, queueType, status: row.status, createdAt, dueAt,
+      assignedToUserId: "synthetic-owner", patientName: "합성 환자", requesterName: "합성 수의사",
+      sourceSnapshot: { inHospitalOrderName: row.name }, updatedAt: createdAt,
+    }));
+    const exactReads: (string | null)[] = [];
+    const writes: string[] = [];
+    let denied = !waiting;
+    let pendingRead: Promise<void> | undefined;
+    // Put the started target below the viewport so visibility depends on scrolling.
+    const precedingItems = waiting ? [sibling] : [
+      sibling,
+      ...Array.from({ length: 24 }, (_, index) => ({
+        ...sibling,
+        id: `synthetic-preceding-item-${index}`,
+        orderId: `synthetic-preceding-order-${index}`,
+        taskId: `synthetic-preceding-task-${index}`,
+      })),
+    ];
+    let instructionItems = [...precedingItems, item];
+
+    await page.route("**/chart/order-drafts?*", route => route.fulfill({
+      json: { ok: true, status: 200, etag: `"${"a".repeat(64)}"`, rows: [order, unlinkedOrder, draftOrder] },
+    }));
+    await page.route("**/chart/order-execution?*", route => route.fulfill({
+      json: { ok: true, status: 200, execution: {
+        workspaceId, encounterId: kongEncounterId, tasks: [priorTask, task],
+        queues: [priorTask, task].map((entry, index) => ({
+          taskId: entry.taskId, orderId: entry.orderId, taskAttemptNo: entry.attemptNo,
+          workItemId: index === 0 ? priorWorkItemId : workItemId, queueType, destinationModule: queueType,
+          queueStatus: index === 0 ? "returned" : item.status, updatedAt: createdAt,
+        })),
+        events: [], revisions: [], billingCandidates: [],
+      } },
+    }));
+    await page.route("**/fulfillment/work-items?*", async route => {
+      const params = new URL(route.request().url()).searchParams;
+      const targetId = params.get("workItemId");
+      if (targetId) {
+        exactReads.push(targetId);
+        if (denied) return route.fulfill({ status: 403, json: { ok: false } });
+        await pendingRead;
+      }
+      const matches = params.get("queueType") === queueType &&
+        (!params.has("date") || params.get("date") === "2026-05-03");
+      return route.fulfill({ json: { ok: true, workItems: matches ? workItems.filter(row => !targetId || row.id === targetId) : [] } });
+    });
+    await page.route("**/fulfillment/work-items/*/instruction", route => {
+      if (route.request().method() !== "GET") {
+        writes.push(route.request().method());
+        return route.fulfill({ status: 409, json: { ok: false } });
+      }
+      return route.fulfill({ json: { ok: true, document: {
+        ...syntheticInstruction, queueType, items: instructionItems, changes: [],
+      } } });
+    });
+    await page.route("**/fulfillment/work-items/*/assignees", route => route.fulfill({ json: { ok: true, assignees: [] } }));
+    await page.route("**/fulfillment/instruction-review?*", route => route.fulfill({ json: { ok: true, reviews: [] } }));
+    await page.goto(kongScenarioUrl);
+
+    const row = page.getByTestId(`chart-order-row-${order.orderId}`);
+    const nameCell = row.locator('[data-column-id="displayName"]');
+    const nameText = nameCell.getByText(name, { exact: true });
+    const shortcut = nameCell.getByRole("button", { name: `${name} 지시서로 이동` });
+    await expect(shortcut).toHaveCSS("opacity", "0", { timeout: 10_000 });
+    for (const unavailable of [unlinkedOrder, draftOrder]) {
+      const unavailableCell = page.getByTestId(`chart-order-row-${unavailable.orderId}`).locator('[data-column-id="displayName"]');
+      await expect(unavailableCell).toBeVisible();
+      await unavailableCell.hover();
+      await expect(unavailableCell.getByRole("button", { name: /지시서로 이동/ })).toHaveCount(0);
+    }
+    await expect(nameText).toHaveCSS("text-overflow", "ellipsis");
+    expect(await nameText.evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true);
+    const originalNamePosition = await nameText.boundingBox();
+    await row.locator('[data-column-id="status"]').hover();
+    await expect(shortcut).toHaveCSS("opacity", "0");
+    await nameText.hover();
+    await expect(page.locator('[data-slot="tooltip-content"]').filter({ hasText: name })).toBeVisible();
+    await expect(shortcut).toHaveCSS("opacity", "1");
+    expect(await nameText.boundingBox()).toEqual(originalNamePosition);
+    await shortcut.click();
+    const dialog = page.getByRole("dialog", { name: `${label} 지시서로 이동할까요?` });
+    await expect(dialog).toContainText(name);
+    expect(await dialog.getByText(name, { exact: true }).evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+    await expect(page).toHaveURL(/\/treatment\?/);
+    expect(exactReads).toEqual([]);
+    await dialog.getByRole("button", { name: "취소", exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await expect(shortcut).toBeFocused();
+    await row.locator('[data-column-id="status"]').hover();
+    await expect(shortcut).toHaveCSS("opacity", "0");
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Tab");
+    await expect(shortcut).toBeFocused();
+    await expect(shortcut).toHaveCSS("opacity", "1");
+    await page.keyboard.press("Enter");
+    const confirm = dialog.getByRole("button", { name: "지시서로 이동", exact: true });
+    if (denied) {
+      await confirm.click();
+      await expect(dialog.getByRole("alert")).toHaveText("이 지시서를 볼 권한이 없어요.");
+      await expect(page).toHaveURL(/\/treatment\?/);
+      denied = false;
+    } else {
+      let releaseRead!: () => void;
+      pendingRead = new Promise(resolve => { releaseRead = resolve; });
+      try {
+        await confirm.click();
+        await expect(dialog.getByRole("button", { name: "확인 중" })).toBeDisabled();
+        await expect.poll(() => exactReads).toEqual([workItemId]);
+        await dialog.getByRole("button", { name: "취소", exact: true }).click();
+        await expect(dialog).toBeHidden();
+      } finally {
+        releaseRead();
+        pendingRead = undefined;
+      }
+      await expect(page).toHaveURL(/\/treatment\?/);
+      await expect(shortcut).toBeFocused();
+      await shortcut.press("Enter");
+    }
+    await confirm.click();
+    await expect(page).toHaveURL(/\/dispensing\?date=2026-05-03/);
+    expect(new URL(page.url()).searchParams.get("workItemId")).toBe(workItemId);
+    expect(exactReads).toEqual([workItemId, workItemId]);
+    const target = page.locator('tr[data-instruction-target="true"]');
+    await expect(target).toHaveCount(1);
+    await expect(target).toContainText(name);
+    await expect(target).toBeInViewport();
+    await expect(target).toBeFocused();
+    const siblingRow = waiting
+      ? page.getByRole("row").filter({ hasText: sibling.name })
+      : page.locator(`tr[data-item="${siblingId}"]`);
+    await expect(siblingRow).toBeVisible();
+    const cellBackgrounds = (row: typeof target) => row.locator(":scope > :is(th, td)").evaluateAll(
+      cells => cells.map(cell => getComputedStyle(cell).backgroundColor),
+    );
+    expect(await cellBackgrounds(target)).toEqual(await cellBackgrounds(siblingRow));
+    if (!waiting) {
+      await expect(target).toHaveAttribute("data-item", workItemId);
+    }
+    expect(writes).toEqual([]);
+    if (waiting) {
+      instructionItems = [sibling];
+      await page.reload();
+      await expect(page.getByText("연결된 조제·처치 오더를 찾을 수 없어요")).toBeVisible();
+      await expect(target).toHaveCount(0);
+      await expect(page.getByRole("row").filter({ hasText: sibling.name })).toHaveCount(0);
+    }
+  });
+}
 
 test("chart order review counts selected roots, matches scoped row charges, and cancels without a mutation", async ({ page }) => {
   await page.goto(kongScenarioUrl);
@@ -10429,6 +10853,7 @@ test("chart order add searches active workspace catalog and adds a draft row", a
 test("chart order set requires explicit leaf intent and preserves set rows on reload save", async ({
   page,
 }) => {
+  await routeQuickAddCatalog(page);
   const draftPatchBodies: Array<Record<string, unknown>> = [];
   page.on("request", (request) => {
     if (
@@ -10447,7 +10872,11 @@ test("chart order set requires explicit leaf intent and preserves set rows on re
   await page.goto(kongScenarioUrl);
   await restoreKongOrderDraftDefaults(page);
 
-  await page.getByRole("button", { name: "Order 추가", exact: true }).click();
+  await page
+    .getByRole("heading", { name: "Plan/Order", exact: true })
+    .locator("..")
+    .getByRole("button", { name: "Order 추가", exact: true })
+    .click();
   const catalogDialog = page.getByRole("dialog", {
     name: "오더 추가",
   });

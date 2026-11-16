@@ -5,34 +5,37 @@ const chartOrderUrl =
 
 const visibleColumns = [
   ["select", "선택", 20],
-  ["orderType", "분류", 88],
+  ["orderType", "분류", 72],
   ["confirmation", "확정 여부", 88],
   ["displayName", "Order 명", 180],
-  ["status", "업무 상태", 88],
+  ["status", "업무 상태", 96],
   ["billingName", "청구서명", 144],
   ["billingReflection", "청구반영", 64],
-  ["durationDays", "일수", 64],
-  ["frequency", "횟수", 64],
-  ["totalOccurrences", "총횟수", 88],
-  ["doseBasis", "head/kg당", 88],
-  ["dosePerAdministration", "1회당", 64],
-  ["ingredientStrength", "성분량", 88],
-  ["calculatedDispenseQuantity", "조제량", 88],
+  ["durationDays", "일수", 56],
+  ["frequency", "횟수", 72],
+  ["totalOccurrences", "총횟수", 72],
+  ["doseBasis", "head/kg당", 80],
+  ["detail-dose", "처방 용량", 88],
+  ["detail-doseUnit", "용량 단위", 88],
+  ["dosePerAdministration", "1회 조제량", 96],
+  ["ingredientStrength", "성분량", 104],
+  ["calculatedDispenseQuantity", "총 조제량", 96],
+  ["actualDispenseQuantity", "실 조제량", 120],
   ["storageMethod", "보관", 88],
-  ["administration", "투여/복약", 114],
-  ["unitPrice", "단가", 114],
-  ["quantity", "수량", 65],
-  ["lineTotal", "합계", 126],
-  ["adjustmentAmount", "할인/할증", 114],
-  ["adjustmentPercent", "%", 72],
-  ["chargeAmount", "총 청구금액", 126],
+  ["administration", "투여/복약", 120],
+  ["unitPrice", "단가", 96],
+  ["quantity", "수량", 64],
+  ["lineTotal", "합계", 104],
+  ["adjustmentAmount", "할인/할증", 104],
+  ["adjustmentPercent", "%", 64],
+  ["chargeAmount", "총 청구금액", 112],
   ["adjustmentReason", "할인/할증 사유", 126],
-  ["taxClass", "과세", 64],
-  ["assignee", "업무 담당", 66],
-  ["requestedBy", "요청 수의사", 77],
+  ["taxClass", "과세", 56],
+  ["assignee", "업무 담당", 72],
+  ["requestedBy", "요청 수의사", 96],
 ] as const;
 
-test("Plan/Order renders the approved 26-column geometry and presentation contract", async ({
+test("Plan/Order renders the approved column geometry and presentation contract", async ({
   page,
 }) => {
   await page.goto(chartOrderUrl);
@@ -41,7 +44,7 @@ test("Plan/Order renders the approved 26-column geometry and presentation contra
   await expect(table).toBeVisible();
 
   const headers = table.locator("thead th[data-column-id]");
-  await expect(headers).toHaveCount(26);
+  await expect(headers).toHaveCount(visibleColumns.length);
   await expect(headers.evaluateAll((elements) =>
     elements.map((element) => [
       element.getAttribute("data-column-id"),
@@ -54,7 +57,7 @@ test("Plan/Order renders the approved 26-column geometry and presentation contra
       String(size),
       id === "displayName"
         ? "pinned-order-boundary"
-        : id === "select" || id === "orderType" || id === "confirmation"
+        : id === "select" || id === "orderType" || id === "confirmation" || id === "requestedBy"
           ? "none"
           : "data-column",
     ]),
@@ -66,7 +69,6 @@ test("Plan/Order renders the approved 26-column geometry and presentation contra
     ),
   )).resolves.toEqual(visibleColumns.map(([, label]) => label));
 
-  await expect(table.locator('[data-column-id="actualDispenseQuantity"]')).toHaveCount(0);
   await expect(table.locator('[data-column-id="unit"]')).toHaveCount(0);
   await expect(table.locator('[data-column-id="select"] button[aria-label*="너비 조절"]')).toHaveCount(0);
   await expect(table.locator('[data-column-id="orderType"] button[aria-label*="너비 조절"]')).toHaveCount(0);
@@ -359,7 +361,7 @@ test("Plan/Order keeps the boundary line and fixed area above the scroll layer",
   await expect(root.locator('[data-emr-pinned-table-scrollbar="horizontal"]')).toHaveCount(1);
   await expect(root.locator('[data-emr-pinned-table-scrollbar="horizontal"]').evaluate((element) =>
     getComputedStyle(element).insetInlineStart,
-  )).resolves.toBe("408px");
+  )).resolves.toBe("392px");
   await expect(root.locator('[data-emr-pinned-table-scrollbar="horizontal"]')).toHaveCSS("z-index", "1");
   await expect(table.locator('[data-emr-pinned-table-header-divider="true"]')).toHaveCount(1);
   const headerDivider = table.locator('[data-emr-pinned-table-header-divider="true"]');
@@ -394,6 +396,46 @@ test("Plan/Order keeps the boundary line and fixed area above the scroll layer",
   ).toHaveCSS("outline-style", "solid");
 });
 
+test("Plan/Order labels fit at the default and minimum column widths", async ({ page }) => {
+  await page.setViewportSize({ width: 1673, height: 867 });
+  await page.goto(chartOrderUrl);
+  const table = page.getByRole("table", { name: "처방/오더 테이블" });
+  await expect(table).toBeVisible();
+  await page.evaluate(async () => { await document.fonts.ready; });
+
+  const columns = [
+    { id: "confirmation", label: "확정 여부", width: 88, resizable: false },
+    { id: "status", label: "업무 상태", width: 96, resizable: true },
+    { id: "totalOccurrences", label: "총횟수", width: 72, resizable: true },
+    { id: "requestedBy", label: "요청 수의사", width: 96, resizable: false },
+  ];
+
+  for (const { id, label, width, resizable } of columns) {
+    await test.step(label, async () => {
+      const header = table.locator(`th[data-column-id="${id}"]`);
+      const headerLabel = header.getByText(label, { exact: true });
+      await headerLabel.scrollIntoViewIfNeeded();
+      await expect(headerLabel).toBeInViewport({ ratio: 1 });
+      const labelFits = () => headerLabel.evaluate((element) =>
+        element.scrollWidth <= element.clientWidth,
+      );
+      await expect(header).toHaveAttribute("data-emr-column-size", String(width));
+      await expect.poll(labelFits, { message: `${label} fits at its default width` }).toBe(true);
+
+      const handle = header.getByRole("button", { name: `${label} 컬럼 너비 조절` });
+      if (resizable) {
+        await handle.press("ArrowRight");
+        await expect(header).toHaveAttribute("data-emr-column-size", String(width + 8));
+        await handle.press("Shift+ArrowLeft");
+        await expect(header).toHaveAttribute("data-emr-column-size", String(width));
+        await expect.poll(labelFits, { message: `${label} fits at its minimum width` }).toBe(true);
+      } else {
+        await expect(handle).toHaveCount(0);
+      }
+    });
+  }
+});
+
 test("Plan/Order scroll columns keep a working header resize handle", async ({ page }) => {
   await page.goto(chartOrderUrl);
   const table = page.getByRole("table", { name: "처방/오더 테이블" });
@@ -402,7 +444,7 @@ test("Plan/Order scroll columns keep a working header resize handle", async ({ p
     name: "업무 상태 컬럼 너비 조절",
   });
   await expect(statusHandle).toBeVisible();
-  await expect(statusHeader).toHaveAttribute("data-emr-column-size", "88");
+  await expect(statusHeader).toHaveAttribute("data-emr-column-size", "96");
   const box = await statusHandle.boundingBox();
   expect(box).not.toBeNull();
   await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
@@ -412,10 +454,10 @@ test("Plan/Order scroll columns keep a working header resize handle", async ({ p
   await page.mouse.down();
   await page.mouse.move(box!.x + box!.width / 2 + 16, box!.y + box!.height / 2);
   await page.mouse.up();
-  await expect(statusHeader).toHaveAttribute("data-emr-column-size", "104");
+  await expect(statusHeader).toHaveAttribute("data-emr-column-size", "112");
   await statusHandle.focus();
   await statusHandle.press("ArrowRight");
-  await expect(statusHeader).toHaveAttribute("data-emr-column-size", "112");
+  await expect(statusHeader).toHaveAttribute("data-emr-column-size", "120");
   await expect(table.locator('thead th[data-column-id="status"]')).not.toHaveAttribute(
     "aria-sort",
     "ascending",
@@ -429,7 +471,7 @@ test("Plan/Order boundary drag resizes only Order name", async ({ page }) => {
   const statusHeader = table.locator('th[data-column-id="status"]');
   const handle = displayNameHeader.locator('[data-emr-column-resize-handle="true"]');
   await expect(displayNameHeader).toHaveAttribute("data-emr-column-size", "180");
-  await expect(statusHeader).toHaveAttribute("data-emr-column-size", "88");
+  await expect(statusHeader).toHaveAttribute("data-emr-column-size", "96");
   const box = await handle.boundingBox();
   expect(box).not.toBeNull();
   await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
@@ -439,12 +481,12 @@ test("Plan/Order boundary drag resizes only Order name", async ({ page }) => {
   await page.mouse.move(box!.x + box!.width / 2 + 24, box!.y + box!.height / 2);
   await page.mouse.up();
   await expect(displayNameHeader).toHaveAttribute("data-emr-column-size", "204");
-  await expect(statusHeader).toHaveAttribute("data-emr-column-size", "88");
+  await expect(statusHeader).toHaveAttribute("data-emr-column-size", "96");
   await page.keyboard.press("Tab");
   await handle.focus();
   await handle.press("ArrowRight");
   await expect(displayNameHeader).toHaveAttribute("data-emr-column-size", "212");
-  await expect(statusHeader).toHaveAttribute("data-emr-column-size", "88");
+  await expect(statusHeader).toHaveAttribute("data-emr-column-size", "96");
 });
 
 test("Plan/Order empty display values use the shared hyphen placeholder", async ({

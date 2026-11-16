@@ -1,5 +1,7 @@
 "use client"
 
+import { usePagePortalVisibility } from "@/components/emr/page-loading-boundary"
+
 import * as React from "react"
 import { useModuleSidePanel, useModuleSidePanelPopupActions } from "@/components/emr/module-side-panel-context"
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover"
@@ -28,8 +30,9 @@ function PopoverContent({
     "align" | "alignOffset" | "side" | "sideOffset"
   >) {
   const panel = useModuleSidePanel();
+  const visibility = usePagePortalVisibility();
   return (
-    <PopoverPrimitive.Portal>
+    <PopoverPrimitive.Portal {...visibility}>
       <PopoverPrimitive.Positioner
         align={align}
         alignOffset={alignOffset}

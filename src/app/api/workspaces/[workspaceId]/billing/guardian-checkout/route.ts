@@ -222,6 +222,7 @@ async function readTransitionBody(request: Request): Promise<BillingInvoiceTrans
       paymentMethod: row.paymentMethod,
       reason: typeof row.reason === "string" ? row.reason : undefined,
       target: row.target,
+      expectedUpdatedAt: typeof row.expectedUpdatedAt === "string" ? row.expectedUpdatedAt : undefined,
     };
   } catch {
     return {};

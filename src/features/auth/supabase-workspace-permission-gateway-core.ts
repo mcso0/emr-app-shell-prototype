@@ -1,11 +1,14 @@
-import type {
-  WorkspacePermissionDbGateway,
-  WorkspacePermissionDbJobPositionAssignmentRow,
-  WorkspacePermissionDbMembershipRow,
-  WorkspacePermissionDbPolicyRow,
-  WorkspacePermissionDbRoleAssignmentRow,
-  WorkspacePermissionDbUserRow,
-} from "@/features/auth/db-workspace-permission-adapter";
+import {
+  createWorkspacePermissionAdapterFromDbRows,
+  loadWorkspacePermissionAdapterFromDb,
+  type WorkspacePermissionDbAdapterInput,
+  type WorkspacePermissionDbGateway,
+  type WorkspacePermissionDbJobPositionAssignmentRow,
+  type WorkspacePermissionDbMembershipRow,
+  type WorkspacePermissionDbPolicyRow,
+  type WorkspacePermissionDbRoleAssignmentRow,
+  type WorkspacePermissionDbUserRow,
+} from "@/features/auth/db-workspace-permission-adapter-core";
 
 type SupabaseQueryResult<Row> = PromiseLike<{
   data: Row[] | null;
@@ -69,6 +72,42 @@ export type SupabaseWorkspacePermissionClient = {
     table: "workspace_membership_job_position_assignments"
   ): SupabaseQueryBuilder<SupabaseJobPositionAssignmentRow>;
 };
+
+export type ChartDraftPermissionClient = SupabaseWorkspacePermissionClient & {
+  rpc(name: "clair_read_chart_draft_permission_snapshot", args: {
+    p_workspace_id: string;
+  }): PromiseLike<{ data: WorkspacePermissionDbAdapterInput | null; error: SupabaseReadError | null }>;
+};
+
+export async function loadChartDraftPermissionAdapter({
+  client,
+  workspaceId,
+  sessionUserId,
+}: {
+  client: ChartDraftPermissionClient;
+  workspaceId: string;
+  sessionUserId: string;
+}) {
+  const { data, error } = await client.rpc("clair_read_chart_draft_permission_snapshot", {
+    p_workspace_id: workspaceId,
+  });
+
+  // Allow a staggered app/database rollout when PostgREST cannot find the RPC.
+  if (error?.code === "PGRST202") {
+    return loadWorkspacePermissionAdapterFromDb({
+      gateway: createSupabaseWorkspacePermissionGateway(client),
+      workspaceId,
+      sessionUserId,
+    });
+  }
+  if (error) throwSupabaseReadError(error);
+  if (!data || !Array.isArray(data.users) || !Array.isArray(data.memberships)
+    || !Array.isArray(data.permissionPolicies) || !Array.isArray(data.permissionRoleAssignments)
+    || !Array.isArray(data.jobPositionAssignments)) {
+    throw new Error("chart_draft_permission_snapshot_invalid");
+  }
+  return createWorkspacePermissionAdapterFromDbRows(data);
+}
 
 export function createSupabaseWorkspacePermissionGateway(
   client: SupabaseWorkspacePermissionClient

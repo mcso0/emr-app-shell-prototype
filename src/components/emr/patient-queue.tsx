@@ -45,16 +45,14 @@ export function PatientQueueFilterMenu({ value, onChange, disabled }: { value: s
 }
 
 // A date/workspace-keyed instance keeps UI continuity separate from business selection.
-export function PatientQueueContent({ active, allRows, rows, selectedId, groupSort, orderSort, onSelect, onClearConditions, readable = true, ready, children }: {
+export function PatientQueueContent({ active, allRows, rows, selectedId, groupSort, orderSort, onSelect, onClearConditions, readable = true, children }: {
   active: boolean; allRows: PatientQueueDisplayRow[]; rows: PatientQueueDisplayRow[]; selectedId?: string;
   groupSort: PatientQueueSort; orderSort: PatientQueueOrderSort; onSelect: (id: string) => void;
-  onClearConditions: () => void; readable?: boolean; ready: boolean; children: ReactNode;
+  onClearConditions: () => void; readable?: boolean; children: ReactNode;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const anchor = useRef<{ id: string; top: number } | null>(null);
-  const previousIds = useRef<Set<string> | null>(null);
   const previousActive = useRef(active);
-  const [newIds, setNewIds] = useState<string[]>([]);
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const [revealId, setRevealId] = useState<string | null>(selectedId ?? null);
   const groups = groupPatientQueue(rows, groupSort, orderSort);
@@ -70,18 +68,6 @@ export function PatientQueueContent({ active, allRows, rows, selectedId, groupSo
     const area = viewport(); area?.addEventListener("scroll", capture, { passive: true });
     return () => area?.removeEventListener("scroll", capture);
   }, [capture, viewport]);
-  useEffect(() => {
-    if (!readable) { previousIds.current = null; const frame = requestAnimationFrame(() => setNewIds([])); return () => cancelAnimationFrame(frame); }
-    if (!ready) return;
-    const next = new Set(allRows.map(row => row.id));
-    if (previousIds.current) {
-      const added = [...next].filter(id => !previousIds.current!.has(id));
-      const frame = requestAnimationFrame(() => setNewIds(current => [...new Set([...current.filter(id => next.has(id)), ...added])]));
-      previousIds.current = next;
-      return () => cancelAnimationFrame(frame);
-    }
-    previousIds.current = next;
-  }, [allRows, readable, ready]);
   useLayoutEffect(() => {
     const area = viewport();
     const modeChanged = previousActive.current !== active;
@@ -110,10 +96,9 @@ export function PatientQueueContent({ active, allRows, rows, selectedId, groupSo
   return <div ref={root} className="contents [&_[data-slot=task-queue-card-footer]>span]:gap-[var(--clair-spacing-4)]">
     {!readable ? <EmrQueueEmptyState placement="panel-center" title="업무 대기열을 볼 권한이 없습니다" /> : <>
       {readable && hiddenSelection ? <div role="status" className="emr-text-metadata rounded-md border border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] p-2 text-[var(--emr-status-info-text)]">선택한 업무는 현재 검색·필터에 포함되지 않습니다. <button className="underline" onClick={() => { onClearConditions(); setRevealId(selectedId); }}>조건 해제하고 보기</button></div> : null}
-      {active && newIds.length > 0 && readable ? <div role="status" className="emr-text-metadata flex items-center justify-between rounded-md bg-[var(--emr-status-info-bg)] p-2 text-[var(--emr-status-info-text)]"><span>새 업무 {newIds.length}건 추가</span><button className="underline" onClick={() => { const id = newIds[0]; if (!rows.some(row => row.id === id)) onClearConditions(); setRevealId(id); setNewIds([]); }}>목록에서 보기</button></div> : null}
       {active && rows.length ? groups.map(group => {
         const first = group.items[0];
-        return <EmrSidePanelCollapsibleGroup key={group.key} className="mb-[var(--clair-spacing-4)] last:mb-0" dataTestId={`patient-queue-group-${group.key}`} accessibleLabel={`${first.card.patientName} · ${first.card.guardianName}`} collapsed={collapsed.has(group.key)} count={group.items.length} indicatorVisible={false} stateIconState={false} label={<span className="flex min-w-0 items-center gap-[var(--clair-spacing-8)]"><Avatar roundness="roundrect" className="size-[18px] shrink-0"><AvatarFallback><CdsGnbPetGnbIcon className="size-3.5" aria-hidden="true" /></AvatarFallback></Avatar><span className="truncate" title={`${first.card.patientName} · ${first.card.guardianName}`}>{first.card.patientName} · {first.card.guardianName}</span>{group.urgentCount ? <span className="shrink-0 text-[10px] text-[var(--emr-status-danger-text)]">긴급 {group.urgentCount}</span> : null}{group.returnedCount ? <span className="shrink-0 text-[10px] text-[var(--emr-status-warning-text)]">재요청 {group.returnedCount}</span> : null}</span>} onToggle={() => setCollapsed(current => { const next = new Set(current); if (next.has(group.key)) next.delete(group.key); else next.add(group.key); return next; })}>
+        return <EmrSidePanelCollapsibleGroup key={group.key} className="mb-[var(--clair-spacing-4)] last:mb-0" dataTestId={`patient-queue-group-${group.key}`} accessibleLabel={`${first.card.patientName} · ${first.card.guardianName}`} collapsed={collapsed.has(group.key)} count={group.items.length} indicatorVisible={false} stateIconState={false} label={<span className="flex min-w-0 items-center gap-[var(--clair-spacing-8)]"><Avatar roundness="roundrect" className="size-[18px] shrink-0"><AvatarFallback><CdsGnbPetGnbIcon className="size-3.5" aria-hidden="true" /></AvatarFallback></Avatar><span className="truncate" title={`${first.card.patientName} · ${first.card.guardianName}`}>{first.card.patientName} · {first.card.guardianName}</span>{group.urgentCount ? <span className="shrink-0 text-[10px] text-[var(--emr-status-danger-text)]">긴급 {group.urgentCount}</span> : null}</span>} onToggle={() => setCollapsed(current => { const next = new Set(current); if (next.has(group.key)) next.delete(group.key); else next.add(group.key); return next; })}>
           <div className="relative ml-[var(--clair-spacing-24)] flex flex-col gap-[var(--clair-spacing-4)] before:absolute before:inset-y-0 before:-left-[var(--clair-spacing-12)] before:w-px before:bg-[var(--emr-border-default)]">{group.items.map(row => {
             return <div key={row.id} data-patient-queue-item={row.id}><EmrTaskQueueCard item={{ ...row.card, assigneeName: row.assignedToUserId ? row.card.assigneeName ?? "확인 불가" : row.card.assigneeName }} selected={selectedId === row.id} onSelect={() => onSelect(row.id)} patientView={{ statusLabel: patientQueueStatusLabels[patientQueueStatus(row.status)] ?? "대기", urgent: row.priority === "urgent" }} /></div>;
           })}</div>

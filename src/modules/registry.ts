@@ -1,3 +1,4 @@
+import { withOrderPreworkSlots } from "@/features/fulfillment/use-order-prework";
 import { createElement } from "react";
 import {
   BedIcon,
@@ -126,7 +127,7 @@ export const modules: ModuleDefinition[] = [
       rightPanelId: "lab-receipt-panel",
       rightLabel: "장비 검사 수신함",
     },
-    slotAvailabilityProvider: LabSlotAvailabilityProvider,
+    slotAvailabilityProvider: withOrderPreworkSlots(LabSlotAvailabilityProvider),
     rightPanelGap: true,
     defaultContentAsideOpen: true,
     defaultRightPanelOpen: false,
@@ -147,7 +148,7 @@ export const modules: ModuleDefinition[] = [
       rightPanelId: "imaging-summary-panel",
       rightLabel: "종합소견",
     },
-    slotAvailabilityProvider: ImagingSlotAvailabilityProvider,
+    slotAvailabilityProvider: withOrderPreworkSlots(ImagingSlotAvailabilityProvider),
     defaultContentAsideOpen: true,
     defaultRightPanelOpen: true,
   },
@@ -164,7 +165,7 @@ export const modules: ModuleDefinition[] = [
       historyPanelId: "dispensing-content-aside",
       historyLabel: "조제/처치 이력",
     },
-    slotAvailabilityProvider: DispensingSlotAvailabilityProvider,
+    slotAvailabilityProvider: withOrderPreworkSlots(DispensingSlotAvailabilityProvider),
     drawer: DispensingDrawer,
   },
   {
@@ -191,7 +192,7 @@ export const modules: ModuleDefinition[] = [
       rightPanelId: "billing-summary-panel",
       rightLabel: "수납 요약",
     },
-    slotAvailabilityProvider: BillingSlotAvailabilityProvider,
+    slotAvailabilityProvider: withOrderPreworkSlots(BillingSlotAvailabilityProvider),
     defaultRightPanelOpen: true,
   },
   {

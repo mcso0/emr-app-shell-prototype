@@ -1,6 +1,20 @@
 # MVP Current Status
 
-Updated: 2026-10-11
+Overall instructions connects chart authoring, atomic scoped revisions, performer acknowledgement, immutable task snapshots and persisted in-app change notifications. Immediate and direct completion paths enforce the same actor/version review. Local contract, component, concurrent SQL and build checks pass. [PR #1033](https://github.com/mcso0/emr-app-shell-prototype/pull/1033) records the exact release candidate, remote migration and Preview/Production results; [CLINICAL-FULFILLMENT-PR-012](../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-012-overall-instructions.md) defines verification limits. Synthetic checks do not establish hospital-user acceptance.
+
+Prework assignment (2026-11-02) adds requested-only 조제/처치 patient context,
+separate claim/start, reasoned takeover notification and one intended set owner.
+Existing source WIP is isolated. [PR #1044](https://github.com/mcso0/emr-app-shell-prototype/pull/1044)
+records the exact release candidate, remote migration and Preview/Production
+evidence for this authorized task. Scope and verification limits remain in
+[CLINICAL-FULFILLMENT-PR-010](../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#prework-context-and-assignment--2026-11-02-local-implementation).
+
+The 2026-11-07 local 조제/처치 candidate starts waiting work on 담당하기.
+It persists assignment and start together and retains takeover reasons and
+requester notifications. Local evidence is recorded in
+[CLINICAL-FULFILLMENT-PR-010](../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#start-waiting-dispensing-and-treatment-work-on-assignment--2026-11-07).
+
+Updated: 2026-11-02
 
 Lab result sheet phase 2 and attachment fixes were merged in PRs #848, #851,
 and #853 on 2026-09-29. PR #853 deployed to Ready Production at
@@ -35,6 +49,34 @@ Local current-assignee authority candidate (2026-10-12) now covers lab, imaging,
 
 Local dispensing/treatment instruction follow-up (2026-10-27) adds explicit set finalization, main/sub item execution, changed-child attempts, common-instruction edits that preserve completion, requester completion, and persisted notifications. The live route requires its five local candidate migrations; none has been remotely applied in this work. Existing actual-result and billing guards remain. Local SQL/API/UI evidence and remaining hosted-schema verification are recorded in [CLINICAL-FULFILLMENT-PR-010](../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#approved-dispensingtreatment-instruction-workflow--2026-10-27).
 
+
+Local collected dispensing revisions (2026-10-27) add current-chart oral instruction revisions and task snapshots, chart entry, an infobar, per-child set instructions, row-associated execution history, bounded table geometry and centered transition loading. Verification is local/synthetic; migration `20261027130000` has not been applied remotely and no deployment is authorized. See [CLINICAL-FULFILLMENT-PR-010](../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#local-implementation-verification--2026-10-27).
+
+Plan/Order dispense quantities were delivered in PR #1028 on 2026-11-01.
+The two quantity/unit migrations are applied, and Production at `f1cae7fb` is Ready.
+The feature separates 1회 조제량, 총 조제량 and 실 조제량, supports manual request
+edits/reconfirmation/reset and hospital rules with product exceptions, and converts
+prescription units while preserving physical quantity. Hosted synthetic RPC and
+authorization checks passed; existing non-synthetic data fingerprints are unchanged.
+Authenticated smoke found an existing reopened-set read-shape mismatch that blocks
+set-child prescription edits. The bounded follow-up restores pricing from the price
+snapshot and avoids treating inherited instructions as new edits; its regression
+reproduces the failure before the fix and passes afterward. Input freeze remains
+until final Production smoke. Final delivery evidence is linked from
+[CLINICAL-FULFILLMENT-PR-010](../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#production-release-verification--2026-11-01).
+
+
+## Local confirmed-order edit candidate — 2026-11-03
+
+Single dispensing/treatment order editing, separate financial proposals, performer
+acknowledgement and partial-work preservation are implemented locally. Remote
+migrations and deployment remain excluded. See [the active work evidence](../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#confirmed-order-editing--2026-11-03-local-implementation)
+for authenticated local browser-to-DB, queue Realtime and notification polling
+verification. The local follow-up now persists selected-order billing before
+navigation and accepts financial proposals after checkout preparation. Proposals
+expire prepared sessions; payment waits for current-assignee approval and the
+latest invoice version. Actual local Auth/UI/API/DB validation is recorded in the
+same work item. Remote application and user acceptance remain separate.
 
 ## Agent Compact Summary
 

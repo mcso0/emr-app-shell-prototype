@@ -3627,15 +3627,17 @@ test("hospital admin order drawer switches rows and closes from outside click", 
   await expect(selectedRow).not.toHaveAttribute("aria-current", "true");
 });
 
-test("hospital admin order table shows skeleton rows while loading catalog", async ({
+test("hospital admin order table shows only page loading while loading catalog", async ({
   page,
 }) => {
+  let release!: () => void;
+  let gate = new Promise<void>(resolve => { release = resolve; });
   await page.route(
     "**/api/workspaces/clair-demo/hospital-admin/order-catalog",
     async (route) => {
       if (route.request().method() === "GET") {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        await route.fulfill({ json: { ok: true, items: [createGenericCatalogItem("clinical_lab", {})] } });
+        await gate;
+        await route.fulfill({ json: { ok: true, items: [] } });
         return;
       }
       await route.continue();
@@ -3644,27 +3646,23 @@ test("hospital admin order table shows skeleton rows while loading catalog", asy
 
   await page.goto("/w/clair-demo/orders?modulePanel=open");
 
-  const skeletonRow = page
-    .locator('[data-emr-data-table-skeleton-row="true"]')
-    .first();
-  await expect(skeletonRow).toBeVisible();
-  await expect(skeletonRow.locator("td").first()).toHaveAttribute(
-    "data-emr-column-pinned",
-    "left",
-  );
-  await expect(skeletonRow.locator("td").nth(1)).toHaveAttribute(
-    "data-emr-column-pinned",
-    "left",
-  );
-  await expect(
-    skeletonRow
-      .locator("td")
-      .nth(1)
-      .locator('[data-emr-table-identity-content="true"]'),
-  ).toHaveCount(1);
+  await expect(page.getByTestId("page-loading-state")).toBeVisible();
+  await expect(page.getByTestId("workspace-main-content")).toBeVisible();
+  await expect(page.getByTestId("workspace-main-content").locator("[data-page-content]").first()).not.toBeVisible();
+  release();
   await expect(
     page.getByTestId("hospital-order-catalog-read-status"),
   ).toContainText("Workspace catalog 기준");
+  await page.getByRole("link", { name: "고객관리", exact: true }).click();
+  await expect(page).toHaveURL(/\/customer/);
+  gate = new Promise<void>(resolve => { release = resolve; });
+  await page.getByRole("link", { name: "병원관리", exact: true }).click();
+  await expect(page).toHaveURL(/\/orders/);
+  await expect(page.getByTestId("page-loading-state")).toBeVisible();
+  await expect(page.getByTestId("workspace-main-content")).toBeVisible();
+  await expect(page.getByTestId("workspace-main-content").locator("[data-page-content]").first()).not.toBeVisible();
+  release();
+  await expect(page.getByTestId("page-loading-state")).not.toBeVisible();
 });
 
 test("hospital admin Order no-data uses the shared empty state and create CTA", async ({
@@ -4215,4 +4213,65 @@ test("hospital settings screens render dividers only between section rows", asyn
   );
   expect(await dividerDisplay("hospital-settings-instagram-row")).toBe("none");
   await expect(page.locator("html")).toHaveJSProperty("scrollWidth", 390);
+});
+
+test("dispense quantity rules save defaults, bulk product exceptions and recover conflicts", async ({ page }) => {
+  const items = [0, 1].map(createServiceReviewDispensingMasterItem);
+  const products = items.map((item, index) => ({ catalogItemId: item.id, productKey: `synthetic-product-${index}`, name: `합성 약품 ${index + 1}`, unit: "tablet" }));
+  let settings = { revision: 0, defaultRules: {} as Record<string, unknown>, productRules: {} as Record<string, unknown>, products, canManage: true };
+  const writes: Record<string, unknown>[] = [];
+  let conflictNext = false;
+  await page.route("**/api/workspaces/workspace-clair-cheongdam/hospital-admin/order-catalog", route => route.fulfill({ json: { ok: true, items, capabilities: { canManageCatalog: true, canAuthorDispensing: true, canApproveDispensing: false } } }));
+  await page.route("**/api/workspaces/workspace-clair-cheongdam/hospital-admin/dispense-quantity-rules", async route => {
+    if (route.request().method() === "GET") return route.fulfill({ json: { ok: true, settings } });
+    const body = route.request().postDataJSON() as Record<string, unknown>; writes.push(body);
+    if (conflictNext) { conflictNext = false; return route.fulfill({ status: 409, json: { ok: false, error: "revision_conflict" } }); }
+    expect(body.expectedRevision).toBe(settings.revision);
+    if (body.target === "hospital") settings = { ...settings, defaultRules: body.rule ? { tablet: body.rule } : {} };
+    else {
+      const next = { ...settings.productRules };
+      for (const id of body.catalogItemIds as string[]) {
+        const key = products.find(product => product.catalogItemId === id)!.productKey;
+        if (body.rule) next[key] = body.rule; else delete next[key];
+      }
+      settings = { ...settings, productRules: next };
+    }
+    settings = { ...settings, revision: settings.revision + 1 };
+    return route.fulfill({ json: { ok: true, settings } });
+  });
+  await page.goto("/w/workspace-clair-cheongdam/orders?modulePanel=open&section=orders");
+  await page.getByTestId("hospital-admin-side-panel").getByRole("button", { name: /^처방\/조제 전체\s+2$/ }).click();
+  await page.getByRole("button", { name: "실 조제량 규칙", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "실 조제량 규칙" });
+  await expect(dialog.getByRole("combobox", { name: "규칙 적용 대상" })).toHaveText("병원 공통");
+  await expect(dialog.getByRole("combobox", { name: "규칙 약품 단위" })).toHaveText("TAB");
+  await expect(dialog.getByText("규칙 미설정 · 이론값 유지", { exact: true })).toHaveCount(2);
+  await dialog.getByRole("combobox", { name: "조제량 처리 방식" }).click();
+  await page.getByRole("option", { name: "올림", exact: true }).click();
+  await dialog.getByRole("spinbutton", { name: "조정 간격" }).fill("0.5");
+  await expect(dialog.getByRole("button", { name: "공통 규칙 저장" })).toBeDisabled();
+  await dialog.getByRole("spinbutton", { name: "표시 자릿수" }).fill("1");
+  await dialog.getByRole("button", { name: "공통 규칙 저장" }).click();
+  await expect(dialog.getByText("병원 기본값 · 올림", { exact: true })).toHaveCount(2);
+  await dialog.getByRole("combobox", { name: "규칙 적용 대상" }).click();
+  await page.getByRole("option", { name: "선택 약품 예외", exact: true }).click();
+  for (const product of products) await dialog.getByRole("checkbox", { name: `${product.name} 규칙 선택` }).check();
+  await dialog.getByRole("combobox", { name: "조제량 처리 방식" }).click();
+  await page.getByRole("option", { name: "버림", exact: true }).click();
+  await dialog.getByRole("button", { name: "2개 약품에 적용" }).click();
+  await expect(dialog.getByRole("combobox", { name: "조제량 처리 방식" })).toHaveText("버림");
+  await expect(dialog.getByText("약품 예외 · 버림", { exact: true })).toHaveCount(2);
+  conflictNext = true;
+  await dialog.getByRole("button", { name: "선택 약품 예외 해제" }).click();
+  await expect(dialog.getByRole("alert")).toContainText("다른 사용자가 규칙을 변경했습니다");
+  await expect(dialog.getByRole("button", { name: "2개 약품에 적용" })).toBeDisabled();
+  await dialog.getByRole("button", { name: "다시 불러오기" }).click();
+  await expect(dialog.getByText("약품 예외 · 버림", { exact: true })).toHaveCount(2);
+  await dialog.getByRole("combobox", { name: "규칙 적용 대상" }).click();
+  await page.getByRole("option", { name: "선택 약품 예외", exact: true }).click();
+  for (const product of products) await dialog.getByRole("checkbox", { name: `${product.name} 규칙 선택` }).check();
+  await dialog.getByRole("button", { name: "선택 약품 예외 해제" }).click();
+  await expect(dialog.getByText("병원 기본값 · 올림", { exact: true })).toHaveCount(2);
+  expect(writes).toHaveLength(4);
+  await page.screenshot({ path: ".artifacts/dispense-quantity/hospital-rules.png", fullPage: false });
 });

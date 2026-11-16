@@ -20,10 +20,13 @@ const errors: Record<string, number> = {
   workspace_membership_missing: 403,
   work_item_unavailable: 404,
   revision_conflict: 409,
+  instruction_ack_required: 409,
   idempotency_conflict: 409,
   invalid_transition: 409,
   billing_locked: 409,
   actual_execution_result_required: 409,
+  treatment_medication_link_required: 409,
+  treatment_medication_link_invalid: 409,
 };
 
 /** The session-bound RPC owns workspace, current attempt and executor checks. */

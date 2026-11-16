@@ -9,8 +9,8 @@ status: "active"
 area: design
 doc_type: design-system
 tags: [design-system, ui, ux-writing, tokens, components, density]
-updated: "2026-10-20"
-last_updated: "2026-10-20"
+updated: "2026-11-03"
+last_updated: "2026-11-03"
 source_docs:
   - "docs/design/references/linear-app/DESIGN.md"
   - "docs/design/system/light-operational-foundation.md"
@@ -93,6 +93,9 @@ dismiss command has no persistent selection; the 6% press is a scoped exception
 to the general 8% active token. Preserve its accessible label, keyboard
 dismissal, and visible focus ring. Scope these styles to the toaster and make
 them independent of Sonner's runtime stylesheet insertion order.
+
+When the compact side panel is modal, `Alt+T` leaves keyboard focus inside the
+panel. Close the panel with `Escape` to use the toast shortcut again.
 
 ## Color
 
@@ -238,11 +241,24 @@ CLAiR screens favor operational density:
   contact, and billing summaries, but follows the same context-bar surface,
   spacing, icon treatment, typography, profile interaction, and overflow controls.
   Visual alignment must not change billing data or calculations.
-- pending patient-context values use shared skeletons rather than visible loading
-  sentences. Keep resolved values, explicit failure/denial/missing states,
-  accessible busy descriptions, and reduced-motion behavior. Chart shows the same
-  skeleton while its first selected-record read is pending; keep loaded context
-  visible during refresh and never add an artificial loading delay.
+- initial page/selected-record reads use the whole-page loading boundary in
+  `empty-info-state-contract.md`; information bars, internal tabs and body appear
+  together after required reads finish. Shared skeletons remain available for
+  independent partial reads and same-page refresh. Preserve resolved values,
+  explicit failure/denial/missing states, accessible busy descriptions and
+  reduced-motion behavior. Do not add artificial loading delays.
+- measured loading for the approved small read-only profile, summary and
+  card/list slices uses `EmrMeasuredLoading` with synthetic presentation content.
+  Real loaded data, fetching owners and editors never enter the measurement
+  boundary. Keep existing content during same-scope refresh/pagination; clear it
+  on subject/workspace changes and authorization denial. Errors and empty states
+  remain explicit. Existing table/calendar/field skeletons and saving/upload
+  progress retain their current owners. Skullet 0.0.3 is pinned; verify the
+  no-persistence and accessibility stories before upgrades. Scope and evidence:
+  [approved adoption](../../work/customer/CUSTOMER-PR-002-patient-guardian-profile-side-panel.md#2026-11-03-approved-measured-loading-adoption).
+  Page-level required reads take precedence: keep these slices inside the page
+  boundary until the complete page is ready; independent partial reads may
+  continue to display their existing skeletons.
 - central workspaces for forms, tables, charting, and result entry
 - right panels for summary, history, or focused auxiliary work
 - every top-level module exposes exactly one effective main-content header at

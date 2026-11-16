@@ -6,7 +6,7 @@ import base from "./playwright.config";
 const baseURL = "http://127.0.0.1:3417";
 export default defineConfig({
   ...base,
-  testMatch: ["queue-read-browser.spec.ts", "fulfillment-queue-lifecycle.spec.ts", "reception-read-coordinator.spec.ts", "reception-read-performance.spec.ts", "dispensing-fulfillment.spec.ts", "fulfillment-eligible-assignees-ui.spec.ts"],
+  testMatch: ["queue-content-loading.spec.ts", "queue-read-browser.spec.ts", "fulfillment-queue-lifecycle.spec.ts", "reception-read-coordinator.spec.ts", "reception-read-performance.spec.ts", "dispensing-fulfillment.spec.ts", "fulfillment-eligible-assignees-ui.spec.ts"],
   timeout: 60_000,
   use: {
     ...base.use, baseURL,

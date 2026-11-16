@@ -1,5 +1,8 @@
 "use client";
 
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+
+import { DispenseQuantityRulesDialog } from "./dispense-quantity-rules-dialog";
 import { useModuleSidePanel, useModuleSidePanelPathname, useModuleSidePanelRouter, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
 
 import { LabResultProfileSelection } from "@/features/lab-imaging/components/result-profile-selection";
@@ -1506,6 +1509,8 @@ export function HospitalAdminConceptScreen({
 
 function useHospitalCatalogRead(workspaceId: string, enabled: boolean, catalogRetryKey = 0) {
   const { hydrated, hydrate, session } = useAuthClient();
+  const readScope = `${workspaceId}:${session?.id}`;
+  const [completedReadScope, setCompletedReadScope] = useState<string | null>(null);
   const beginCatalogLoad = useHospitalAdminStore((state) => state.beginCatalogLoad);
   const finishCatalogLoad = useHospitalAdminStore((state) => state.finishCatalogLoad);
   useEffect(() => {
@@ -1558,7 +1563,9 @@ function useHospitalCatalogRead(workspaceId: string, enabled: boolean, catalogRe
       }
     };
 
-    void loadCatalog();
+    void loadCatalog().finally(() => {
+      if (!canceled) setCompletedReadScope(readScope);
+    });
 
     return () => {
       canceled = true;
@@ -1572,9 +1579,10 @@ function useHospitalCatalogRead(workspaceId: string, enabled: boolean, catalogRe
     beginCatalogLoad,
     finishCatalogLoad,
     workspaceId,
+    readScope,
   ]);
 
-  return session;
+  return { session, initialPending: enabled && (!hydrated || completedReadScope !== readScope) };
 }
 
 export function HospitalAdminSidePanel({ moduleLabel, workspaceId }: ShellComponentProps) {
@@ -1888,6 +1896,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   const [orderColumnVisibility, setOrderColumnVisibility] =
     useState<VisibilityState>({});
   const [dispensingCreateOpen, setDispensingCreateOpen] = useState(false);
+  const [dispenseRulesOpen, setDispenseRulesOpen] = useState(false);
   const selectedSubcategory = getHospitalOrderSubcategory(
     selectedSubcategoryId,
   );
@@ -2788,7 +2797,8 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
       ),
     );
   };
-  const session = useHospitalCatalogRead(workspaceId, true, catalogRetryKey);
+  const { session, initialPending: catalogInitialPending } = useHospitalCatalogRead(workspaceId, true, catalogRetryKey);
+  usePageReadiness(activeSection === "orders" && (catalogInitialPending || catalogReadStatus === "idle" || catalogReadStatus === "loading"), `${workspaceId}:${activeSection}`);
 
   if (activeSection === "members") {
     return (
@@ -2865,6 +2875,8 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
 
   return (
     <>
+      <DispenseQuantityRulesDialog key={workspaceId} workspaceId={workspaceId} actorHeaders={session ? getDemoActorHeaders(session) : undefined}
+        initialSelection={selectedOrderIds} open={dispenseRulesOpen} onOpenChange={setDispenseRulesOpen} />
       <Dialog
         open={dispensingCreateOpen}
         onOpenChange={setDispensingCreateOpen}
@@ -2938,6 +2950,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
         searchValue={searchQuery}
         tableControls={
           <>
+            {isDispensingOrderTable && <Button size="sm" variant="outline" onClick={() => setDispenseRulesOpen(true)}>실 조제량 규칙</Button>}
             <Popover
               open={orderFilterOpen}
               onOpenChange={(open) => {
@@ -3164,6 +3177,7 @@ function HospitalAdminAuditReview({ workspaceId }: { workspaceId: string }) {
   >("idle");
   const canReview =
     session?.role === "hospital_admin" || session?.role === "supabase";
+  usePageReadiness(!hydrated || (canReview && (status === "idle" || status === "loading")), workspaceId);
   const hasAuditFilters = Boolean(query.trim()) || eventType !== "all";
   const auditEmptyStateKind = hasAuditFilters ? "no-filter-results" : "no-data";
   const auditEmptyStateTitle = hasAuditFilters

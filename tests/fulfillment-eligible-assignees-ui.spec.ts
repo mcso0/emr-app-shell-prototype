@@ -66,6 +66,7 @@ for (const screen of screens) {
 
       const workspaceId = PREPARED_EMPTY_CLINIC_WORKSPACE_ID;
       const workItemId = `synthetic-${screen.queueType}-${status}`;
+      const awaitingClaim = screen.module === "dispensing" && status === "requested";
       const workItem = {
         workspaceId,
         id: workItemId,
@@ -75,8 +76,8 @@ for (const screen of screens) {
         status,
         requestCycle: 1,
         rowRevision: 1,
-        assignedToUserId: "user-tech",
-        assignedToDisplayName: "합성 현재 담당자",
+        assignedToUserId: awaitingClaim ? null : "user-tech",
+        assignedToDisplayName: awaitingClaim ? null : "합성 현재 담당자",
         canManage: true,
         requestedByUserId: "user-vet",
         patientName: "합성 환자",
@@ -99,9 +100,10 @@ for (const screen of screens) {
         await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}/instruction`, route => route.fulfill({
           json: { ok: true, document: { ...structuredClone(syntheticInstruction),
             rootOrderId: workItemId, rootTaskId: workItemId, isSet: false, queueType: screen.queueType,
-            name: "합성 업무", mainAssigneeId: "user-tech", mainAssigneeName: "합성 현재 담당자",
+            name: "합성 업무", mainAssigneeId: workItem.assignedToUserId,
+            mainAssigneeName: workItem.assignedToDisplayName, canClaim: awaitingClaim,
             items: [{ ...syntheticInstruction.items[0], id: workItemId, orderId: workItemId, taskId: workItemId,
-              name: "합성 업무", status, assigneeId: "user-tech", assigneeName: "합성 현재 담당자" }],
+              name: "합성 업무", status, assigneeId: workItem.assignedToUserId, assigneeName: workItem.assignedToDisplayName }],
           } },
         }));
       }
@@ -124,7 +126,11 @@ for (const screen of screens) {
         if (reads.length === 1) {
           await new Promise<void>((resolve) => { releaseCandidates = resolve; });
           if (screen.module === "dispensing") {
-            await route.fulfill({ status: 503, json: { ok: false } });
+            if (status === "requested") {
+              await route.fulfill({ json: { ok: true, assignees: null } });
+            } else {
+              await route.abort("failed");
+            }
             return;
           }
           await route.fulfill({ json: { ok: true, assignees: [
@@ -153,24 +159,29 @@ for (const screen of screens) {
         else await page.getByTestId(queueItemTestId).click();
 
         if (screen.module === "dispensing") {
-          // Instruction screens preload candidates and assign per item. They no
-          // longer use the legacy header dropdown or handoff dialog.
-          const choose = page.getByRole("button", { name: "합성 업무 담당 선택", exact: true });
+          const choose = awaitingClaim
+            ? page.getByRole("button", { name: "담당하기", exact: true })
+            : page.getByRole("button", { name: "합성 업무 담당 선택", exact: true });
           await expect.poll(() => reads.length).toBe(1);
-          await expect(choose).toBeDisabled();
+          expect(await choose.evaluateAll(buttons => buttons.every(button =>
+            button.matches(":disabled, [aria-disabled=true]"),
+          ))).toBe(true);
           releaseCandidates?.();
-          const alert = page.getByRole("alert").filter({ hasText: "담당자 목록을 불러오지 못했어요." });
+          const alert = page.getByRole("alert").filter({ hasText: "담당자 정보를 불러오지 못했어요. 다시 조회해 주세요." });
           await expect(alert).toBeVisible();
-          await expect(page.locator(`tr[data-item="${workItemId}"]`)).toContainText("합성 업무");
-          await choose.click();
-          await expect(page.getByRole("menu")).toBeVisible();
-          await expect(page.getByRole("menuitemcheckbox")).toHaveCount(0);
-          await page.keyboard.press("Escape");
-          await expect(page.getByRole("menu")).toHaveCount(0);
+          if (awaitingClaim) {
+            await expect(page.getByRole("rowheader", { name: "합성 업무", exact: true })).toBeVisible();
+          } else {
+            await expect(page.locator(`tr[data-item="${workItemId}"]`)).toContainText("합성 업무");
+          }
           await alert.getByRole("button", { name: "다시 조회", exact: true }).click();
           await expect.poll(() => reads.length).toBe(2);
           await expect(alert).toHaveCount(0);
           await expect(choose).toBeEnabled();
+          if (awaitingClaim) {
+            expect(mutations).toEqual([]);
+            return;
+          }
           await choose.click();
           const current = page.getByRole("menuitemcheckbox", { name: "합성 현재 담당자", exact: true });
           await expect(current).toBeChecked();

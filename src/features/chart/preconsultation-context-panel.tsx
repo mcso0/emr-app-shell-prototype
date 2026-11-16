@@ -37,11 +37,10 @@ import {
 } from "@/components/ui/button-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
+import { EmrMeasuredLoading } from "@/components/emr/measured-loading";
 import type {
   ChartPreconsultationContext,
   ChartPreconsultationContextResponse,
-  ChartPreconsultationHistoryEntry,
   ChartPreconsultationVitalMeasurement,
 } from "@/features/chart/preconsultation-context";
 import {
@@ -51,6 +50,7 @@ import {
 } from "@/features/chart/vital-comparison-delta";
 import { ChartVitalDialog } from "@/features/chart/components/chart-vital-dialog";
 import {
+  createDefaultWorkspaceVitalSettingsSnapshot,
   fromCanonicalVitalValue,
   getEnabledWorkspaceVitalSettings,
   type WorkspaceVitalKey,
@@ -58,6 +58,7 @@ import {
 } from "@/features/patient-vitals/workspace-vital-settings";
 import { useWorkspaceVitalSettings } from "@/features/patient-vitals/use-workspace-vital-settings";
 import { cn } from "@/lib/utils";
+import vitalStyles from "./preconsultation-vitals.module.css";
 
 const PRECONSULTATION_SCROLL_CLASS =
   "min-h-0 flex-1 overflow-hidden [&>[data-slot=scroll-area-scrollbar]]:opacity-0 [&>[data-slot=scroll-area-scrollbar]]:transition-opacity [&>[data-slot=scroll-area-scrollbar][data-hovering]]:opacity-100";
@@ -240,7 +241,7 @@ export function ChartPreconsultationContextPanel({
   );
 }
 
-async function loadChartPreconsultationContext({
+export async function loadChartPreconsultationContext({
   actorHeaders,
   encounterId,
   workspaceId,
@@ -266,106 +267,63 @@ async function loadChartPreconsultationContext({
   }
 }
 
-function PreconsultationLoadingState() {
-  return (
-    <ScrollArea
-      className={PRECONSULTATION_SCROLL_CLASS}
-      viewportClassName="scroll-fade-y scroll-fade-8 px-4"
-      viewportStyle={{ overflowX: "hidden" }}
-      aria-busy="true"
-      aria-label="환자 정보 불러오는 중"
-      data-testid="preconsultation-loading-state"
-    >
-      <div className="mx-auto w-full max-w-[1024px] bg-[var(--emr-surface-panel)]">
-        <div className="min-h-[204px] px-5 py-6 sm:px-6 sm:py-8">
-          <Skeleton className="h-7 w-[138px] rounded-full" />
-          <div className="mt-6 flex items-center gap-5 sm:mt-8">
-            <Skeleton className="size-16 shrink-0 rounded-[10px] sm:size-20" />
-            <div className="flex min-w-0 flex-col gap-2.5">
-              <Skeleton className="h-7 w-[210px] max-w-full" />
-              <Skeleton className="h-5 w-[330px] max-w-full" />
-            </div>
-          </div>
-        </div>
-        <Separator className="mx-6 !w-auto" />
-        <div className="flex flex-col gap-6 px-5 py-6 sm:px-8 sm:py-8">
-          {[80, 56, 56, 154, 180].map((height, index) => (
-            <div className="flex flex-col gap-3.5" key={`${height}-${index}`}>
-              <Skeleton className="h-[22px] w-[130px]" />
-              <Skeleton className="w-full" style={{ height }} />
-            </div>
-          ))}
-        </div>
-      </div>
-      <span className="sr-only" role="status">
-        환자와 접수 정보를 불러오고 있어요.
-      </span>
-    </ScrollArea>
-  );
+const loadingContext: ChartPreconsultationContext = {
+  encounter: { id: "loading-encounter", encounterNo: "000000", receptionType: "walk_in", checkedInAt: "2026-01-01T01:00:00Z", status: "waiting", visitPurpose: "가상 방문 목적" },
+  queue: { id: "loading-queue", status: "waiting" },
+  patient: { id: "loading-patient", patientNo: "000000", name: "예시 환자", species: "dog", breed: "품종 정보", sex: "unknown", estimatedAgeText: "나이 정보", specialNote: "가상 환자 메모" },
+  guardian: { id: "loading-guardian", name: "예시 보호자", memo: "가상 보호자 메모" },
+  veterinarian: { id: "loading-veterinarian", displayName: "담당 수의사" },
+  priorEncounterCount: 2,
+  vitals: [{ id: "loading-vital", encounterId: "loading-encounter", measuredAt: "2026-01-01T01:00:00Z" }],
+  history: [0, 1].map(index => ({ encounterId: `loading-history-${index}`, encounterNo: "000000", checkedInAt: "2025-12-01T01:00:00Z", status: "completed", visitPurpose: "가상 진료 이력" })),
+};
+const loadingVitalSettings = createDefaultWorkspaceVitalSettingsSnapshot(false);
+
+export function PatientPreworkMemoLoading() {
+  return <EmrMeasuredLoading label="환자와 보호자 메모를 불러오는 중입니다."><MemoSection context={loadingContext} /></EmrMeasuredLoading>;
 }
 
-function PreconsultationHeader({
-  context,
-  onOpenGuardianInformation,
-  onOpenPatientInformation,
-  onRequestCall,
-  primaryActionBusy,
-}: {
+export function PatientPreworkVitalsLoading() {
+  return <EmrMeasuredLoading label="바이탈 정보를 불러오는 중입니다.">
+    <VitalSection context={loadingContext} canWrite={false} onOpenVitalDialog={() => {}} vitalSettings={loadingVitalSettings} />
+  </EmrMeasuredLoading>;
+}
+
+export function PreconsultationLoadingState() {
+  return <ScrollArea className={PRECONSULTATION_SCROLL_CLASS} viewportClassName="scroll-fade-y scroll-fade-8 px-4"
+    viewportStyle={{ overflowX: "hidden" }} aria-busy="true" aria-label="환자 정보 불러오는 중" data-testid="preconsultation-loading-state">
+    <div className="mx-auto w-full max-w-[1024px] bg-[var(--emr-surface-panel)]">
+      <EmrMeasuredLoading label="환자와 접수 정보를 불러오는 중입니다.">
+        <PatientPreworkHeader context={loadingContext} statusLabel="진료 대기" actions={null} />
+      </EmrMeasuredLoading>
+      <Separator className="mx-6 !w-auto" />
+      <main className="px-5 py-6 sm:px-8 sm:py-8"><div className="flex min-w-0 flex-col gap-6">
+        <EmrMeasuredLoading label="접수 정보를 불러오는 중입니다."><ReceptionSummary context={loadingContext} /></EmrMeasuredLoading>
+        <SectionDivider />
+        <EmrMeasuredLoading label="방문 목적을 불러오는 중입니다."><VisitPurpose context={loadingContext} /></EmrMeasuredLoading>
+        <SectionDivider /><PatientPreworkMemoLoading />
+        <SectionDivider /><PatientPreworkVitalsLoading />
+        <SectionDivider />
+        <EmrMeasuredLoading label="과거 진료 이력을 불러오는 중입니다."><HistorySection context={loadingContext} expanded={false} onToggle={() => {}} /></EmrMeasuredLoading>
+      </div></main>
+    </div>
+  </ScrollArea>;
+}
+
+export type PatientPreworkContext = Pick<ChartPreconsultationContext, "patient" | "guardian"> & {
+  encounter: Pick<ChartPreconsultationContext["encounter"], "id" | "encounterNo" | "checkedInAt" | "receptionMemo">;
+};
+
+function PreconsultationHeader({ context, onOpenGuardianInformation, onOpenPatientInformation, onRequestCall, primaryActionBusy }: {
   context: ChartPreconsultationContext;
   onOpenGuardianInformation: () => void;
   onOpenPatientInformation: () => void;
   onRequestCall: () => void;
   primaryActionBusy: boolean;
 }) {
-  return (
-    <header
-      className="min-w-0 px-5 py-6 sm:px-6 sm:py-8"
-      aria-labelledby="preconsultation-patient-heading"
-    >
-      <div className="flex min-h-7 flex-wrap items-center gap-2.5">
-        <Badge
-          variant="outline"
-          className="h-7 gap-1.5 rounded-full bg-[var(--emr-surface-muted)] pl-2.5 pr-3 text-sm text-[var(--emr-text-secondary)]"
-        >
-          <CdsUtilitiesCircleIcon className="size-[10px]" aria-hidden="true" />
-          진료 대기
-        </Badge>
-        <Badge
-          variant="outline"
-          className="h-7 gap-1.5 rounded-full bg-[var(--emr-surface-muted)] px-3 text-sm text-[var(--emr-text-tertiary)]"
-        >
-          <span>차트번호 </span>
-          <strong className="font-medium text-[var(--emr-text-secondary)]">
-            {context.encounter.encounterNo}
-          </strong>
-        </Badge>
-      </div>
-      <div className="mt-6 grid grid-cols-1 gap-5 sm:mt-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-6">
-        <PatientIdentity context={context} size="large" />
-        <div className="flex shrink-0 flex-wrap items-center gap-3 lg:flex-nowrap lg:justify-end">
-          <Button
-            className="h-8 min-w-0 gap-1.5 rounded-[var(--clair-radius-atomic-8)] px-3 text-sm font-medium leading-5 tracking-[0.014em] has-data-[icon=inline-start]:!pl-3 sm:flex-none"
-            variant="outline"
-            size="default"
-            onClick={onOpenPatientInformation}
-          >
-            <CdsGnbPetGnbIcon data-icon="inline-start" aria-hidden="true" />
-            환자 정보
-          </Button>
-          <Button
-            className="h-8 min-w-0 gap-1.5 rounded-[var(--clair-radius-atomic-8)] px-3 text-sm font-medium leading-5 tracking-[0.014em] has-data-[icon=inline-start]:!pl-3 sm:flex-none"
-            variant="outline"
-            size="default"
-            onClick={onOpenGuardianInformation}
-          >
-            <CdsPeopleUserIcon data-icon="inline-start" aria-hidden="true" />
-            보호자 정보
-          </Button>
-          <span
-            aria-hidden="true"
-            className="hidden h-6 w-px shrink-0 bg-[var(--clair-color-atomic-neutral-300)] lg:block"
-          />
-          <ButtonGroup className="ml-auto lg:ml-0">
+  return <PatientPreworkHeader context={context} statusLabel="진료 대기"
+    onOpenGuardianInformation={onOpenGuardianInformation} onOpenPatientInformation={onOpenPatientInformation}
+    actions={(          <ButtonGroup className="ml-auto lg:ml-0">
             <ButtonGroupPrimaryButton
               className="h-8 gap-1.5 px-3 text-sm font-medium leading-5 tracking-[0.014em] has-data-[icon=inline-start]:!pl-3"
               disabled={primaryActionBusy}
@@ -385,7 +343,75 @@ function PreconsultationHeader({
             >
               <CdsNavigationChevronDownIcon aria-hidden="true" />
             </ButtonGroupIconButton>
-          </ButtonGroup>
+          </ButtonGroup>)} />;
+}
+
+export function PatientPreworkHeader({
+  context,
+  onOpenGuardianInformation,
+  onOpenPatientInformation,
+  actions,
+  statusLabel,
+  loadingDetails = false,
+}: {
+  context: PatientPreworkContext;
+  onOpenGuardianInformation?: () => void;
+  onOpenPatientInformation?: () => void;
+  actions: ReactNode;
+  statusLabel: string;
+  loadingDetails?: boolean;
+}) {
+  return (
+    <header
+      className="min-w-0 px-5 py-6 sm:px-6 sm:py-8"
+      aria-labelledby="preconsultation-patient-heading"
+    >
+      <div className="flex min-h-7 flex-wrap items-center gap-2.5">
+        <Badge
+          variant="outline"
+          className="h-7 gap-1.5 rounded-full bg-[var(--emr-surface-muted)] pl-2.5 pr-3 text-sm text-[var(--emr-text-secondary)]"
+        >
+          <CdsUtilitiesCircleIcon className="size-[10px]" aria-hidden="true" />
+          {statusLabel}
+        </Badge>
+        <Badge
+          variant="outline"
+          className="h-7 gap-1.5 rounded-full bg-[var(--emr-surface-muted)] px-3 text-sm text-[var(--emr-text-tertiary)]"
+        >
+          <span>차트번호 </span>
+          <strong className="font-medium text-[var(--emr-text-secondary)]">
+            {context.encounter.encounterNo}
+          </strong>
+        </Badge>
+      </div>
+      <div className="mt-6 grid grid-cols-1 gap-5 sm:mt-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-6">
+        <PatientIdentity context={context} size="large" loadingDetails={loadingDetails} />
+        <div className="flex shrink-0 flex-wrap items-center gap-3 lg:flex-nowrap lg:justify-end">
+          <Button
+            className="h-8 min-w-0 gap-1.5 rounded-[var(--clair-radius-atomic-8)] px-3 text-sm font-medium leading-5 tracking-[0.014em] has-data-[icon=inline-start]:!pl-3 sm:flex-none"
+            variant="outline"
+            size="default"
+            disabled={!onOpenPatientInformation}
+            onClick={onOpenPatientInformation}
+          >
+            <CdsGnbPetGnbIcon data-icon="inline-start" aria-hidden="true" />
+            환자 정보
+          </Button>
+          <Button
+            className="h-8 min-w-0 gap-1.5 rounded-[var(--clair-radius-atomic-8)] px-3 text-sm font-medium leading-5 tracking-[0.014em] has-data-[icon=inline-start]:!pl-3 sm:flex-none"
+            variant="outline"
+            size="default"
+            disabled={!onOpenGuardianInformation}
+            onClick={onOpenGuardianInformation}
+          >
+            <CdsPeopleUserIcon data-icon="inline-start" aria-hidden="true" />
+            보호자 정보
+          </Button>
+          <span
+            aria-hidden="true"
+            className="hidden h-6 w-px shrink-0 bg-[var(--clair-color-atomic-neutral-300)] lg:block"
+          />
+          {actions}
         </div>
       </div>
     </header>
@@ -395,9 +421,11 @@ function PreconsultationHeader({
 function PatientIdentity({
   context,
   size,
+  loadingDetails = false,
 }: {
-  context: ChartPreconsultationContext;
+  context: PatientPreworkContext;
   size: "large" | "medium";
+  loadingDetails?: boolean;
 }) {
   const metadata = getPatientMetadata(context);
   return (
@@ -441,7 +469,9 @@ function PatientIdentity({
             {`${context.guardian?.name ?? "미지정"} 보호자`}
           </p>
         </div>
-        {size === "large" ? (
+        {loadingDetails ? <EmrMeasuredLoading label="환자 상세 정보를 불러오는 중입니다.">
+          <p className="mt-1.5 text-sm leading-6 sm:text-base">종류 · 품종 정보 · 나이 정보 · 성별</p>
+        </EmrMeasuredLoading> : size === "large" ? (
           <p className="mt-1 flex flex-wrap items-baseline gap-x-1 gap-y-0 text-sm text-[var(--emr-text-tertiary)] sm:mt-1.5 sm:text-base sm:font-semibold sm:leading-6 sm:whitespace-nowrap">
             {metadata.map((item, index) => (
               <span key={`${item}-${index}`} className="inline-flex items-baseline gap-1">
@@ -542,8 +572,9 @@ function ReceptionSummary({ context }: { context: ChartPreconsultationContext })
   );
 }
 
-function MemoSection({ context }: { context: ChartPreconsultationContext }) {
+export function MemoSection({ context, patientMemo: memoOverride, guardianLoading = false }: { context: PatientPreworkContext; patientMemo?: string; guardianLoading?: boolean }) {
   const patientMemo =
+    memoOverride ??
     context.patient.handlingCautionNote ??
     context.patient.specialNote ??
     context.patient.allergyNote ??
@@ -561,10 +592,10 @@ function MemoSection({ context }: { context: ChartPreconsultationContext }) {
           label="환자"
           value={patientMemo ?? "기록된 환자 주의사항이 없어요."}
         />
-        <MemoCard
+        {guardianLoading ? <EmrMeasuredLoading label="보호자 메모를 불러오는 중입니다."><MemoCard label="보호자" value="가상 보호자 메모" /></EmrMeasuredLoading> : <MemoCard
           label="보호자"
           value={context.guardian?.memo ?? "기록된 보호자 메모가 없어요."}
-        />
+        />}
       </div>
     </section>
   );
@@ -603,14 +634,14 @@ function MemoCard({
   );
 }
 
-function VitalSection({
+export function VitalSection({
   canWrite,
   context,
   onOpenVitalDialog,
   vitalSettings,
 }: {
   canWrite: boolean;
-  context: ChartPreconsultationContext;
+  context: { encounter: { id: string }; vitals: ChartPreconsultationVitalMeasurement[] };
   onOpenVitalDialog: () => void;
   vitalSettings: WorkspaceVitalSettingsSnapshot;
 }) {
@@ -755,24 +786,26 @@ function VitalComparison({
   vitalSettings: WorkspaceVitalSettingsSnapshot;
 }) {
   const vitalDefinitions = getVitalDefinitions(vitalSettings);
+  const columnWeights = { weight: 20, temperature: 13, heart_rate: 13, respiratory_rate: 13, blood_pressure: 26 };
+  const totalWeight = 15 + vitalDefinitions.reduce((sum, vital) => sum + columnWeights[vital.key], 0);
   return (
     <div
-      className="max-w-full overflow-x-auto rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)]"
-      tabIndex={0}
-      aria-label="환자 바이탈 표, 좁은 화면에서는 가로로 스크롤할 수 있습니다"
+      className={cn("max-w-full rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)]", vitalStyles.comparison)}
+      role="group"
+      aria-label="환자 바이탈 표"
     >
-      <table className="w-full min-w-[960px] table-fixed border-separate border-spacing-0">
+      <table className={cn("w-full table-fixed border-separate border-spacing-0", vitalStyles.wideTable)}>
         <caption className="sr-only">오늘 및 직전 방문 바이탈 비교</caption>
         <colgroup>
-          <col className="w-[148px]" />
-          {vitalDefinitions.map((vital) => <col key={vital.key} />)}
+          <col style={{ width: `${15 / totalWeight * 100}%` }} />
+          {vitalDefinitions.map((vital) => <col key={vital.key} style={{ width: `${columnWeights[vital.key] / totalWeight * 100}%` }} />)}
         </colgroup>
         <thead>
           <tr>
             <VitalHeaderCell first icon={<CdsFilesCalendarIcon />}>일자</VitalHeaderCell>
             {vitalDefinitions.map((vital) => (
               <VitalHeaderCell key={vital.key} icon={vital.icon}>
-                {vital.label}
+                <VitalLabel vital={vital} />
               </VitalHeaderCell>
             ))}
           </tr>
@@ -794,17 +827,47 @@ function VitalComparison({
           ) : null}
         </tbody>
       </table>
+      <table className={cn("w-full table-fixed border-separate border-spacing-0", vitalStyles.narrowTable)}>
+        <caption className="sr-only">오늘 및 직전 방문 바이탈 비교</caption>
+        <colgroup><col style={{ width: "30%" }} /><col style={{ width: "35%" }} /><col style={{ width: "35%" }} /></colgroup>
+        <thead>
+          <tr>
+            <VitalHeaderCell>항목</VitalHeaderCell>
+            <VitalHeaderCell>오늘<span className={vitalStyles.dateDetail}>{formatShortDate(current.measuredAt)}</span></VitalHeaderCell>
+            <VitalHeaderCell>직전 방문<span className={vitalStyles.dateDetail}>{previous ? formatFullDate(previous.measuredAt) : "기록 없음"}</span></VitalHeaderCell>
+          </tr>
+        </thead>
+        <tbody>
+          {vitalDefinitions.map((vital) => (
+            <tr key={vital.key}>
+              <th scope="row" className={cn("border-r border-b border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-neutral-50)] text-left text-sm font-medium text-[var(--emr-text-tertiary)]", vitalStyles.valueCell)}>
+                <span className={vitalStyles.headerLabel}>{vital.icon}<VitalLabel vital={vital} /></span>
+              </th>
+              <td className={cn("border-r border-b border-[var(--emr-border-default)] text-sm font-medium leading-5 tracking-[0.014em]", vitalStyles.valueCell)}>
+                <VitalMetric vital={vital} measurement={current} previous={previous} />
+              </td>
+              <td className={cn("border-b border-[var(--emr-border-default)] text-sm font-medium leading-5 tracking-[0.014em]", vitalStyles.valueCell)}>
+                {previous ? <VitalMetric vital={vital} measurement={previous} /> : <span className="text-muted-foreground">—</span>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
 
-function VitalHeaderCell({ children, first = false, icon }: { children: ReactNode; first?: boolean; icon: ReactNode }) {
+function VitalLabel({ vital }: { vital: VitalDefinition }) {
+  return <span className={vitalStyles.label}>{vital.key === "blood_pressure" ? <><span>혈압</span><span>(수축/이완)</span></> : vital.label}</span>;
+}
+
+function VitalHeaderCell({ children, first = false, icon }: { children: ReactNode; first?: boolean; icon?: ReactNode }) {
   return (
-    <th className={cn(
-      "h-11 border-r border-b border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-neutral-50)] px-4 py-2.5 text-left text-sm font-medium text-[var(--emr-text-tertiary)] last:border-r-0",
-      first && "px-6",
+    <th scope="col" className={cn(
+      "h-11 border-r border-b border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-neutral-50)] text-left text-sm font-medium text-[var(--emr-text-tertiary)] last:border-r-0",
+      vitalStyles.headerCell,
     )}>
-      <span className="inline-flex items-center gap-1.5 [&_svg]:size-3.5">{icon}{children}</span>
+      {icon || first ? <span className={vitalStyles.headerLabel}>{icon}{children}</span> : children}
     </th>
   );
 }
@@ -828,35 +891,39 @@ function VitalRow({
   return (
     <tr>
       <th
+        scope="row"
         className={cn(
-          "h-[52px] border-r border-b border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-common-100)] px-6 py-0 text-left text-sm font-medium leading-5 tracking-[0.014em] text-[var(--clair-color-atomic-neutral-800)]",
+          "border-r border-b border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-common-100)] text-left text-sm font-medium leading-5 tracking-[0.014em] text-[var(--clair-color-atomic-neutral-800)]",
+          vitalStyles.valueCell,
           isLast && "border-b-0",
         )}
       >
-        <span className="inline-flex items-center gap-0.5 whitespace-nowrap">
+        <span className={vitalStyles.dateValue}>
           <span>{dateLabel}</span>
           {dateDetail ? <span className="text-[var(--clair-color-atomic-neutral-500)]">{dateDetail}</span> : null}
         </span>
       </th>
       {vitalDefinitions.map((vital) => {
-        const delta = current && previous ? vital.delta(measurement, previous) : null;
         return (
           <td
             key={vital.key}
             className={cn(
-              "h-[52px] border-r border-b border-[var(--emr-border-default)] px-4 py-0 text-sm font-medium leading-5 tracking-[0.014em] last:border-r-0",
+              "border-r border-b border-[var(--emr-border-default)] text-sm font-medium leading-5 tracking-[0.014em] last:border-r-0",
+              vitalStyles.valueCell,
               isLast && "border-b-0",
             )}
           >
-            <div className="flex items-center justify-between gap-2">
-              <span>{vital.format(measurement)}</span>
-              {delta ? <VitalDeltaIndicator delta={delta} /> : null}
-            </div>
+            <VitalMetric vital={vital} measurement={measurement} previous={current ? previous : undefined} />
           </td>
         );
       })}
     </tr>
   );
+}
+
+function VitalMetric({ vital, measurement, previous }: { vital: VitalDefinition; measurement: ChartPreconsultationVitalMeasurement; previous?: ChartPreconsultationVitalMeasurement }) {
+  const delta = previous ? vital.delta(measurement, previous) : null;
+  return <div className={vitalStyles.metric}><span className={vitalStyles.value}>{vital.format(measurement)}</span>{delta ? <VitalDeltaIndicator delta={delta} /> : null}</div>;
 }
 
 function VitalDeltaIndicator({ delta }: { delta: VitalDelta }) {
@@ -928,7 +995,15 @@ function HistorySection({
       </SectionTitle>
       {entries.length > 0 ? (
         <>
-          <HistoryTimeline entries={entries} />
+          <PatientPreworkHistoryTimeline
+            label="과거 진료 이력"
+            testId="preconsultation-history-timeline"
+            entries={entries.map(entry => ({
+              id: entry.encounterId,
+              timestamp: entry.checkedInAt,
+              summary: entry.visitPurpose ?? entry.chiefComplaint ?? entry.primaryDiagnosis ?? "진료 요약 미입력",
+            }))}
+          />
           {hasMoreHistory ? (
             <div className="flex justify-center">
               <Button
@@ -957,18 +1032,20 @@ function HistorySection({
   );
 }
 
-function HistoryTimeline({
-  entries,
-}: {
-  entries: ChartPreconsultationHistoryEntry[];
+type PreworkHistoryEntry = { id: string; timestamp: string; summary: string };
+
+export function PatientPreworkHistoryTimeline({ entries, label, testId }: {
+  entries: PreworkHistoryEntry[];
+  label: string;
+  testId?: string;
 }) {
   const groups = groupHistoryEntries(entries);
 
   return (
     <ol
       className="flex min-w-0 flex-col gap-3 px-6 py-1"
-      aria-label="과거 진료 이력"
-      data-testid="preconsultation-history-timeline"
+      aria-label={label}
+      data-testid={testId}
     >
       {groups.map((group) => (
         <li key={group.date} className="flex min-w-0 gap-2">
@@ -985,25 +1062,22 @@ function HistoryTimeline({
               {group.date}
             </div>
             <ol className="flex min-w-0 flex-col gap-2">
-              {group.entries.map((entry) => {
-                const summary = entry.visitPurpose ?? entry.chiefComplaint ?? entry.primaryDiagnosis ?? "진료 요약 미입력";
-                return (
-                  <li
-                    key={entry.encounterId}
-                    className="flex h-14 min-w-0 items-center gap-3 overflow-hidden rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] p-4"
+              {group.entries.map((entry) => (
+                <li
+                  key={entry.id}
+                  className="flex h-14 min-w-0 items-center gap-3 overflow-hidden rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] p-4"
+                >
+                  <Badge
+                    className="h-[22px] w-[69px] shrink-0 rounded-[var(--clair-radius-atomic-6)] border-[rgba(0,0,0,0.08)] bg-[var(--emr-surface-panel)] px-2 font-mono text-xs font-medium"
+                    variant="outline"
                   >
-                    <Badge
-                      className="h-[22px] w-[69px] shrink-0 rounded-[var(--clair-radius-atomic-6)] border-[rgba(0,0,0,0.08)] bg-[var(--emr-surface-panel)] px-2 font-mono text-xs font-medium"
-                      variant="outline"
-                    >
-                      {formatHistoryTime(entry.checkedInAt)}
-                    </Badge>
-                    <span className="min-w-0 truncate text-[15px] font-medium leading-6 tracking-[0.006em]">
-                      {summary}
-                    </span>
-                  </li>
-                );
-              })}
+                    {formatHistoryTime(entry.timestamp)}
+                  </Badge>
+                  <span className="min-w-0 truncate text-[15px] font-medium leading-6 tracking-[0.006em]">
+                    {entry.summary}
+                  </span>
+                </li>
+              ))}
             </ol>
           </div>
         </li>
@@ -1052,7 +1126,7 @@ function VeterinarianAvatar({ name }: { name: string }) {
   );
 }
 
-function getPatientMetadata(context: ChartPreconsultationContext) {
+function getPatientMetadata(context: PatientPreworkContext) {
   return [
     getSpeciesLabel(context.patient.species),
     context.patient.breed ?? "품종 미입력",
@@ -1061,11 +1135,12 @@ function getPatientMetadata(context: ChartPreconsultationContext) {
   ];
 }
 
-function getPatientAge(context: ChartPreconsultationContext) {
+function getPatientAge(context: PatientPreworkContext) {
   if (context.patient.estimatedAgeText) return context.patient.estimatedAgeText;
   if (!context.patient.birthDate) return "나이 미입력";
   const birth = new Date(`${context.patient.birthDate}T00:00:00`);
   const at = new Date(context.encounter.checkedInAt);
+  if (!Number.isFinite(birth.getTime()) || !Number.isFinite(at.getTime())) return "나이 미입력";
   let years = at.getFullYear() - birth.getFullYear();
   if (at.getMonth() < birth.getMonth() || (at.getMonth() === birth.getMonth() && at.getDate() < birth.getDate())) years -= 1;
   return `${Math.max(0, years)}세`;
@@ -1120,12 +1195,10 @@ function formatShortDate(value: string) {
   return `${year}.${month}.${day}`;
 }
 
-function groupHistoryEntries(
-  entries: ChartPreconsultationHistoryEntry[],
-) {
-  return entries.reduce<Array<{ date: string; entries: ChartPreconsultationHistoryEntry[] }>>(
+function groupHistoryEntries(entries: PreworkHistoryEntry[]) {
+  return entries.reduce<Array<{ date: string; entries: PreworkHistoryEntry[] }>>(
     (groups, entry) => {
-      const date = formatHistoryDate(entry.checkedInAt);
+      const date = formatHistoryDate(entry.timestamp);
       const existing = groups.find((group) => group.date === date);
       if (existing) {
         existing.entries.push(entry);

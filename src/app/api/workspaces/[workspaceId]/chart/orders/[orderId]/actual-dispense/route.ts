@@ -23,6 +23,7 @@ type RequestBody = {
   actualQuantity?: number;
   expectedOrderUpdatedAt?: string;
   idempotencyKey?: string;
+  mode?: "manual" | "automatic" | "reconfirm" | "legacy";
   reason?: string | null;
 };
 
@@ -69,7 +70,8 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     idempotencyKey: body.idempotencyKey,
     orderId,
     permissionAdapter,
-    reason: body.reason,
+    mode: body.mode,
+    reason: body.mode === "legacy" ? body.reason : undefined,
     workspaceId,
   });
   return Response.json(result, { status: result.status });

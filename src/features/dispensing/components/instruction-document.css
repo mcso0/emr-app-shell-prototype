@@ -2,8 +2,19 @@
 /* Review: shared header for instructions; metadata stays in one wrapping line. */
 /* Visual rhythm: one list surface, consistent columns, restrained state accents. */
 /* Linked veterinarian and technician review flow. */
+
+.fd-order-filter-option > [data-slot="dropdown-menu-radio-item-indicator"] {
+  display: none;
+}
+.fd-order-filter-check {
+  background: url("/assets/instruction/order-filter-unselected.svg") center no-repeat;
+}
+.fd-order-filter-option[aria-checked="true"] .fd-order-filter-check {
+  background-image: url("/assets/instruction/order-filter-selected.svg");
+}
+
 .figma-document {
-  background: white;
+  background: transparent;
   padding: 0 16px 16px;
   display: flex;
   flex-direction: column;
@@ -22,6 +33,7 @@
   font-weight: 500;
 }
 .fd-card {
+  background: var(--clair-color-atomic-common-100);
   border: 1px solid #e5e5e5;
   border-radius: 12px;
   padding: 12px 16px;
@@ -171,12 +183,16 @@
   border-radius: 0 !important;
 }
 .fd-table {
+  --fd-frequency-change-padding-inline: 8px;
   width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
   font-size: 14px;
   line-height: 20px;
   font-weight: 500;
+}
+.fd-card[data-dispensing] .fd-table {
+  --fd-frequency-change-padding-inline: 6px;
 }
 .fd-table thead tr {
   height: 36px;
@@ -261,6 +277,7 @@
 .fd-table .fd-row-arrow {
   height: 24px;
   width: 24px;
+  margin-left: 4px;
   padding: 0;
   min-height: 0;
 }
@@ -316,7 +333,7 @@
 }
 .fd-table tr.fd-info-row td {
   height: 52px !important;
-  padding: 0 24px 10px !important;
+  padding: 0 28px 10px !important;
 }
 .fd-info {
   height: auto;
@@ -597,7 +614,8 @@
   min-width: 36px;
 }
 .fd-frequency.fd-frequency-changed {
-  min-width: 73px;
+  min-width: calc(57px + 2 * var(--fd-frequency-change-padding-inline));
+  padding-inline: var(--fd-frequency-change-padding-inline);
 }
 .figma-document {
   padding-bottom: 0;
@@ -610,16 +628,13 @@
   overflow: visible;
   text-overflow: clip;
 }
-/* Workspace integration: longer master names and instructions remain fully readable. */
+/* Workspace integration: keep instructions readable and reserve row padding. */
 .instruction-document-surface .figma-document {
   min-width: 1320px;
 }
 .instruction-document-surface .fd-table td.fd-name {
-  white-space: normal;
-  overflow-wrap: anywhere;
-  padding-top: 10px !important;
-  padding-bottom: 10px !important;
-  text-overflow: clip;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
 }
 .instruction-document-surface .fd-table tr.fd-info-row td {
   white-space: normal;
@@ -635,15 +650,12 @@
   text-overflow: clip;
 }
 
-/* Fit the workspace; reserve the action columns and let the item name wrap. */
+/* Fit the workspace and reserve the action columns. */
 .instruction-document-surface .figma-document {
   min-width: 0;
   width: 100%;
   padding-left: 0;
   padding-right: 0;
-}
-.instruction-document-surface .fd-table col:nth-child(2) {
-  width: auto !important;
 }
 .instruction-document-surface .fd-table col:nth-child(3),
 .instruction-document-surface .fd-table col:nth-child(9),
@@ -654,10 +666,6 @@
 .instruction-document-surface .fd-table col:nth-child(7) {
   width: 72px !important;
 }
-.instruction-document-surface .fd-table col:nth-child(5),
-.instruction-document-surface .fd-table col:nth-child(8) {
-  width: 64px !important;
-}
 .instruction-document-surface .fd-table col:nth-child(10) {
   width: 64px !important;
 }
@@ -666,9 +674,6 @@
 }
 .instruction-document-surface .fd-table col:nth-child(13) {
   width: 82px !important;
-}
-.instruction-document-surface .fd-table col:last-child {
-  width: 0 !important;
 }
 .instruction-document-surface .fd-table td:nth-child(3),
 .instruction-document-surface .fd-table td:nth-child(9),
@@ -717,9 +722,6 @@
     padding-left: 4px;
     padding-right: 4px;
   }
-  .instruction-document-surface .fd-table col:first-child {
-    width: 24px !important;
-  }
   .instruction-document-surface .fd-table col:nth-child(3),
   .instruction-document-surface .fd-table col:nth-child(9),
   .instruction-document-surface .fd-table col:nth-child(12) {
@@ -728,10 +730,6 @@
   .instruction-document-surface .fd-table col:nth-child(4),
   .instruction-document-surface .fd-table col:nth-child(7) {
     width: 52px !important;
-  }
-  .instruction-document-surface .fd-table col:nth-child(5),
-  .instruction-document-surface .fd-table col:nth-child(8) {
-    width: 50px !important;
   }
   .instruction-document-surface .fd-table col:nth-child(6) {
     width: 78px !important;
@@ -784,7 +782,7 @@
     padding: 0 4px !important;
   }
   .instruction-document-surface .fd-table tr.fd-info-row td {
-    padding: 0 24px 10px !important;
+    padding: 0 28px 10px !important;
   }
 }
 @container (max-width:760px) {
@@ -803,10 +801,6 @@
   .instruction-document-surface .fd-table col:nth-child(4),
   .instruction-document-surface .fd-table col:nth-child(7) {
     width: 42px !important;
-  }
-  .instruction-document-surface .fd-table col:nth-child(5),
-  .instruction-document-surface .fd-table col:nth-child(8) {
-    width: 44px !important;
   }
   .instruction-document-surface .fd-table col:nth-child(10) {
     width: 48px !important;
@@ -830,7 +824,7 @@
   padding: 0 !important;
 }
 .instruction-document-surface .fd-table tr.fd-info-row td {
-  padding: 0 24px 10px !important;
+  padding: 0 28px 10px !important;
 }
 
 /* Latest Figma: narrower metadata columns and the compact completion control. */
@@ -871,6 +865,50 @@
   padding-left: 7px;
   padding-right: 7px;
 }
+.fd-toolbar .fd-tool.fd-choice {
+  width: auto;
+  min-width: 58px;
+  justify-content: center;
+}
+.fd-filter-control {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  border: 1px solid var(--emr-border-default);
+  border-radius: var(--clair-radius-md);
+  background: var(--card);
+  box-shadow: var(--clair-shadow-xs);
+}
+.fd-filter-control[data-active] {
+  border-color: var(--clair-color-atomic-sky-200);
+}
+.fd-toolbar .fd-filter-control button {
+  height: 26px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.fd-toolbar .fd-filter-control .fd-choice {
+  min-width: 56px;
+}
+.fd-toolbar .fd-filter-control .fd-choice:hover {
+  background: var(--emr-state-hover);
+}
+.fd-toolbar .fd-filter-control[data-active] .fd-choice {
+  min-width: 0;
+  padding-right: 0;
+}
+.fd-toolbar .fd-filter-clear {
+  width: 24px;
+  color: var(--clair-color-atomic-neutral-500);
+}
+.fd-toolbar .fd-filter-clear:hover {
+  color: var(--clair-color-atomic-neutral-900);
+}
+.fd-toolbar .fd-choice[data-sort-active] {
+  border-color: var(--clair-color-atomic-sky-200);
+  color: var(--emr-text-link);
+}
 .fd-table .fd-complete {
   width: 58px;
   height: 24px;
@@ -880,10 +918,6 @@
 .fd-table td:nth-child(14) {
   padding-left: 10px !important;
 }
-.instruction-document-surface .fd-table col:nth-child(5),
-.instruction-document-surface .fd-table col:nth-child(8) {
-  width: 88px !important;
-}
 .instruction-document-surface .fd-table col:nth-child(10),
 .instruction-document-surface .fd-table col:nth-child(11) {
   width: 72px !important;
@@ -892,10 +926,6 @@
   width: 78px !important;
 }
 @container (max-width:900px) {
-  .instruction-document-surface .fd-table col:nth-child(5),
-  .instruction-document-surface .fd-table col:nth-child(8) {
-    width: 50px !important;
-  }
   .instruction-document-surface .fd-table col:nth-child(10) {
     width: 58px !important;
   }
@@ -918,10 +948,6 @@
   }
 }
 @container (max-width:760px) {
-  .instruction-document-surface .fd-table col:nth-child(5),
-  .instruction-document-surface .fd-table col:nth-child(8) {
-    width: 44px !important;
-  }
   .instruction-document-surface .fd-table col:nth-child(10) {
     width: 48px !important;
   }
@@ -1012,4 +1038,94 @@
 }
 .instruction-document-surface .figma-document {
   font-family: inherit;
+}
+
+/* Bounded identity column; dose and total share the remaining table width. */
+.instruction-document-surface .fd-table col:nth-child(4),
+.instruction-document-surface .fd-table col:nth-child(7) { width: auto !important; }
+.instruction-document-surface .fd-table col:nth-child(14) { width: 120px !important; }
+.fd-info { align-items: flex-start; }
+.fd-info > .fd-icon { flex-shrink: 0; margin-top: 3px; }
+.oral-instruction-infobar {
+  display: flex; align-items: flex-start; gap: 16px; padding: 12px 12px 12px 18px;
+  border: 1px solid var(--clair-color-atomic-neutral-200);
+  border-radius: 12px; background: var(--clair-color-atomic-neutral-100); font-size: 14px; line-height: 20px;
+  font-weight: 500; letter-spacing: .196px; margin-bottom: 16px;
+}
+.oral-instruction-symbol {
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 44px; height: 44px; border-radius: 8px; background: rgb(0 0 0 / 6%);
+}
+/* Keep numerical values readable once the identity/action minimums are reached. */
+.instruction-document-surface .fd-table-container { overflow-x: auto !important; }
+.instruction-document-surface .fd-table {
+  --fd-item-column-default: 280px;
+  --fd-item-column-width: var(--fd-item-column-default);
+  --fd-table-base-width: 1048px;
+  --fd-unit-base-width: 88px;
+  --fd-dose-unit-column: var(--fd-dose-unit-width, var(--fd-unit-base-width));
+  --fd-total-unit-column: var(--fd-total-unit-width, var(--fd-unit-base-width));
+  min-width: calc(
+    var(--fd-table-base-width) +
+    max(0px, var(--fd-item-column-width) - var(--fd-item-column-default)) +
+    max(0px, var(--fd-dose-unit-column) + var(--fd-total-unit-column) - 2 * var(--fd-unit-base-width))
+  );
+}
+.instruction-document-surface .fd-card[data-dispensing] .fd-table {
+  --fd-item-column-width: var(--fd-item-column-resized-width, var(--fd-item-column-default));
+}
+.instruction-document-surface .fd-table col:nth-child(2) {
+  width: var(--fd-item-column-width) !important;
+}
+.instruction-document-surface .fd-table col:nth-child(5) { width: var(--fd-dose-unit-column); }
+.instruction-document-surface .fd-table col:nth-child(8) { width: var(--fd-total-unit-column); }
+.fd-table [data-fd-unit] {
+  display: inline-block;
+  width: max-content;
+  white-space: nowrap;
+}
+.instruction-document-surface .fd-table col:nth-child(14) { width: 78px !important; }
+@container (max-width: 1000px) {
+  .instruction-document-surface .fd-table {
+    --fd-item-column-default: 180px;
+    --fd-table-base-width: 948px;
+  }
+}
+@container (max-width: 900px) {
+  .instruction-document-surface .fd-table {
+    --fd-table-base-width: 798px;
+    --fd-unit-base-width: 50px;
+  }
+}
+@container (max-width: 760px) {
+  .instruction-document-surface .fd-table {
+    --fd-table-base-width: 766px;
+    --fd-unit-base-width: 44px;
+  }
+}
+
+/* Before work starts, reuse the document's read-only row disclosure and note. */
+.fd-prework-table thead th {
+  background: var(--emr-surface-muted);
+}
+.fd-prework-table th.fd-prework-item-name {
+  height: 40px !important;
+  border-bottom: 0;
+  color: var(--emr-text-primary);
+  font-size: 14px !important;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.fd-prework-table .fd-info-row[hidden] {
+  display: none !important;
+}
+.fd-prework-table.fd-prework-treatment td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.fd-table tr[data-instruction-target]:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
 }

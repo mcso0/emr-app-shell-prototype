@@ -2,9 +2,10 @@
 
 import type { ReactNode } from "react";
 import { CdsFilesClockIcon } from "@/components/cds-icons/files-and-layout";
+import { EmrMeasuredLoading } from "@/components/emr/measured-loading";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
-import { EmrProfilePanelLoading, EmrProfilePanelState } from "@/components/emr/profile-panel";
+import { EmrProfilePanelState } from "@/components/emr/profile-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -203,7 +204,13 @@ export function ProfileWorkStatusTab({
   state: ProfileWorkStatusState;
 }) {
   if (state === "loading") {
-    return <EmrProfilePanelLoading label="배정된 업무를 불러오는 중입니다" />;
+    return <EmrMeasuredLoading label="배정된 업무를 불러오는 중입니다">
+      <StaffWorkTimeline groups={[{ dateLabel: "오늘", items: [0, 1].map(index => ({
+        id: `loading-work-${index}`, category: "lab", categoryLabel: "검사", title: "배정된 업무",
+        subtitle: "가상 업무 항목", patientName: "예시 환자", guardianName: "예시 보호자",
+        status: "requested", statusLabel: "요청됨", requestedAtLabel: "오전 10:00 요청", navigationAvailable: false,
+      })) }]} onRequestNavigation={() => {}} />
+    </EmrMeasuredLoading>;
   }
 
   if (state === "empty") {

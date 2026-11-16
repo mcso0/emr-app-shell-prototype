@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
@@ -44,6 +46,12 @@ export function HospitalScheduleV2Screen({ workspaceId }: { workspaceId: string 
   const requestedWeekStart = searchParams.get("weekStart") ?? undefined;
   const [snapshot, setSnapshot] = useState<HospitalScheduleRevisionRemoteSnapshot | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "empty" | "error" | "read-only">("loading");
+  const pageScope = `${workspaceId}:${requestedWeekStart ?? "current"}`;
+  const [completedPageScope, setCompletedPageScope] = useState<string | null>(null);
+  const activePageScope = useRef(pageScope);
+  const readSequence = useRef(0);
+  useLayoutEffect(() => { activePageScope.current = pageScope; }, [pageScope]);
+  usePageReadiness(completedPageScope !== pageScope, pageScope);
   const [error, setError] = useState<HospitalScheduleRevisionRequestError | null>(null);
   const [editor, setEditor] = useState<ScheduleEntryEditorTarget>(null);
   // The sheet clears dirty state and requests close in the same save continuation.
@@ -61,10 +69,12 @@ export function HospitalScheduleV2Screen({ workspaceId }: { workspaceId: string 
 
   const load = useCallback(
     async (weekStart?: string) => {
+      const requestSequence = ++readSequence.current;
       setState("loading");
       setError(null);
       try {
         const next = await readHospitalScheduleRevision({ weekStart, workspaceId });
+        if (activePageScope.current !== pageScope || requestSequence !== readSequence.current) return;
         if (!next) {
           setSnapshot(null);
           setState("error");
@@ -78,12 +88,15 @@ export function HospitalScheduleV2Screen({ workspaceId }: { workspaceId: string 
           replaceWeekStart(next.canonicalWeekStart, pathname, router, searchParams);
         }
       } catch (caught) {
+        if (activePageScope.current !== pageScope || requestSequence !== readSequence.current) return;
         setSnapshot(null);
         setError(toRequestError(caught));
         setState("error");
+      } finally {
+        if (activePageScope.current === pageScope && requestSequence === readSequence.current) setCompletedPageScope(pageScope);
       }
     },
-    [pathname, router, searchParams, workspaceId],
+    [pathname, router, searchParams, workspaceId, pageScope],
   );
 
   useEffect(() => {

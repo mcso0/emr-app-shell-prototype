@@ -1,5 +1,7 @@
 import { useId, useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import { PathnameContext, SearchParamsContext } from "next/dist/shared/lib/hooks-client-context.shared-runtime";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { ActualInstructionCaller, prepareInstructionCaller, instructionCallerParameters } from "./instruction-caller.stories.fixture";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 
@@ -34,12 +36,38 @@ const meta = {
   render: (args) => <HeaderStackExample {...args} />,
 } satisfies Meta<HeaderArgs>;
 
+const instructionStoryRouter = {
+  bfcacheId: "synthetic-instruction",
+  back: fn(),
+  forward: fn(),
+  refresh: fn(),
+  prefetch: fn(),
+  push: fn(),
+  replace: fn(),
+};
+
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const HistoryAndOutputMenu: Story = {
   beforeEach: prepareInstructionCaller,
-  parameters: { ...instructionCallerParameters, controls: { disable: true }, docs: { description: { story: "Actual exported DispensingContent with real title bar, five-field info card, order filters, history panel and source-disabled output items. Source owns local table transitions; fetch and clipboard remain restored local fixtures." } } },
-  render: () => <ActualInstructionCaller />,
+  parameters: {
+    ...instructionCallerParameters,
+    nextjs: { ...instructionCallerParameters.nextjs, appDirectory: false },
+    controls: { disable: true },
+    docs: { description: { story: "Actual dispensing header and history. This synthetic instruction has no origin chart. The document menu disables chart navigation and keeps link copying available." } },
+  },
+  render: () => {
+    const { pathname, query } = instructionCallerParameters.nextjs.navigation;
+    return (
+      <AppRouterContext.Provider value={instructionStoryRouter}>
+        <PathnameContext.Provider value={pathname}>
+          <SearchParamsContext.Provider value={new URLSearchParams(query)}>
+            <ActualInstructionCaller />
+          </SearchParamsContext.Provider>
+        </PathnameContext.Provider>
+      </AppRouterContext.Provider>
+    );
+  },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement), body = within(canvasElement.ownerDocument.body);
     const history = await canvas.findByRole("button", { name: "처치 이력 패널 열기" });
@@ -48,8 +76,11 @@ export const HistoryAndOutputMenu: Story = {
     await expect(await canvas.findByText("조제/처치 이력")).toBeVisible();
     await userEvent.click(history); await waitFor(() => expect(canvas.queryByText("조제/처치 이력")).not.toBeInTheDocument());
     await userEvent.click(canvas.getByRole("button", { name: "문서 추가 작업" }));
-    const pdf = await body.findByRole("menuitem", { name: "PDF 다운로드" }), print = body.getByRole("menuitem", { name: "출력하기" });
-    await expect(pdf).toHaveAttribute("aria-disabled", "true"); await expect(print).toHaveAttribute("aria-disabled", "true");
+    const items = within(await body.findByRole("menu")).getAllByRole("menuitem");
+    await expect(items).toHaveLength(2);
+    await expect(items[0]).toHaveAccessibleName("오더 차트로 이동");
+    await expect(items[0]).toHaveAttribute("aria-disabled", "true");
+    await expect(items[1]).toHaveAccessibleName("지시서 링크 복사");
     await userEvent.keyboard("{Escape}"); await waitFor(() => expect(body.queryByRole("menu")).not.toBeInTheDocument());
   },
 };

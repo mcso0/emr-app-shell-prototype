@@ -160,6 +160,7 @@ export type ChartOrderExecutionReadGateway = {
 
 export type ChartOrderExecutionReadResult =
   | {
+      canCancelDispensingTreatmentOrders: boolean;
       enforcedBy: "chart-order-execution-read-model";
       execution: ChartOrderExecutionReadModel;
       ok: true;
@@ -223,6 +224,8 @@ export async function readChartOrderExecution({
   return {
     ok: true,
     status: 200,
+    canCancelDispensingTreatmentOrders: permission.effectivePermissionIds.includes("order:update") &&
+      (permission.assignedRoles.includes("vet") || permission.jobPosition?.key === "veterinarian"),
     enforcedBy: "chart-order-execution-read-model",
     execution: result.execution,
   };

@@ -21,6 +21,9 @@ function createFixture(scenario: Scenario) {
     const intercept: typeof fetch = async (input, init) => {
       const url = new URL(input instanceof Request ? input.url : String(input), window.location.origin);
       if (!url.pathname.startsWith("/api/")) return old(input, init);
+      if (url.pathname === `/api/workspaces/${workspaceId}/fulfillment/instruction-review` && (!init?.method || init.method === "GET")) {
+        return Response.json({ ok: true, reviews: (url.searchParams.get("taskIds") ?? "").split(",").map(taskId => ({ taskId, current: null, previous: null, snapshots: [], requiresAcknowledgement: false })) });
+      }
       if (url.pathname !== `/api/workspaces/${workspaceId}/chart/tasks/${taskId}/actual`) throw new Error("Unexpected synthetic actual-record API");
       const method = init?.method ?? (input instanceof Request ? input.method : "GET");
       pending++;

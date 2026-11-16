@@ -34,6 +34,7 @@ export type ShellComponentProps = {
 };
 
 export type WorkspaceSlotAvailability = {
+  readonly orderPrework?: boolean;
   readonly hasContentAside?: boolean;
   readonly hasRightPanel?: boolean;
 };

@@ -1,3 +1,5 @@
+import { DISPENSING_DOSE_UNITS, DISPENSING_QUANTITY_UNITS } from "./dispensing-unit-conversion";
+
 import type {
   ClinicalOrderDestinationModule,
   ClinicalOrderExecutionMode,
@@ -205,12 +207,12 @@ export const CLINICAL_ORDER_FIELD_SCHEMAS: Readonly<
     fields: [
       field({ key: "doseBasis", valueType: "string", label: "용량 기준", control: "select", options: ["patient", "kg", "body_surface_area"], displayOrder: 10, required: true, placement: "inline", bulkEditable: true, semantics: "calculation_input" }),
       field({ key: "dose", valueType: "number", label: "용량", control: "number", displayOrder: 20, required: true, validation: { min: 0, precision: 3 }, placement: "inline", semantics: "calculation_input" }),
-      field({ key: "doseUnit", valueType: "string", label: "단위", control: "select", options: ["mg", "mg/kg", "ml", "ml/kg", "g", "tablet", "capsule", "drop", "pipette", "application", "spray"], displayOrder: 30, required: true, placement: "inline", bulkEditable: true, semantics: "calculation_input" }),
+      field({ key: "doseUnit", valueType: "string", label: "단위", control: "select", options: [...DISPENSING_DOSE_UNITS], displayOrder: 30, required: true, placement: "inline", bulkEditable: true, semantics: "calculation_input" }),
       field({ key: "route", valueType: "string", label: "경로", control: "select", options: ["PO", "IV", "IM", "SC", "topical", "otic", "ophthalmic", "transdermal", "oromucosal", "inhalation", "nasal", "other"], displayOrder: 40, required: true, placement: "inline", bulkEditable: true, semantics: "instruction" }),
       field({ key: "frequency", valueType: "string", label: "빈도", control: "select", options: ["once", "sid", "bid", "tid", "qid", "prn", "custom"], displayOrder: 50, required: true, placement: "inline", bulkEditable: true, semantics: "calculation_input" }),
       field({ key: "durationDays", valueType: "number", label: "일수", control: "number", unit: "일", displayOrder: 60, required: true, validation: { min: 1, precision: 0 }, placement: "inline", semantics: "calculation_input" }),
       field({ key: "totalQuantity", valueType: "number", label: "총량", control: "number", displayOrder: 70, required: true, validation: { min: 0, precision: 3 }, placement: "inline", semantics: "calculation_input" }),
-      field({ key: "totalQuantityUnit", valueType: "string", label: "조제 단위", control: "select", options: ["mg", "ml", "g", "tablet", "capsule", "drop", "pipette", "application", "spray"], displayOrder: 80, placement: "inline", bulkEditable: true, semantics: "calculation_input" }),
+      field({ key: "totalQuantityUnit", valueType: "string", label: "조제 단위", control: "select", options: [...DISPENSING_QUANTITY_UNITS], displayOrder: 80, placement: "inline", bulkEditable: true, semantics: "calculation_input" }),
       field({ key: "medicationInstruction", valueType: "string", label: "복용 시점", control: "select", options: ["before_meal", "after_meal", "with_meal", "any_time"], displayOrder: 90, placement: "inline", bulkEditable: true, semantics: "instruction" }),
       field({ key: "storageMethod", valueType: "string", label: "보관 방법", control: "select", options: ["room_temp", "room_temp_light_protected", "refrigerated", "refrigerated_light_protected"], displayOrder: 100, placement: "inline", bulkEditable: true, semantics: "instruction" }),
       field({ key: "taperSchedule", valueType: "string", label: "증감 스케줄", control: "schedule", displayOrder: 110, validation: { maxLength: 4000 }, placement: "detail", semantics: "instruction" }),

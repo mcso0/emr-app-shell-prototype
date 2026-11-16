@@ -18,7 +18,8 @@ import { CdsMedicalStethoscopeIcon } from "@/components/cds-icons/medical-and-do
 import { CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { Button } from "@/components/ui/button";
-import { EmrProfileIdentity, EmrProfilePanel, EmrProfilePanelBody, EmrProfilePanelLoading, EmrProfilePanelState, EmrProfileTabPanel } from "@/components/emr/profile-panel";
+import { EmrMeasuredLoading } from "@/components/emr/measured-loading";
+import { EmrProfileIdentity, EmrProfilePanel, EmrProfilePanelBody, EmrProfilePanelState, EmrProfileTabPanel } from "@/components/emr/profile-panel";
 import { PERSONAL_PROFILE_STORAGE_EVENT, PERSONAL_PROFILE_CHANGED_KEY, notifyPersonalProfileChanged } from "@/features/auth/personal-profile-session";
 import {
   EditableProfileAvatar,
@@ -460,7 +461,7 @@ export function StaffOperationalProfilePanel({
       <EmrProfileTabPanel value="profile">
         <EmrProfilePanelBody className="p-4">
           {requestState === "loading" ? (
-            <EmrProfilePanelLoading label="직원 운영 프로필 불러오는 중" testId="staff-operational-profile-loading" />
+            <StaffProfileLoading />
           ) : requestState === "error" ? (
             <EmrProfilePanelState state="error" label="운영 프로필을 불러오지 못했어요" onRetry={loadProfile} />
           ) : profile && response ? (
@@ -650,7 +651,19 @@ function SectionTitle({ children, id }: { children: string; id: string }) {
   );
 }
 
-function AccountInformation({ profile }: { profile: StaffOperationalProfile }) {
+export function StaffProfileLoading() {
+  return <EmrMeasuredLoading label="직원 운영 프로필 불러오는 중" testId="staff-operational-profile-loading">
+    <div className="grid gap-4">
+      <TodayShiftSection currentWork={{ date: "2026-01-01", detailLabel: "근무 일정", startMinutes: 540, endMinutes: 1080, source: "schedule", state: "working" }} error={false} onRetry={() => {}} todayDate="2026-01-01" />
+      <div aria-hidden="true" className="mx-2 h-px bg-[var(--emr-border-subtle)]" />
+      <AccountInformation profile={{ jobPositionLabel: "담당 역할", department: "진료과 정보", email: "sample@example.invalid", phone: "010-0000-0000" }} />
+      <div aria-hidden="true" className="mx-2 h-px bg-[var(--emr-border-subtle)]" />
+      <section className="px-2"><SectionTitle id="staff-loading-availability-title">다가오는 일정</SectionTitle><div className="mt-3"><ProfileAvailabilitySummary state="ready" eventLabel="1월 2일 휴무" returnLabel="1월 3일 복귀" /></div></section>
+    </div>
+  </EmrMeasuredLoading>;
+}
+
+function AccountInformation({ profile }: { profile: Pick<StaffOperationalProfile, "jobPositionLabel" | "department" | "email" | "phone"> }) {
   return (
     <section aria-labelledby="staff-account-heading" className="px-2">
       <SectionTitle id="staff-account-heading">계정 정보</SectionTitle>

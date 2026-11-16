@@ -26,7 +26,7 @@ const summary: ChartOrderBillingSummary = {
   currency: "KRW",
   context: null,
   invoiceId: null,
-  orderCounts: { total: 7, confirmed: 6, draft: 1, recheck: 1, requested: 0, requestable: 6, cancelled: 0 },
+  orderCounts: { total: 7, confirmed: 6, draft: 1, recheck: 1, requested: 0, requestable: 2, cancelled: 0 },
   amounts: { gross: 316000, confirmed: 266000, draft: 50000, discount: 36000, surcharge: 0, tax: 0, paid: 0, outstanding: 0, estimatedTotal: 280000, requestableTotal: 230000 },
   requestableOrderIds: ["order-1", "order-2"],
   unfinishedOrders: [{ orderId: "order-2", name: "Chemistry 17종", status: "in_progress" }],
@@ -97,6 +97,7 @@ test("billing summary keeps chart:view and chart:update as separate server gates
     actorUserId: "user-vet",
     workspaceId: "foreign-workspace",
     encounterId,
+    orderIds: ["order-1", "order-2"],
     expectedEtag: summary.etag,
     idempotencyKey: "billing-foreign-1",
     permissionAdapter: adapter,
@@ -126,6 +127,7 @@ test("billing request is revision-aware and returns an invoice handoff", async (
     actorUserId: "playwright-default-session",
     workspaceId,
     encounterId,
+    orderIds: ["order-1", "order-2"],
     expectedEtag: '"stale"',
     idempotencyKey: "billing-stale-1",
     gateway,
@@ -137,6 +139,7 @@ test("billing request is revision-aware and returns an invoice handoff", async (
     actorUserId: "playwright-default-session",
     workspaceId,
     encounterId,
+    orderIds: ["order-1", "order-2"],
     expectedEtag: summary.etag,
     idempotencyKey: "billing-request-1",
     gateway,
@@ -145,7 +148,7 @@ test("billing request is revision-aware and returns an invoice handoff", async (
     ok: true,
     summary: {
       invoiceId: "invoice-chart-order-demo",
-      orderCounts: { requestable: 0, requested: 6 },
+      orderCounts: { requestable: 0, requested: 2 },
       amounts: { requestableTotal: 0 },
     },
   });
@@ -155,6 +158,7 @@ test("billing request is revision-aware and returns an invoice handoff", async (
     actorUserId: "playwright-default-session",
     workspaceId,
     encounterId,
+    orderIds: ["order-1", "order-2"],
     expectedEtag: summary.etag,
     idempotencyKey: "billing-request-1",
     gateway,
@@ -176,17 +180,19 @@ test("Supabase gateway calls only the scoped summary and atomic writer RPCs", as
     workspaceId,
     encounterId,
     actorUserId: "user-vet",
+    orderIds: ["order-1", "order-2"],
     expectedEtag: summary.etag,
     idempotencyKey: "billing-gateway-1",
     acknowledgeUnfinished: true,
   });
   expect(calls.map((call) => call.name)).toEqual([
     "clair_get_chart_order_billing_summary",
-    "clair_request_chart_order_billing",
+    "clair_request_selected_chart_order_billing",
   ]);
   expect(calls[1]?.args).toMatchObject({
     p_workspace_id: workspaceId,
     p_encounter_id: encounterId,
+    p_order_ids: ["order-1", "order-2"],
     p_expected_etag: summary.etag,
     p_idempotency_key: "billing-gateway-1",
     p_acknowledge_unfinished: true,
@@ -316,4 +322,17 @@ test("live billing UI keeps protected snapshots out of the actor-agnostic global
   expect(chartModule).toContain(
     'key={`${authSession?.role ?? "signed-out"}:${authSession?.id ?? "signed-out"}:${bundle.encounter.workspaceId}:${bundle.encounter.id}:${activeChartId}`}',
   );
+});
+
+test("selected billing validates the explicit scope and preserves unselected unfinished orders", async () => {
+  const gateway = createMockChartOrderBillingSummaryGateway(summary);
+  const base = { actorUserId: "playwright-default-session", workspaceId, encounterId,
+    expectedEtag: summary.etag, idempotencyKey: "selected-scope-1", gateway };
+  for (const orderIds of [undefined, [], ["order-1", "order-1"], [""]]) {
+    expect(await requestChartOrderBilling({ ...base, orderIds })).toMatchObject({ ok: false, status: 400 });
+  }
+  const result = await requestChartOrderBilling({ ...base, orderIds: ["order-1"] });
+  expect(result).toMatchObject({ ok: true, summary: { requestableOrderIds: ["order-2"], orderCounts: { requested: 1, requestable: 1 } } });
+  expect(await requestChartOrderBilling({ ...base, orderIds: ["order-1"] })).toEqual(result);
+  expect(await requestChartOrderBilling({ ...base, orderIds: ["order-2"] })).toMatchObject({ ok: false, error: "idempotency_conflict" });
 });

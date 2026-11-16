@@ -1,5 +1,10 @@
 "use client";
 
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+
+import { useOrderPrework } from "@/features/fulfillment/use-order-prework";
+import { DispensingPreworkContext } from "./components/prework-context";
+
 import { useModuleSidePanel, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
 
 import {
@@ -20,8 +25,9 @@ import {
 import {
   CdsActionsRefreshCcwIcon,
 } from "@/components/cds-icons/actions-and-controls";
+import { CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import { EmrEmptyState, EmrContentLoadingState } from "@/components/emr/empty-state";
-import { EmrCopyLinkButton } from "@/components/emr/copy-link-button";
+import { copyWorkspaceSurfaceLink } from "@/components/emr/copy-link-button";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import { EmrOrderQueueSidePanel } from "@/components/emr/order-queue-side-panel";
@@ -30,7 +36,6 @@ import { EmrStatusBadge } from "@/components/emr/status-badge";
 import {
   EmrInstructionHeaderStack,
   EmrInstructionHistoryToggle,
-  EmrInstructionOutputMenu,
   EmrInstructionTitleBar,
 } from "@/components/emr/instruction-header-stack";
 import { EmrInstructionFilterTabs } from "@/components/emr/instruction-filter-tabs";
@@ -57,15 +62,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { OrderWorkTable } from "@/features/dispensing/components/order-work-table";
 import {
   type FulfillmentTransitionOptions,
 } from "@/features/fulfillment/components/work-lifecycle-action";
 import { FulfillmentExecutionActions } from "@/features/fulfillment/components/execution-result-dialog";
 import { loadFulfillmentEligibleAssigneesRoute } from "@/features/fulfillment/client-eligible-assignees";
-import { InstructionActions, InstructionBody } from "./components/instruction-workspace";
+import { InstructionActions, InstructionBody, InstructionDocumentOutputMenu } from "./components/instruction-workspace";
 import { useFulfillmentInstruction } from "./use-fulfillment-instruction";
-import { getInstructionStatusLabel } from "./instruction-view-model";
+import { getInstructionStatusLabel, hasPendingInstructionRerequest, isPendingFulfillmentRerequest, isWaitingInstruction } from "./instruction-view-model";
 import {
   getFulfillmentOrderDisplayName,
   getPatientHistoryStatus,
@@ -99,7 +105,11 @@ import {
 } from "@/features/order-queue/data";
 import { subscribeQueueRealtimeRefresh } from "@/features/work-queue/queue-realtime-refresh";
 import { useAuthClient } from "@/features/auth/auth-client";
-import { getSharedReadActorScope, subscribeSharedReadActorScope, useSharedReadActorScope } from "@/features/auth/shared-read-actor-scope";
+import {
+  getSharedReadActorScope,
+  subscribeSharedReadActorScope,
+  useSharedReadActorScope,
+} from "@/features/auth/shared-read-actor-scope";
 import { createSharedVisibleResource } from "@/lib/visible-refresh";
 import { usePatientLatestVitalItems } from "@/features/patient-vitals/use-patient-latest-vitals";
 import { useContextVitalEditor } from "@/features/patient-vitals/use-context-vital-editor";
@@ -593,7 +603,7 @@ function applyFulfillmentToQueueItems(
         workItem.startedAt
           ? formatOperatingShortTime(workItem.startedAt)
           : item.startedAt,
-      statusId: mapFulfillmentToQueueStatusId(workItem.status, item.statusId),
+      statusId: mapFulfillmentToQueueStatusId(workItem, item.statusId),
     };
   });
 
@@ -611,12 +621,25 @@ function applyFulfillmentToQueueItems(
 
 function createLiveQueueItem(workItem: FulfillmentWorkItem): OrderQueueItem {
   const isTreatment = workItem.queueType === "treatment";
+  const queueStatus = workItem.status === "paused" && !workItem.assignedToUserId
+    ? "requested"
+    : workItem.status;
   const timestamp =
     workItem.createdAt ?? new Date().toISOString();
   const time = formatOperatingShortTime(timestamp);
+  const statusId = mapFulfillmentToQueueStatusId(workItem, "waiting");
 
   return {
-    patientQueue: { assignedToUserId: workItem.assignedToUserId, patientId: workItem.patientId, workspaceId: workItem.workspaceId, status: workItem.status, priority: workItem.priority, requestedAt: workItem.createdAt, originChartId: workItem.originChartId, originChartCreatedAt: workItem.originChartCreatedAt },
+    patientQueue: {
+      assignedToUserId: workItem.assignedToUserId,
+      patientId: workItem.patientId,
+      workspaceId: workItem.workspaceId,
+      status: statusId === "reRequested" && queueStatus === "requested" ? "re_requested" : queueStatus,
+      priority: workItem.priority,
+      requestedAt: workItem.createdAt,
+      originChartId: workItem.originChartId,
+      originChartCreatedAt: workItem.originChartCreatedAt,
+    },
     id: `live-fulfillment-${workItem.id}`,
     instructionId: `${isTreatment ? "TR" : "RX"}-${workItem.id.slice(0, 8).toUpperCase()}`,
     patientName:
@@ -625,9 +648,6 @@ function createLiveQueueItem(workItem: FulfillmentWorkItem): OrderQueueItem {
       workItem.guardianName ??
       workItem.sourceSnapshot?.guardianName ??
       "보호자 미지정",
-    patientAge: "나이 미상",
-    patientBreed: "품종 미상",
-    patientSex: "성별 미상",
     receptionType: "외래",
     orderType: isTreatment ? "처치" : "조제",
     orderTypeCategory: workItem.queueType,
@@ -638,9 +658,9 @@ function createLiveQueueItem(workItem: FulfillmentWorkItem): OrderQueueItem {
       workItem.startedAt
         ? formatOperatingShortTime(workItem.startedAt)
         : undefined,
-    statusId: mapFulfillmentToQueueStatusId(workItem.status, "waiting"),
+    statusId,
     time,
-    waitMinutes: workItem.status === "requested" ? 0 : undefined,
+    waitMinutes: queueStatus === "requested" ? 0 : undefined,
   };
 }
 
@@ -695,12 +715,14 @@ function getFulfillmentRequesterName(workItem: FulfillmentWorkItem) {
 }
 
 function mapFulfillmentToQueueStatusId(
-  status: FulfillmentWorkItemStatus,
+  { status, assignedToUserId, requestCycle, taskAttemptNo }: FulfillmentWorkItem,
   fallback: string,
 ) {
   if (status === "completed") return "completed";
   if (status === "cancelled") return "canceled";
   if (status === "returned") return "reRequested";
+  if (isPendingFulfillmentRerequest(status, requestCycle ?? taskAttemptNo ?? 1, assignedToUserId)) return "reRequested";
+  if (status === "paused" && !assignedToUserId) return "waiting";
   if (status === "in_progress" || status === "paused") return "inProgress";
   if (status === "requested") return "waiting";
   return fallback;
@@ -1009,7 +1031,8 @@ function getDispensingTaskCardItem(item: OrderQueueItem): EmrTaskQueueCardItem {
     actionTestId: `order-queue-item-action-${item.id}`,
     assigneeName: item.assigneeName,
     eventActorName: item.requesterName,
-    eventKind: getTaskQueueEventKindFromStatus(item.statusId),
+    // This line retains the original request time and requester.
+    eventKind: item.patientQueue?.status === "re_requested" ? "request" : getTaskQueueEventKindFromStatus(item.statusId),
     eventTime: item.time,
     guardianName: item.guardianName,
     patientName: item.patientName,
@@ -1086,7 +1109,7 @@ export function DispensingSidePanel({
             workItemId: workItem?.id,
             queueItemId: itemId,
           },
-          removeParams: ["imagingStudyId", "invoiceId", "labResultId"],
+          removeParams: ["imagingStudyId", "invoiceId", "labResultId", "focusWorkItemId"],
           search: searchParams,
           workspaceId,
         }),
@@ -1109,6 +1132,7 @@ export function DispensingSidePanel({
           "patientId",
           "workItemId",
           "queueItemId",
+          "focusWorkItemId",
         ],
         search: searchParams,
         workspaceId,
@@ -1126,7 +1150,7 @@ export function DispensingSidePanel({
     <EmrOrderQueueSidePanel
       emptyObjectLabel="조제/처치 업무"
       getTaskCardItem={getDispensingTaskCardItem}
-      patientGrouping={{ workspaceId, readable: fulfillmentQueue.status !== "permission_denied", ready: fulfillmentQueue.status === "ready" || fulfillmentQueue.status === "empty" }}
+      patientGrouping={{ workspaceId, readable: fulfillmentQueue.status !== "permission_denied" }}
       items={items}
       loading={fulfillmentQueue.status === "loading"}
       readStatus={fulfillmentQueue.status === "error" || fulfillmentQueue.status === "permission_denied" ? fulfillmentQueue.status : undefined}
@@ -1155,6 +1179,7 @@ export function DispensingHeader({
   const selectedQueueItemId = useSelectedDispensingQueueItemId(moduleId);
   const { selectedDate } = useSelectedOperatingDate(workspaceId, searchParams.get("date"));
   const fulfillmentQueue = useDispensingFulfillmentQueue(selectedDate);
+  usePageReadiness(fulfillmentQueue.status === "loading", `${workspaceId}:${selectedDate}:${selectedQueueItemId}`);
   const allowLegacyFixtureFallback = !isLiveAuthRuntime() && isLegacySalesDemoWorkspace(workspaceId);
   const items = useMemo(
     () => getQueueItemsForWorkspace(workspaceId, fulfillmentQueue.workItems),
@@ -1254,6 +1279,18 @@ function getDispensingInstructionType(
   return selectedQueueItem?.orderTypeCategory === "treatment" ? "처치" : "조제";
 }
 
+function InstructionPatientSummary({ workspaceId, patientId }: { workspaceId: string; patientId?: string | null }) {
+  // Share the exact profile reader, age calculation and breed/sex labels with
+  // the patient context bar.
+  const { patientItems } = usePatientContextProfileInteractions({ workspaceId, patientId });
+  if (patientItems?.some((item) => item.loading)) {
+    return <span role="status">환자 정보 불러오는 중</span>;
+  }
+  return <span data-testid="instruction-patient-summary" className="block min-w-0 truncate">
+    {patientItems?.map((item) => item.value).join(" · ")}
+  </span>;
+}
+
 function renderInstructionInfoCardValue(value: ReactNode) {
   if (typeof value === "string" || typeof value === "number") {
     return <span className="block min-w-0 truncate">{value}</span>;
@@ -1339,7 +1376,7 @@ export function DispensingContentAside({
                 buildWorkspaceSurfaceRoute({
                   moduleId: targetModule,
                   params: { date, encounterId: first.encounterId, workItemId: first.id },
-                  removeParams: ["imagingStudyId", "invoiceId", "labResultId"],
+                  removeParams: ["imagingStudyId", "invoiceId", "labResultId", "focusWorkItemId"],
                   search: searchParams,
                   workspaceId,
                 }),
@@ -1359,6 +1396,9 @@ export function DispensingContentAside({
     key={`${workspaceId}:${selectedWorkItem?.patientId ?? selectedQueueItem.id}`}
     kind="fulfillment"
     showCategories
+    refreshing={history.refreshing}
+    readError={history.readError}
+    onRetry={history.refresh}
     status={allowLegacyFixtureFallback && !selectedWorkItem ? "ready" : history.status}
     onCollapse={() => setContentAsideOpen(false)}
   />;
@@ -1686,12 +1726,13 @@ export function DispensingContent({
 }: ShellComponentProps) {
   const searchParams = useSearchParams();
   const selectedQueueItemId = useSelectedDispensingQueueItemId(moduleId);
+  const focusWorkItemId = searchParams.get("focusWorkItemId");
   const { selectedDate } = useSelectedOperatingDate(workspaceId, searchParams.get("date"));
   const fulfillmentQueue = useDispensingFulfillmentQueue(selectedDate);
-  const allowLegacyFixtureFallback = isLegacySalesDemoWorkspace(workspaceId);
+  const allowLegacyFixtureFallback = !focusWorkItemId && isLegacySalesDemoWorkspace(workspaceId);
   const currentWorkspaceQueueItems = useMemo(
-    () => getQueueItemsForWorkspace(workspaceId, fulfillmentQueue.workItems),
-    [fulfillmentQueue.workItems, workspaceId],
+    () => getQueueItemsForRuntime(fulfillmentQueue.workItems, { allowFixtureItems: allowLegacyFixtureFallback }),
+    [allowLegacyFixtureFallback, fulfillmentQueue.workItems],
   );
   const selectedQueueItem = useMemo(() => {
     return (
@@ -1709,17 +1750,25 @@ export function DispensingContent({
     selectedQueueItemId,
   ]);
 
+  usePageReadiness(fulfillmentQueue.status === "loading", `${workspaceId}:${selectedDate}:${selectedQueueItemId}`);
+
   return (
     <DispensingContentBody
       fulfillmentQueue={fulfillmentQueue}
-      onOpenChart={onNavigateWorkspaceSurface ? encounterId => onNavigateWorkspaceSurface(
-        buildWorkspaceSurfaceRoute({ moduleId: "treatment", params: { encounterId }, workspaceId }), "treatment",
+      onOpenChart={onNavigateWorkspaceSurface ? (encounterId, chartId) => onNavigateWorkspaceSurface(
+        buildWorkspaceSurfaceRoute({
+          moduleId: "treatment",
+          params: chartId ? { encounterId, chartId, orderChart: "1", date: selectedDate } : { encounterId },
+          workspaceId,
+        }),
+        "treatment",
       ) : undefined}
       key={selectedQueueItem?.id ?? "default"}
       hasRightPanel={hasRightPanel}
       moduleId={moduleId}
       workspaceId={workspaceId}
       selectedDate={selectedDate}
+      focusWorkItemId={focusWorkItemId}
       allowLegacyFixtureFallback={allowLegacyFixtureFallback}
       queueItemCount={currentWorkspaceQueueItems.length}
       selectedQueueItem={selectedQueueItem}
@@ -1735,10 +1784,12 @@ function DispensingContentBody({
   moduleId,
   workspaceId,
   selectedDate,
+  focusWorkItemId,
   queueItemCount,
   selectedQueueItem,
 }: DispensingContentBodyProps & {
-  onOpenChart?: (encounterId: string) => void;
+  focusWorkItemId?: string | null;
+  onOpenChart?: (encounterId: string, chartId?: string) => void;
   fulfillmentQueue: ReturnType<typeof useDispensingFulfillmentQueue>;
 }) {
   const documentLayout = useWorkspaceDocumentLayout();
@@ -1751,10 +1802,10 @@ function DispensingContentBody({
   const selectedQueueItemId = selectedQueueItem?.id;
   const selectedFulfillmentWorkItem = useMemo(
     () =>
-      findFulfillmentForQueueItem(
+      selectedQueueItem ? findFulfillmentForQueueItem(
         selectedQueueItem,
         fulfillmentQueue.workItems,
-      ),
+      ) : undefined,
     [fulfillmentQueue.workItems, selectedQueueItem],
   );
   const instruction = useFulfillmentInstruction(
@@ -1762,6 +1813,27 @@ function DispensingContentBody({
     !allowLegacyFixtureFallback ? selectedFulfillmentWorkItem?.id : undefined,
     selectedFulfillmentWorkItem ? String(selectedFulfillmentWorkItem.rowRevision) : undefined,
   );
+  const focusedItemId = selectedFulfillmentWorkItem?.id === focusWorkItemId
+    ? focusWorkItemId ?? undefined
+    : undefined;
+  const [preworkCompletionRoot, setPreworkCompletionRoot] = useState<string | null>(null);
+  const instructionScope = instruction.document ? `${instruction.document.rootTaskId}:${instruction.document.queueType}` : null;
+  const firstStartedAt = instruction.document?.firstStartedAt;
+  const keepStartedRerequestOpen = firstStartedAt && instruction.document?.mainAssigneeId
+    && hasPendingInstructionRerequest(instruction.document);
+  const preworkEligible = !allowLegacyFixtureFallback && instruction.document && selectedFulfillmentWorkItem
+    && !instruction.document.finalized && instruction.document.items.length > 0
+    && (preworkCompletionRoot === instructionScope
+      || (isWaitingInstruction(instruction.document) && !keepStartedRerequestOpen));
+  const entry = useOrderPrework({
+    preserveLayoutWhilePending: true,
+    scopeKey: `${workspaceId}:${selectedFulfillmentWorkItem?.id ?? ""}:${instructionScope ?? ""}`,
+    requested: Boolean(preworkEligible),
+    ownsWork: Boolean(instruction.document?.canStart),
+    pending: !allowLegacyFixtureFallback && Boolean(selectedFulfillmentWorkItem) && instruction.loading,
+  });
+  const prework = preworkEligible && (entry.show || preworkCompletionRoot === instructionScope);
+  usePageReadiness(instruction.loading, `${workspaceId}:${selectedFulfillmentWorkItem?.id}:${entry.show ? "entry" : "instruction"}`);
   const medicationLinkPending = selectedFulfillmentWorkItem?.queueType === "treatment"
     && selectedFulfillmentWorkItem.sourceSnapshot?.detailSchemaVersion === 3
     && selectedFulfillmentWorkItem.sourceSnapshot.detailInputs?.administrationPolicy === "separate_medication_order"
@@ -1874,7 +1946,10 @@ function DispensingContentBody({
         : "대기중";
   const instructionRequestedAt =
     primaryGroup?.rows[0]?.requestedAt ?? "2026.04.14 10:30";
-  const instructionPatientSummary = getQueuePatientSummary(selectedQueueItem);
+  const usesInstructionWorkspace = Boolean(selectedFulfillmentWorkItem && !allowLegacyFixtureFallback);
+  const instructionPatientSummary = selectedFulfillmentWorkItem && usesInstructionWorkspace
+    ? <InstructionPatientSummary workspaceId={workspaceId} patientId={selectedFulfillmentWorkItem.patientId} />
+    : getQueuePatientSummary(selectedQueueItem);
   const instructionRequester = selectedQueueItem?.requesterName ?? "이수지";
   const instructionAssignee = instruction.document
     ? instruction.document.mainAssigneeName ?? "미지정"
@@ -1884,25 +1959,34 @@ function DispensingContentBody({
     : selectedQueueItem
       ? selectedQueueStatusLabel
       : primaryStartStatus;
-  const instructionStartedAt = selectedQueueItem?.startedAt ?? "미시작";
+  const instructionStartedAt = firstStartedAt ? formatOperatingShortTime(firstStartedAt) : selectedQueueItem?.startedAt ?? "미시작";
+  const instructionStatusBadge = (
+    <EmrStatusBadge label={instructionStartStatus} marker="none" testId="instruction-status-label" />
+  );
   const instructionInfoItems: Array<{ label: string; value: ReactNode }> = [
     {
       label: "요청 일시",
-      value: (
-        <span className="inline-flex min-w-0 max-w-full items-center gap-1.5 overflow-hidden whitespace-nowrap">
+      value: usesInstructionWorkspace ? (
+        <span className="inline-flex min-w-0 items-center gap-1.5">
           <span className="min-w-0 truncate">{instructionRequestedAt}</span>
-          <EmrStatusBadge
-            label={instructionStartStatus}
-            marker="none"
-            testId="instruction-status-label"
-          />
+          {instructionStatusBadge}
         </span>
-      ),
+      ) : instructionRequestedAt,
     },
     { label: "환자 정보", value: instructionPatientSummary },
     { label: "요청 수의사", value: instructionRequester },
-    { label: `${instructionType} 담당`, value: instructionAssignee },
-    { label: `${instructionType} 시작`, value: instructionStartedAt },
+    ...(!usesInstructionWorkspace ? [
+      { label: `${instructionType} 담당`, value: instructionAssignee },
+      {
+        label: `${instructionType} 시작`,
+        value: (
+          <span className="inline-flex shrink-0 items-center gap-1.5">
+            <span>{instructionStartedAt}</span>
+            {instructionStatusBadge}
+          </span>
+        ),
+      },
+    ] : []),
   ];
   const updateGroup = (
     groupId: string,
@@ -1919,6 +2003,24 @@ function DispensingContentBody({
 
   if (!selectedQueueItem && (fulfillmentQueue.status === "error" || fulfillmentQueue.status === "permission_denied")) {
     return <div className="flex h-full min-h-0 flex-col px-4 py-3"><DispensingFulfillmentQueueNotice status={fulfillmentQueue.status} onRetry={fulfillmentQueue.refresh} /></div>;
+  }
+
+  const instructionTargetMissing = focusedItemId && instruction.document &&
+    !instruction.document.items.some(item => item.id === focusedItemId);
+  if ((!selectedQueueItem && focusWorkItemId) || instructionTargetMissing) {
+    return (
+      <div className="flex h-full min-h-0 items-center justify-center px-4">
+        <EmrEmptyState
+          kind="no-scope-result"
+          priority="supporting"
+          surface="content"
+          title="연결된 조제·처치 오더를 찾을 수 없어요"
+          description={instructionTargetMissing ? "차트에서 지시서를 다시 열어 주세요." : undefined}
+          primaryAction={instructionTargetMissing ? undefined :
+            <Button variant="outline" onClick={() => void fulfillmentQueue.refresh()}>다시 조회</Button>}
+        />
+      </div>
+    );
   }
 
   if (!selectedQueueItem) {
@@ -2087,9 +2189,12 @@ function DispensingContentBody({
     });
   };
 
+  const sourceChartId = selectedFulfillmentWorkItem?.originChartId;
+  const sourceEncounterId = selectedFulfillmentWorkItem?.encounterId;
   const titleBar = (
     <EmrInstructionTitleBar
             className={documentLayout ? "min-h-9 flex-wrap gap-2" : "px-4"}
+            actionsClassName={usesInstructionWorkspace ? "max-w-full flex-wrap justify-end" : undefined}
             title={`${instructionType} 지시서`}
             icon={
               <EmrInstructionHistoryToggle
@@ -2101,20 +2206,41 @@ function DispensingContentBody({
               />
             }
             badge={
-              <EmrCopyLinkButton
-                ariaLabel={`${instructionType} 지시서 링크 복사`}
-                date={selectedDate}
-                moduleId="dispensing"
-                params={{
-                  encounterId: selectedFulfillmentWorkItem?.encounterId,
-                  workItemId: selectedFulfillmentWorkItem?.id,
-                  queueItemId: selectedQueueItem.id,
-                }}
+              <InstructionDocumentOutputMenu
                 workspaceId={workspaceId}
+                controller={instruction}
+                onChanged={fulfillmentQueue.refresh}
+                onOpenChart={onOpenChart && sourceEncounterId && sourceChartId
+                  ? () => onOpenChart(sourceEncounterId, sourceChartId)
+                  : undefined}
+                onCopyLink={() => void copyWorkspaceSurfaceLink({
+                  date: selectedDate,
+                  moduleId: "dispensing",
+                  params: {
+                    encounterId: sourceEncounterId,
+                    workItemId: selectedFulfillmentWorkItem?.id,
+                    queueItemId: selectedQueueItem.id,
+                  },
+                  workspaceId,
+                })}
               />
             }
             actions={
               <>
+                {usesInstructionWorkspace ? (
+                  <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
+                    <span className="shrink-0 whitespace-nowrap text-[13px] font-medium leading-[18px] text-[var(--emr-text-secondary)]">
+                      {`${instructionType} 시작 일시 ${instructionStartedAt}`}
+                    </span>
+                    <span className="inline-flex min-w-0 items-center gap-2">
+                      <Separator orientation="vertical" className="h-4 data-vertical:self-center" />
+                      <span className="inline-flex h-7 min-w-0 items-center gap-1.5 rounded-lg border border-input bg-card px-2 text-xs font-medium">
+                        <CdsPeopleUserIcon className="size-3.5 shrink-0" aria-hidden="true" />
+                        <span className="truncate">{instructionAssignee}</span>
+                      </span>
+                    </span>
+                  </div>
+                ) : null}
                 <WorkspaceDocumentWidthToggle />
                 {hasRightPanel && instructionType === "처치" ? (
                   <Button
@@ -2129,8 +2255,12 @@ function DispensingContentBody({
                     {rightPanelOpen ? "우측 패널 접기" : "우측 패널 펼치기"}
                   </Button>
                 ) : null}
-                {selectedFulfillmentWorkItem ? (
-                  !allowLegacyFixtureFallback ? <InstructionActions controller={instruction} onChanged={fulfillmentQueue.refresh} /> : (
+                {!prework && selectedFulfillmentWorkItem ? (
+                  usesInstructionWorkspace ? (
+                    <div className="flex flex-wrap items-center justify-end gap-2 empty:hidden before:h-4 before:w-px before:shrink-0 before:bg-border">
+                      <InstructionActions inDocumentToolbar workspaceId={workspaceId} controller={instruction} onChanged={fulfillmentQueue.refresh} />
+                    </div>
+                  ) : (
                   <FulfillmentExecutionActions
                     workspaceId={selectedFulfillmentWorkItem.workspaceId}
                     workItemId={selectedFulfillmentWorkItem.id}
@@ -2154,7 +2284,7 @@ function DispensingContentBody({
                     status={selectedFulfillmentWorkItem.status}
                   />
                   )
-                ) : primaryGroup ? (
+                ) : !prework && primaryGroup ? (
                   <GroupStatusAction
                     group={primaryGroup}
                     statusLabel={statusLabel}
@@ -2167,10 +2297,17 @@ function DispensingContentBody({
                     }
                   />
                 ) : null}
-                <EmrInstructionOutputMenu />
               </>
             }
           />
+  );
+
+  if (prework && selectedFulfillmentWorkItem) return (
+    <div data-slot="dispensing-content" className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-panel)]">
+      <DispensingPreworkContext key={selectedFulfillmentWorkItem.id} controller={instruction} workItem={selectedFulfillmentWorkItem} focusedItemId={focusedItemId}
+        onChanged={fulfillmentQueue.refresh} onEntered={() => { instruction.refresh(); entry.enter(); }}
+        onCompletionOpenChange={(open) => setPreworkCompletionRoot(open ? instructionScope : null)} />
+    </div>
   );
 
   return (
@@ -2183,7 +2320,12 @@ function DispensingContentBody({
           <div className="grid gap-2">
             <div
               data-slot="instruction-info-card"
-              className="grid min-h-[72px] grid-cols-5 rounded-[var(--emr-document-info-radius)] border border-[var(--emr-document-info-divider)] bg-card px-[var(--emr-document-info-padding-x)] py-[var(--emr-document-info-padding-y)]"
+              className={cn(
+                "grid min-h-[72px] rounded-[var(--emr-document-info-radius)] border border-[var(--emr-document-info-divider)] bg-card px-[var(--emr-document-info-padding-x)] py-[var(--emr-document-info-padding-y)]",
+                usesInstructionWorkspace
+                  ? "grid-cols-[minmax(max-content,1fr)_repeat(2,minmax(0,1fr))]"
+                  : "grid-cols-[repeat(4,minmax(0,1fr))_minmax(max-content,1fr)]",
+              )}
             >
               {instructionInfoItems.map(({ label, value }) => (
                 <div
@@ -2214,7 +2356,7 @@ function DispensingContentBody({
         }
       />
 
-      <div className={cn("mt-3 grid gap-2", !documentLayout && "px-4")}>
+      <div className={cn("mt-3 grid gap-2 empty:hidden", !documentLayout && "px-4")}>
         {medicationLinkPending && selectedFulfillmentWorkItem ? <EmrInlineAlert severity="warning" title="수행 전 약품 오더 연결이 필요합니다."
           action={onOpenChart ? <Button size="sm" variant="outline" onClick={() => onOpenChart(selectedFulfillmentWorkItem.encounterId)}>차트에서 약품 오더 연결</Button> : undefined}>
           차트에서 ‘{getFulfillmentDisplayName(selectedFulfillmentWorkItem) ?? "처치"}’의 오더 정정을 열어 같은 진료의 약품 오더를 연결해 주세요. 약품 오더가 없다면 먼저 추가하고 확정해 주세요.
@@ -2254,15 +2396,18 @@ function DispensingContentBody({
         ) : null}
       </div>
 
+      {selectedFulfillmentWorkItem && !allowLegacyFixtureFallback && instruction.loading && !instruction.document ? (
+        <div className="min-h-0 flex-1"><EmrContentLoadingState testId="instruction-document-loading" title="조제/처치 업무를 불러오는 중입니다" /></div>
+      ) : (
       <ScrollArea
         data-slot="instruction-result-scroll-area"
         className="min-h-0 flex-1"
       >
         <div
           data-slot="instruction-result-scroll-content"
-          className={cn("flex flex-col gap-4 pb-10 pt-4", !documentLayout && "px-4")}
+          className={cn("flex flex-col gap-4 pb-10 pt-3", !documentLayout && "px-4")}
         >
-          {selectedFulfillmentWorkItem && !allowLegacyFixtureFallback ? <InstructionBody key={selectedFulfillmentWorkItem.id} controller={instruction} workspaceId={selectedFulfillmentWorkItem.workspaceId} onChanged={fulfillmentQueue.refresh} /> : visibleTableGroups.map((group, section) => {
+          {selectedFulfillmentWorkItem && !allowLegacyFixtureFallback ? <InstructionBody key={selectedFulfillmentWorkItem.id} controller={instruction} workspaceId={selectedFulfillmentWorkItem.workspaceId} onChanged={fulfillmentQueue.refresh} focusedItemId={focusedItemId} /> : visibleTableGroups.map((group, section) => {
             const completedCount = group.rows.filter(
               (row) => row.workStatus === "완료",
             ).length;
@@ -2345,6 +2490,7 @@ function DispensingContentBody({
           ) : null}
         </div>
       </ScrollArea>
+      )}
     </div>
   );
 }

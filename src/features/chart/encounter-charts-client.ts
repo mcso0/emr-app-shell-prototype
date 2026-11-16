@@ -26,9 +26,10 @@ export function chartLifecycleError(reason?: string) {
   return "차트를 처리하지 못했어요. 연결을 확인한 뒤 다시 시도해 주세요.";
 }
 
-export function useEncounterCharts({ workspaceId, encounterId, actorKey, actorHeaders, enabled, prepareInitialChart, requestedChartId }: {
+export function useEncounterCharts({ workspaceId, encounterId, actorKey, actorHeaders, enabled, prepareInitialChart, requestedChartId, requireRequestedChart = false }: {
   workspaceId?: string; encounterId?: string; actorKey: string; actorHeaders?: Record<string, string>;
   enabled: boolean; prepareInitialChart?: boolean; requestedChartId?: string | null;
+  requireRequestedChart?: boolean;
 }) {
   const scope = `${workspaceId ?? ""}:${actorKey}:${encounterId ?? ""}`;
   const createRequestRef = useRef<{ scope: string; id: string } | null>(null);
@@ -55,8 +56,12 @@ export function useEncounterCharts({ workspaceId, encounterId, actorKey, actorHe
     if (!enabled || !workspaceId || !encounterId) return;
     const result = await encounterChartsRequest(workspaceId, "GET", { encounterId }, actorHeaders);
     if (signal?.aborted || activeScopeRef.current !== scope) return;
+    if (requireRequestedChart && result.ok && !result.charts?.some((chart) => chart.id === requestedChartRef.current)) {
+      setCharts(scope, [], "error");
+      return;
+    }
     setCharts(scope, result.ok ? result.charts ?? [] : [], result.ok ? "ready" : "error", requestedChartRef.current ?? undefined);
-  }, [actorHeaders, enabled, encounterId, scope, setCharts, workspaceId]);
+  }, [actorHeaders, enabled, encounterId, requireRequestedChart, scope, setCharts, workspaceId]);
   useEffect(() => {
     if (!enabled || !encounterId || !workspaceId) return;
     const controller = new AbortController();
@@ -137,7 +142,7 @@ export function useEncounterCharts({ workspaceId, encounterId, actorKey, actorHe
     return () => { if (useChartStore.getState().createEncounterChart === create) useChartStore.setState({ createEncounterChart: undefined }); };
   }, [create]);
   useEffect(() => {
-    if (storedScope !== scope || !selectedChartId) return;
+    if (storedScope !== scope || !selectedChartId || useChartStore.getState().selectedChartId !== selectedChartId) return;
     const url = new URL(window.location.href);
     if (url.searchParams.has("historyEncounterId")) return;
     const requestedHistoryChartId = useChartStore.getState().historyViewChartId;
@@ -151,7 +156,8 @@ export function useEncounterCharts({ workspaceId, encounterId, actorKey, actorHe
     url.searchParams.set("chartId", selectedChartId);
     window.history.replaceState(window.history.state, "", url);
   }, [scope, selectedChartId, storedScope]);
-  return { scope, charts: storedScope === scope ? charts : [], selectedChartId: storedScope === scope ? selectedChartId : "",
+  const requestedChartSelected = !requireRequestedChart || selectedChartId === requestedChartId;
+  return { scope, charts: storedScope === scope ? charts : [], selectedChartId: storedScope === scope && requestedChartSelected ? selectedChartId : "",
     status: storedScope === scope ? status : "loading" as const, initialChartPreparationStatus,
     acceptPreparedChart, ensureInitialChart, reload, create };
 }

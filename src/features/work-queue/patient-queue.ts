@@ -59,7 +59,6 @@ export function groupPatientQueue<T extends PatientQueueRow>(rows: T[], sort: Pa
   return [...groups].map(([key, items]) => ({
     key, items: [...items].sort((a,b) => comparePatientQueueRows(a,b,orderSort)),
     urgentCount: items.filter(item => item.priority === "urgent").length,
-    returnedCount: items.filter(item => patientQueueStatus(item.status) === "returned").length,
     latest: Math.max(...items.map(item => queueTimestamp(item.requestedAt))),
     rank: Math.min(...items.map(item => item.priority === "urgent" ? 0 : patientQueueStatus(item.status) === "returned" ? 1 : ["requested", "in_progress", "paused"].includes(patientQueueStatus(item.status)) ? 2 : 3)),
   })).sort((a,b) => (sort === "priority" ? a.rank-b.rank : 0) || b.latest-a.latest || a.key.localeCompare(b.key));

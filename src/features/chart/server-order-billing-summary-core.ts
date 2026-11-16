@@ -17,6 +17,8 @@ type GatewayError =
   | "idempotency_conflict"
   | "revision_conflict"
   | "unfinished_ack_required"
+  | "invalid_billing_selection"
+  | "billing_selection_unavailable"
   | "no_billable_orders"
   | "billing_authority_incomplete"
   | "vat_calculation_policy_missing"
@@ -32,6 +34,7 @@ export type ChartOrderBillingSummaryGateway = {
     actorUserId: string;
     encounterId: string;
     expectedEtag: string;
+    orderIds: string[];
     idempotencyKey: string;
     workspaceId: string;
   }): Promise<
@@ -61,6 +64,8 @@ export type RequestChartOrderBillingResult =
   | {
       error:
         | "encounter_unavailable"
+        | "invalid_billing_selection"
+        | "billing_selection_unavailable"
         | "no_billable_orders"
         | "billing_authority_incomplete"
         | "vat_calculation_policy_missing"
@@ -101,6 +106,7 @@ export async function readChartOrderBillingSummary({
 }
 
 export async function requestChartOrderBilling({
+  orderIds,
   acknowledgeUnfinished = false,
   actorUserId,
   encounterId,
@@ -111,6 +117,7 @@ export async function requestChartOrderBilling({
   workspaceId,
 }: {
   acknowledgeUnfinished?: boolean;
+  orderIds?: string[];
   actorUserId: string | null;
   encounterId?: string | null;
   expectedEtag?: string | null;
@@ -120,9 +127,12 @@ export async function requestChartOrderBilling({
   workspaceId: string;
 }): Promise<RequestChartOrderBillingResult> {
   if (
-    !encounterId?.trim() ||
-    !expectedEtag?.trim() ||
-    !idempotencyKey?.trim() ||
+    typeof encounterId !== "string" || !encounterId.trim() ||
+    typeof expectedEtag !== "string" || !expectedEtag.trim() ||
+    typeof idempotencyKey !== "string" || !idempotencyKey.trim() ||
+    !Array.isArray(orderIds) || orderIds.length === 0 || orderIds.length > 500 ||
+    orderIds.some(id => typeof id !== "string" || !id.trim() || id.length > 128) ||
+    new Set(orderIds).size !== orderIds.length ||
     idempotencyKey.trim().length < 8 ||
     idempotencyKey.trim().length > 160
   ) {
@@ -138,6 +148,7 @@ export async function requestChartOrderBilling({
   );
   if (billingDenial) return billingDenial;
   const result = await gateway.requestBilling({
+    orderIds: [...orderIds].sort(),
     acknowledgeUnfinished,
     actorUserId: actorUserId!,
     encounterId: encounterId.trim(),
@@ -156,6 +167,8 @@ export async function requestChartOrderBilling({
   }
   if (
     result.error === "encounter_unavailable" ||
+    result.error === "invalid_billing_selection" ||
+    result.error === "billing_selection_unavailable" ||
     result.error === "no_billable_orders" ||
     result.error === "billing_authority_incomplete" ||
     result.error === "vat_calculation_policy_missing" ||
@@ -171,7 +184,8 @@ export type SupabaseChartOrderBillingSummaryRpcClient = {
     p_encounter_id: string;
     p_workspace_id: string;
   }): Promise<{ data: unknown; error: { message?: string } | null }>;
-  rpc(functionName: "clair_request_chart_order_billing", args: {
+  rpc(functionName: "clair_request_selected_chart_order_billing", args: {
+    p_order_ids: string[];
     p_acknowledge_unfinished: boolean;
     p_actor_user_id: string;
     p_encounter_id: string;
@@ -195,7 +209,8 @@ export function createSupabaseChartOrderBillingSummaryGateway(
       return summary ? { ok: true, summary } : { ok: false, error: "db_read_failed" };
     },
     async requestBilling(input) {
-      const { data, error } = await client.rpc("clair_request_chart_order_billing", {
+      const { data, error } = await client.rpc("clair_request_selected_chart_order_billing", {
+        p_order_ids: input.orderIds,
         p_acknowledge_unfinished: input.acknowledgeUnfinished,
         p_actor_user_id: input.actorUserId,
         p_encounter_id: input.encounterId,
@@ -216,21 +231,24 @@ export function createMockChartOrderBillingSummaryGateway(
   let state = initial;
   const completed = new Map<
     string,
-    { etag: string; summary: ChartOrderBillingSummary }
+    { etag: string; orderIds: string; summary: ChartOrderBillingSummary }
   >();
   return {
     async read({ encounterId, workspaceId }) {
       state ??= createEmptySummary(workspaceId, encounterId);
       return { ok: true, summary: state };
     },
-    async requestBilling({ encounterId, expectedEtag, idempotencyKey, workspaceId }) {
+    async requestBilling({ encounterId, expectedEtag, idempotencyKey, orderIds, acknowledgeUnfinished, workspaceId }) {
       state ??= createEmptySummary(workspaceId, encounterId);
       const replay = completed.get(idempotencyKey);
-      if (replay) return replay.etag === expectedEtag
+      if (replay) return replay.etag === expectedEtag && replay.orderIds === JSON.stringify(orderIds)
         ? { ok: true, summary: replay.summary }
         : { ok: false, error: "idempotency_conflict" };
       if (state.etag !== expectedEtag) return { ok: false, error: "revision_conflict" };
       if (state.orderCounts.requestable === 0) return { ok: false, error: "no_billable_orders" };
+      if (orderIds.some(id => !state!.requestableOrderIds.includes(id))) return { ok: false, error: "billing_selection_unavailable" };
+      if (!acknowledgeUnfinished && state.unfinishedOrders.some(item => orderIds.includes(item.orderId))) return { ok: false, error: "unfinished_ack_required" };
+      const remainingIds = state.requestableOrderIds.filter(id => !orderIds.includes(id));
       state = {
         ...state,
         etag: `\"mock-${Date.now()}\"`,
@@ -238,13 +256,13 @@ export function createMockChartOrderBillingSummaryGateway(
         invoiceId: state.invoiceId ?? "invoice-chart-order-demo",
         orderCounts: {
           ...state.orderCounts,
-          requested: state.orderCounts.requested + state.orderCounts.requestable,
-          requestable: 0,
+          requested: state.orderCounts.requested + orderIds.length,
+          requestable: remainingIds.length,
         },
-        amounts: { ...state.amounts, requestableTotal: 0 },
-        requestableOrderIds: [],
+        amounts: { ...state.amounts, requestableTotal: remainingIds.length ? state.amounts.requestableTotal : 0 },
+        requestableOrderIds: remainingIds,
       };
-      completed.set(idempotencyKey, { etag: expectedEtag, summary: state });
+      completed.set(idempotencyKey, { etag: expectedEtag, orderIds: JSON.stringify(orderIds), summary: state });
       return { ok: true, summary: state };
     },
   };
@@ -288,7 +306,7 @@ function mapDbError(message: string | undefined, fallback: GatewayError): Gatewa
   const known: GatewayError[] = [
     "encounter_unavailable", "revision_conflict", "unfinished_ack_required", "no_billable_orders",
     "billing_authority_incomplete", "vat_calculation_policy_missing", "returned_work_blocks_billing",
-    "idempotency_conflict", "billing_request_in_progress",
+    "idempotency_conflict", "billing_request_in_progress", "invalid_billing_selection", "billing_selection_unavailable",
   ];
   return known.find((error) => message?.includes(error)) ?? fallback;
 }

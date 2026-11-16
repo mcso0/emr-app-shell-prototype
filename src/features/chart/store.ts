@@ -16,6 +16,7 @@ type ChartStore = {
   flushEditors: () => Promise<boolean>;
   flushOrderEdits?: () => Promise<boolean>;
   flushActiveChart?: () => Promise<boolean>;
+  flushOverallInstructions?: () => Promise<boolean>;
   selectChart: (chartId: string) => Promise<void>;
   setEncounterCharts: (scope: string, charts: SoapNote[], status: "loading" | "ready" | "error", preferredChartId?: string) => void;
   updateEncounterChart: (scope: string, chart: SoapNote) => void;
@@ -75,6 +76,7 @@ export const useChartStore = create<ChartStore>()((set, get) => ({
   diagnosisSaving: false,
   flushEditors: async () => {
     if (get().diagnosisSaving) return false;
+    if (get().flushOverallInstructions && !await get().flushOverallInstructions!()) return false;
     if (get().flushActiveChart && !await get().flushActiveChart!()) return false;
     if (get().flushOrderEdits && !await get().flushOrderEdits!()) return false;
     return !get().diagnosisSaving;

@@ -1,12 +1,17 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
+
 import { Button } from "@/components/ui/button";
+import { EmrProfilePanelLoading } from "@/components/emr/profile-panel";
+import styles from "./profile-side-panel.module.css";
 
 import {
   ProfileSidePanel,
+  ProfileBasicInformation,
   type ProfileSidePanelModel,
   type ProfileSidePanelTab,
+  type ProfileTabState,
 } from "./profile-side-panel";
 
 const reservationRows = [
@@ -369,10 +374,9 @@ export const TodayEmpty: Story = {
 export const TodayLoading: Story = {
   parameters: { docs: { description: { story: "오늘 접수와 예약을 불러오는 동안 기본 정보를 유지하는지 확인합니다." } } },
   render: () => <Specimen defaultTab="info" model={{ ...patientModel, todayItems: [], todayState: { status: "loading" } }} />,
-  play: async ({ canvas }) => {
-    const message = canvas.getByText("오늘 접수/예약을 불러오는 중입니다");
-    await expect(message).toBeVisible();
-    await expect(message.querySelector('svg[aria-hidden="true"]')).toBeVisible();
+  play: async ({ canvas, canvasElement }) => {
+    await expect(canvas.getByText("오늘 접수/예약을 불러오는 중입니다")).toBeInTheDocument();
+    await expect(canvasElement.querySelector('[skullet-loading]')).toHaveAttribute("aria-hidden", "true");
     await expect(canvas.getByText("환자명", { exact: true })).toBeVisible();
   },
 };
@@ -394,5 +398,106 @@ export const TodayError: Story = {
     await expect(retryToday).toHaveBeenCalledTimes(1);
     await expect(canvas.queryByRole("button", { name: "다시 시도" })).not.toBeInTheDocument();
     await expect(canvas.getByText("수납대기", { exact: true })).toBeVisible();
+  },
+};
+
+
+function LoadingComparison() {
+  const [loading, setLoading] = useState(true);
+  const [kind, setKind] = useState<"patient" | "guardian">("patient");
+  const [long, setLong] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  const original = kind === "patient" ? patientModel : guardianModel;
+  const model = { ...original, infoRows: original.infoRows.map((row, index) =>
+    index === 0 && long ? { ...row, value: "아주 긴 이름을 가진 가상 프로필 예시입니다" } : row) };
+  const replay = () => {
+    if (timer.current) clearTimeout(timer.current);
+    setLoading(true);
+    timer.current = setTimeout(() => setLoading(false), 1800);
+  };
+  return (
+    <div className="space-y-5 p-6">
+      <div className="flex flex-wrap gap-2">
+        <Button onClick={replay}>로딩 재생</Button>
+        <Button variant="outline" onClick={() => {
+          if (timer.current) clearTimeout(timer.current);
+          setLoading((value) => !value);
+        }}>{loading ? "내용 보기" : "로딩 유지"}</Button>
+        <Button variant="outline" onClick={() => { setKind(kind === "patient" ? "guardian" : "patient"); replay(); }}>
+          {kind === "patient" ? "보호자로 전환" : "환자로 전환"}
+        </Button>
+        <Button variant="outline" aria-pressed={long} onClick={() => setLong(!long)}>긴 이름</Button>
+      </div>
+      <div className="flex flex-wrap items-start gap-6">
+        {["기존 방식", "Skullet"].map((label, index) => (
+          <div key={label} className="w-[380px] max-w-full space-y-3">
+            <h2 className="text-base font-semibold">{label}</h2>
+            <div className={styles.panel} style={{ width: "100%", minHeight: 450, height: "auto", padding: "16px 0" }}>
+              {index === 0 && loading ? <EmrProfilePanelLoading /> : <ProfileBasicInformation model={model} loading={loading} />}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export const SkulletComparison: Story = {
+  render: () => <LoadingComparison />,
+  parameters: { docs: { description: { story: "로컬 Skullet 0.0.3 시험. 합성 데이터만 사용합니다. 기존 전체 정보 로딩과 기본 정보 자동 스켈레톤을 비교합니다. 성능 측정 결과가 아닙니다." } } },
+};
+
+export const SkulletProfileLoading: Story = {
+  play: async ({ canvasElement }) => {
+    const busy = canvasElement.querySelector('[aria-busy="true"]');
+    if (!busy) throw new Error("Basic information must report loading");
+    const skeleton = busy.querySelector<HTMLElement>("[skullet-loading]");
+    if (!skeleton?.inert || skeleton.getAttribute("aria-hidden") !== "true")
+      throw new Error("Loading sample must be inert and hidden from assistive technology");
+    if (canvasElement.textContent?.includes("다가오는 일정"))
+      throw new Error("Previous profile schedule must not appear while loading");
+    if (canvasElement.querySelector('[data-testid="profile-today-section"]'))
+      throw new Error("Previous profile today section must not appear while loading");
+  },
+  render: () => (
+    <div style={{ height: 850, width: 380 }}>
+      <ProfileSidePanel model={patientModel} sectionStates={{ info: { status: "loading" } }} onClose={() => {}} onHeaderAction={() => {}} />
+    </div>
+  ),
+};
+
+
+export const ActivityInitialLoading: Story = {
+  render: () => <div className="flex flex-wrap gap-4">{(["reservations", "history", "billing"] as const).map(tab =>
+    <div key={tab} style={{ height: 700, width: 380 }}><ProfileSidePanel model={patientModel} defaultTab={tab}
+      sectionStates={{ [tab]: { status: "loading" } }} onClose={() => {}} onHeaderAction={() => {}} /></div>
+  )}</div>,
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelectorAll('[skullet-loading]')).toHaveLength(3);
+  },
+};
+
+function HistoryAppendExample() {
+  const [state, setState] = useState<ProfileTabState>({ status: "ready", nextCursor: "next-page" });
+  return <div className="space-y-3">
+    <Button onClick={() => setState({ status: "ready", nextCursor: "next-page", readError: "append" })}>조회 실패 응답</Button>
+    <div style={{ height: 700, width: 380 }}><ProfileSidePanel defaultTab="history"
+      model={{ ...patientModel, history: [{ ...patientModel.history[0], title: "유지할 가상 진료 이력", dateAt: new Date().toISOString() }] }}
+      sectionStates={{ history: state }} onClose={() => {}} onHeaderAction={() => {}}
+      onLoadSection={() => setState({ status: "ready", nextCursor: "next-page", pending: "append" })} /></div>
+  </div>;
+}
+export const HistoryAppendRetainsRows: Story = {
+  render: () => <HistoryAppendExample />,
+  play: async ({ canvas, canvasElement }) => {
+    await userEvent.click(canvas.getByRole("button", { name: "더 보기" }));
+    await expect(canvas.getByText("유지할 가상 진료 이력")).toBeVisible();
+    await expect(canvas.getByRole("button", { name: "불러오는 중" })).toBeDisabled();
+    await expect(canvasElement.querySelector('[skullet-loading]')).toBeNull();
+    await userEvent.click(canvas.getByRole("button", { name: "조회 실패 응답" }));
+    await expect(canvas.getByText("유지할 가상 진료 이력")).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "추가 정보를 불러오지 못했습니다. 다시 시도" }));
+    await expect(canvas.getByRole("button", { name: "불러오는 중" })).toBeDisabled();
   },
 };

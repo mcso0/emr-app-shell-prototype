@@ -26,6 +26,7 @@ type EmrInstructionHeaderStackProps = {
 
 type EmrInstructionTitleBarProps = {
   actions?: ReactNode;
+  actionsClassName?: string;
   badge?: ReactNode;
   className?: string;
   icon?: ReactNode;
@@ -44,6 +45,7 @@ type EmrInstructionHistoryToggleProps = {
 
 export function EmrInstructionTitleBar({
   actions,
+  actionsClassName,
   badge,
   className,
   icon,
@@ -53,7 +55,7 @@ export function EmrInstructionTitleBar({
   return (
     <EmrPageHeader
       actions={actions}
-      actionsClassName="ml-auto gap-2"
+      actionsClassName={cn("ml-auto gap-2", actionsClassName)}
       badge={badge}
       className={cn(
         "min-h-12 flex-wrap gap-x-4 gap-y-2 py-2.5 [&>div:first-child]:gap-2",
@@ -105,7 +107,8 @@ export function EmrInstructionHistoryToggle({
   );
 }
 
-export function EmrInstructionOutputMenu() {
+/** The document menu uses the supplied actions or the default output placeholders. */
+export function EmrInstructionOutputMenu({ children }: { children?: ReactNode }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -123,14 +126,18 @@ export function EmrInstructionOutputMenu() {
         <CdsFilesMoreHorizontalIcon aria-hidden="true" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40">
-        <DropdownMenuItem className="h-8 gap-2 text-xs" disabled>
-          <DownloadIcon aria-hidden="true" />
-          PDF 다운로드
-        </DropdownMenuItem>
-        <DropdownMenuItem className="h-8 gap-2 text-xs" disabled>
-          <PrinterIcon aria-hidden="true" />
-          출력하기
-        </DropdownMenuItem>
+        {children ?? (
+          <>
+            <DropdownMenuItem className="h-8 gap-2 text-xs" disabled>
+              <DownloadIcon aria-hidden="true" />
+              PDF 다운로드
+            </DropdownMenuItem>
+            <DropdownMenuItem className="h-8 gap-2 text-xs" disabled>
+              <PrinterIcon aria-hidden="true" />
+              출력하기
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

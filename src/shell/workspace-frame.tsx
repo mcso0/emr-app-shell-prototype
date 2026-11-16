@@ -1,5 +1,8 @@
 "use client";
 
+import { useAuthClient } from "@/features/auth/auth-client";
+import { useSharedReadActorScope } from "@/features/auth/shared-read-actor-scope";
+import { EmrPageLoadingProvider, EmrPageLoadingSurface } from "@/components/emr/page-loading-boundary";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useState, type CSSProperties } from "react";
 import { CloseIcon } from "@/components/icons";
@@ -46,6 +49,8 @@ export function WorkspaceFrame({
     rightPanelWidth,
     setActiveDrawer,
   } = useLayoutStore();
+  const { session } = useAuthClient();
+  const actorScope = useSharedReadActorScope(session);
   const Header = moduleDefinition.contentHeader;
   const ContentAside = moduleDefinition.contentAside;
   const Content = moduleDefinition.content;
@@ -148,7 +153,7 @@ export function WorkspaceFrame({
   };
 
   return (
-    <SlotAvailabilityProvider {...baseSlotProps}>
+    <EmrPageLoadingProvider key={`${actorScope}:${workspaceId}:${moduleDefinition.id}`}><SlotAvailabilityProvider {...baseSlotProps}>
       {(availability) => {
         const hasContentAside =
           Boolean(ContentAside) && (availability.hasContentAside ?? true);
@@ -214,10 +219,12 @@ export function WorkspaceFrame({
                   "overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-border-strong)] shadow-xs"
               )}
             >
-              {Header ? <Header {...slotProps} /> : null}
+              <EmrPageLoadingSurface contentClassName="flex flex-col">
+              {Header && !availability.orderPrework ? <Header {...slotProps} /> : null}
               {moduleDefinition.documentLayout ? (
                 <WorkspaceDocumentLayout
                   moduleDefinition={moduleDefinition}
+                  orderPrework={availability.orderPrework}
                   slotProps={{ ...slotProps, hasRightPanel: hasModuleRightPanel }}
                 />
               ) : <div
@@ -255,6 +262,7 @@ export function WorkspaceFrame({
                 </div>
               </div>}
 
+              </EmrPageLoadingSurface>
             </section>
 
             <aside
@@ -280,6 +288,7 @@ export function WorkspaceFrame({
                 className={cn("flex h-full w-full flex-col", isProfileRightPanel && "min-w-[var(--clair-profile-content-width)] max-[1100px]:min-w-0")}
                 style={{ minWidth: isProfileRightPanel ? undefined : rightPanelVisible ? effectiveRightPanelWidth : 0 }}
               >
+                <EmrPageLoadingSurface showIndicator={false}>
                 <AnimatePresence initial={false}>
                   {isProfileRightPanel && activeDrawer ? (
                     <motion.div
@@ -301,6 +310,7 @@ export function WorkspaceFrame({
                 ) : RightPanel && rightPanelVisible ? (
                   <RightPanel {...slotProps} />
                 ) : null)}
+                </EmrPageLoadingSurface>
               </div>
             </aside>
 
@@ -321,6 +331,7 @@ export function WorkspaceFrame({
                     zIndex: SHELL_LAYOUT.drawer.zIndex,
                   }}
                 >
+                  <EmrPageLoadingSurface showIndicator={false}>
                   {shouldShowShellDrawerHeader ? (
                     <div className="flex h-12 items-center justify-between border-b px-4">
                       <div>
@@ -346,12 +357,13 @@ export function WorkspaceFrame({
                   {EffectiveModuleDrawer ? (
                     <EffectiveModuleDrawer {...slotProps} />
                   ) : null}
+                  </EmrPageLoadingSurface>
                 </motion.aside>
               ) : null}
             </AnimatePresence>
           </main>
         );
       }}
-    </SlotAvailabilityProvider>
+    </SlotAvailabilityProvider></EmrPageLoadingProvider>
   );
 }

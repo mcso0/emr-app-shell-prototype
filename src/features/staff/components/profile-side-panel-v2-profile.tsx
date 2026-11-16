@@ -2,7 +2,7 @@
 
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { EmrMeasuredLoading } from "@/components/emr/measured-loading";
 
 export type ProfileAvailabilityState = "loading" | "ready" | "empty" | "error";
 
@@ -18,18 +18,9 @@ export function ProfileAvailabilitySummary({
   state: ProfileAvailabilityState;
 }) {
   if (state === "loading") {
-    return (
-      <section
-        aria-label="다가오는 일정 불러오는 중"
-        className="flex h-[70px] items-center gap-4 rounded-xl border border-[var(--emr-border-default)] px-4"
-      >
-        <Skeleton className="size-[42px] shrink-0 rounded-md" />
-        <div className="grid min-w-0 gap-1">
-          <Skeleton className="h-5 w-24" />
-          <Skeleton className="h-4 w-40" />
-        </div>
-      </section>
-    );
+    return <EmrMeasuredLoading label="다가오는 일정 불러오는 중">
+      <ProfileAvailabilitySummary state="ready" eventLabel="1월 2일 휴무" returnLabel="1월 3일 복귀" />
+    </EmrMeasuredLoading>;
   }
 
   if (state === "error") {

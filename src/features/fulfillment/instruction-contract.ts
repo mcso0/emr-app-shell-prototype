@@ -1,8 +1,16 @@
 import { z } from "zod";
+import { oralInstructionSchema } from "@/features/chart/chart-oral-instruction-contract";
 
 const id = z.string().min(1);
 const snapshot = z.record(z.string(), z.unknown());
 export const instructionCommandSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("takeover"),
+    commandId: z.uuid(),
+    expectedRevision: id,
+    reason: z.string().trim().min(1).max(1000),
+    startWork: z.literal(true).optional(),
+  }).strict(),
   z
     .object({
       action: z.literal("edit_instruction"),
@@ -11,9 +19,15 @@ export const instructionCommandSchema = z.discriminatedUnion("action", [
       instruction: z.string().max(5000),
     })
     .strict(),
+  z.object({
+    action: z.literal("claim"),
+    commandId: z.uuid(),
+    expectedRevision: id,
+    startWork: z.literal(true).optional(),
+  }).strict(),
   z
     .object({
-      action: z.enum(["claim", "start", "resume", "unassign", "complete_all"]),
+      action: z.enum(["start", "resume", "unassign", "complete_all"]),
       commandId: z.uuid(),
       expectedRevision: id,
     })
@@ -65,6 +79,9 @@ export const instructionItemSchema = z.object({
 });
 
 export const instructionDocumentSchema = z.object({
+  oralInstruction: oralInstructionSchema.nullable().optional(),
+  encounterNo: z.string().nullable().optional(),
+  firstStartedAt: z.iso.datetime({ offset: true }).nullish(),
   rootOrderId: id,
   rootTaskId: id,
   name: z.string(),
@@ -76,6 +93,7 @@ export const instructionDocumentSchema = z.object({
   instruction: z.string(),
   finalized: z.boolean(),
   canClaim: z.boolean(),
+  canTakeover: z.boolean().default(false),
   canStart: z.boolean(),
   canResume: z.boolean(),
   canUnassign: z.boolean(),
@@ -113,7 +131,7 @@ export function instructionCompletionConfirmation(
     title:
       itemId && document.isSet ? "이 항목을 완료할까요?" : "오더를 완료할까요?",
     description:
-      !itemId && unfinished > 0
+      document.isSet && !itemId && unfinished > 0
         ? `미완료 항목 ${unfinished}개도 함께 완료됩니다.`
         : document.isSet && itemId
           ? "이 항목의 작업을 완료합니다. 세트 오더는 상단에서 완료해 주세요."
@@ -123,12 +141,15 @@ export function instructionCompletionConfirmation(
 }
 
 export const instructionErrorMessages: Record<string, string> = {
+  instruction_ack_required: "최신 지시사항을 확인한 뒤 다시 시도해 주세요.",
   revision_conflict:
     "다른 사용자가 오더를 변경했어요. 최신 내용을 확인한 뒤 다시 시도해 주세요.",
   permission_missing:
     "현재 담당자에게 작업 권한이 있어요. 담당 상태를 확인해 주세요.",
   actual_execution_result_required: "수행 결과를 먼저 기록해 주세요.",
   billing_locked: "수납에 반영된 오더는 완료를 해제할 수 없어요.",
+  treatment_medication_link_required: "처치를 시작하려면 차트에서 약품 오더를 연결해 주세요.",
+  treatment_medication_link_invalid: "처치를 시작하려면 차트에서 연결된 약품 오더를 확인해 주세요.",
   work_item_unavailable: "이 오더를 더 이상 찾을 수 없어요.",
   invalid_transition:
     "현재 상태에서는 이 작업을 할 수 없어요. 오더를 새로 확인해 주세요.",

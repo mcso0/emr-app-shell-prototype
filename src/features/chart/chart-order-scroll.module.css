@@ -66,6 +66,17 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
+  .instructionAction {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .instructionCell:hover .instructionAction,
+  .instructionAction:focus-visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
   .scrollbarRevealRoot :global([data-emr-pinned-table-scrollbar]) {
     opacity: 0;
     pointer-events: none;

@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
+import { Fragment, createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
+import { EmrPageLoadingBoundary, EmrPageLoadingSurface } from "@/components/emr/page-loading-boundary";
 import { createPortal } from "react-dom";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { CdsNavigationMaximize2Icon, CdsNavigationMinimize2Icon } from "@/components/cds-icons/navigation";
@@ -158,7 +159,7 @@ function WorkspacePanel({
         )}
       >
         <div className={cn("relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--emr-surface-content-panel)] border-[var(--emr-border-strong)]", styles.panelSurface, side === "left" ? "border-r" : "border-l")}>
-          {children}
+          <EmrPageLoadingSurface contentClassName="flex flex-col" showIndicator={false}>{children}</EmrPageLoadingSurface>
         </div>
       </DialogPrimitive.Popup>
       </div>
@@ -169,13 +170,15 @@ function WorkspacePanel({
 }
 
 export function WorkspaceDocumentLayout({
-  moduleDefinition, slotProps,
+  moduleDefinition, slotProps, orderPrework = false,
 }: {
+  orderPrework?: boolean;
   moduleDefinition: ModuleDefinition;
   slotProps: ShellComponentProps;
 }) {
   const config = moduleDefinition.documentLayout!;
   const Content = moduleDefinition.content;
+  const DocumentLoadingBoundary = moduleDefinition.id === "dispensing" ? EmrPageLoadingBoundary : Fragment;
   const ContentAside = moduleDefinition.contentAside;
   const RightPanel = moduleDefinition.rightPanel;
   const areaRef = useRef<HTMLDivElement>(null);
@@ -399,18 +402,20 @@ export function WorkspaceDocumentLayout({
     }}>
       <div ref={areaRef} onClickCapture={capturePanelClick} data-testid="workspace-document-area" data-presentation={overlay ? "drawer" : "inline"} className="relative grid min-h-0 flex-1 overflow-clip" style={{ gridTemplateColumns: `${inlineLeft ? leftWidth : 0}px minmax(0, 1fr) ${inlineRight ? rightWidth : 0}px` }}>
         <WorkspacePanel key={historyControlsId} open={leftOpen} visible={historyVisible} drawer={overlay} side="left" controlsId={historyControlsId} label={config.historyLabel} width={panelWidth} position={panelPosition} instant={!historyMotion || Boolean(reduceMotion)} presentationInstant={shadowPresentation.instant} reduceMotion={reduceMotion} onClose={(pointer) => { preparePanelMotion("left", pointer); closeLeft(false); }}>
-          {ContentAside ? <ContentAside {...slotProps} /> : null}
+          {ContentAside && !orderPrework ? <ContentAside {...slotProps} /> : null}
         </WorkspacePanel>
         <div ref={centerRef} data-testid="workspace-document-center" onFocusCapture={(event) => {
           if (compact && centerRef.current?.contains(event.target as Node)) setCompactSurface("body");
-        }} className={cn(styles.center, "col-start-2 row-start-1 min-h-0 min-w-0 overflow-clip px-4 has-[[data-chart-start-locked=true]]:bg-[var(--emr-surface-panel)] has-[[data-chart-start-locked=true]]:px-0")} style={{ paddingBottom: switcherHeight }}>
-          <div ref={documentRef} data-testid="workspace-document" data-width-mode={widthMode} className="flex h-full min-h-0 w-full flex-col has-[[data-chart-start-locked=true]]:!max-w-none has-[[data-chart-start-locked=true]]:!ml-0" style={{ maxWidth: targetWidth, marginLeft: documentLeft - leftInset, transitionProperty: "max-width, margin-left", transitionDuration: animateWidth && !reduceMotion ? `${transitionMs}ms` : "0s", transitionTimingFunction: "cubic-bezier(.2,0,0,1)" }}>
-            <div ref={setToolbarHost} data-slot="instruction-header-title-bar" data-testid="workspace-document-toolbar" className="shrink-0 empty:hidden" />
+        }} className={cn(orderPrework && "!bg-[var(--emr-surface-panel)] !px-0", styles.center, "col-start-2 row-start-1 min-h-0 min-w-0 overflow-clip px-4 has-[[data-chart-start-locked=true]]:bg-[var(--emr-surface-panel)] has-[[data-chart-start-locked=true]]:px-0")} style={{ paddingBottom: switcherHeight }}>
+          <DocumentLoadingBoundary>
+          <div ref={documentRef} data-testid="workspace-document" data-width-mode={widthMode} className="flex h-full min-h-0 w-full flex-col has-[[data-chart-start-locked=true]]:!max-w-none has-[[data-chart-start-locked=true]]:!ml-0" style={{ maxWidth: orderPrework ? "none" : targetWidth, marginLeft: orderPrework ? 0 : documentLeft - leftInset, transitionProperty: "max-width, margin-left", transitionDuration: animateWidth && !reduceMotion ? `${transitionMs}ms` : "0s", transitionTimingFunction: "cubic-bezier(.2,0,0,1)" }}>
+            <div ref={setToolbarHost} data-slot="instruction-header-title-bar" data-testid="workspace-document-toolbar" className="shrink-0 empty:hidden" hidden={orderPrework} />
             <div className="min-h-0 flex-1"><Content {...slotProps} /></div>
           </div>
+          </DocumentLoadingBoundary>
         </div>
         {RightPanel && config.rightLabel ? <WorkspacePanel key={rightControlsId} open={rightOpen} visible={rightVisible} drawer={overlay} side="right" controlsId={rightControlsId} label={config.rightLabel} width={panelWidth} position={rightPosition} sliding={receiptSliding} instant={!receiptMotion || Boolean(reduceMotion)} presentationInstant={shadowPresentation.instant} reduceMotion={reduceMotion} onClose={(pointer) => { preparePanelMotion("right", pointer); closeRight(false); }}>
-          {RightPanel ? <RightPanel {...slotProps} /> : null}
+          {RightPanel && !orderPrework ? <RightPanel {...slotProps} /> : null}
         </WorkspacePanel> : null}
         {compact ? <div data-testid="workspace-panel-switcher" role="group" aria-label="작업 영역 선택" className="absolute inset-x-0 bottom-0 z-20 flex min-h-16 items-center gap-1 border-t bg-card p-2">
           {leftOpen ? <Button size="sm" variant="outline" className="min-w-0 flex-1 whitespace-normal px-1 text-xs leading-tight" data-panel-switch="left" aria-controls={historyControlsId} aria-pressed={historyVisible} onClick={() => setCompactSurface("left")}>이력 보기</Button> : null}

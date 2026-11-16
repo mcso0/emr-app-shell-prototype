@@ -106,6 +106,7 @@ export type GuardianCheckoutSessionPayload = {
 export type BillingInvoiceTransitionTarget = "waiting" | "unpaid" | "paid" | "voided";
 
 export type BillingInvoiceTransitionInput = {
+  expectedUpdatedAt?: string;
   invoiceId?: string;
   paymentMethod?: PaymentMethod;
   reason?: string;
@@ -131,7 +132,7 @@ export type BillingInvoiceTransitionPayload = {
 export type GuardianCheckoutGatewayResult<T> =
   | ({ ok: true } & T)
   | { ok: false; status: 403; denialReason: "permission_missing" }
-  | { ok: false; status: 409; denialReason: "billing_review_required" | "guardian_unavailable" | "invoice_unavailable" }
+  | { ok: false; status: 409; denialReason: "billing_review_required" | "guardian_unavailable" | "invoice_unavailable" | "invoice_revision_conflict" | "payment_in_progress" | "billing_change_pending" }
   | { ok: false; status: 500; error: "db_read_failed" | "db_write_failed" };
 
 export type GuardianCheckoutGateway = {
@@ -160,7 +161,7 @@ export type GuardianBillingLedgerResult =
     })
   | { ok: false; status: 400; error: "invalid_input"; fieldErrors: Partial<Record<"guardianId", string>> }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "billing_review_required" | "guardian_unavailable" | "invoice_unavailable" }
+  | { ok: false; status: 409; denialReason: "billing_review_required" | "guardian_unavailable" | "invoice_unavailable" | "invoice_revision_conflict" | "payment_in_progress" | "billing_change_pending" }
   | { ok: false; status: 500; error: "db_read_failed" };
 
 export type GuardianCheckoutPrepareResult =
@@ -176,7 +177,7 @@ export type GuardianCheckoutPrepareResult =
       fieldErrors: Partial<Record<"invoiceIds" | "adjustments", string>>;
     }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "billing_review_required" | "guardian_unavailable" | "invoice_unavailable" }
+  | { ok: false; status: 409; denialReason: "billing_review_required" | "guardian_unavailable" | "invoice_unavailable" | "invoice_revision_conflict" | "payment_in_progress" | "billing_change_pending" }
   | { ok: false; status: 500; error: "db_write_failed" };
 
 export type BillingInvoiceTransitionResult =
@@ -192,7 +193,7 @@ export type BillingInvoiceTransitionResult =
       fieldErrors: Partial<Record<"invoiceId" | "target" | "reason" | "paymentMethod", string>>;
     }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "billing_review_required" | "guardian_unavailable" | "invoice_unavailable" }
+  | { ok: false; status: 409; denialReason: "billing_review_required" | "guardian_unavailable" | "invoice_unavailable" | "invoice_revision_conflict" | "payment_in_progress" | "billing_change_pending" }
   | { ok: false; status: 500; error: "db_write_failed" };
 
 const defaultLedgerInput: Required<GuardianBillingLedgerInput> = {
@@ -210,6 +211,7 @@ const defaultPrepareInput: Required<GuardianCheckoutPrepareInput> = {
 };
 
 const defaultTransitionInput: Required<BillingInvoiceTransitionInput> = {
+  expectedUpdatedAt: "",
   invoiceId: "",
   paymentMethod: "card",
   reason: "",
@@ -490,6 +492,7 @@ export function createSupabaseGuardianCheckoutGateway(
         p_actor_user_id: actorUserId,
         p_invoice_id: input.invoiceId,
         p_target: input.target,
+        p_expected_updated_at: input.expectedUpdatedAt || null,
         p_payment_method: input.paymentMethod,
         p_reason: input.reason,
       });
@@ -691,6 +694,7 @@ function normalizeTransitionInput(input: BillingInvoiceTransitionInput): Require
     ...defaultTransitionInput,
     ...input,
     invoiceId: trimToEmpty(input.invoiceId),
+    expectedUpdatedAt: trimToEmpty(input.expectedUpdatedAt),
     reason: input.reason?.trim() ?? "",
   };
 }
@@ -731,6 +735,9 @@ function mapGuardianCheckoutError(
   if (message?.includes("current_assignee_required") || message?.includes("permission_missing") || message?.includes("actor_mismatch")) return { ok: false, status: 403, denialReason: "permission_missing" };
   if (message?.includes("billing_review_required")) return { ok: false, status: 409, denialReason: "billing_review_required" };
   if (message?.includes("guardian_unavailable")) return { ok: false, status: 409, denialReason: "guardian_unavailable" };
+  for (const denialReason of ["invoice_revision_conflict", "payment_in_progress", "billing_change_pending"] as const) {
+    if (message?.includes(denialReason)) return { ok: false, status: 409, denialReason };
+  }
   if (message?.includes("invoice_unavailable")) return { ok: false, status: 409, denialReason: "invoice_unavailable" };
   return { ok: false, status: 500, error: fallback };
 }

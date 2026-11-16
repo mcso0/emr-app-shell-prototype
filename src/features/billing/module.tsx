@@ -1,5 +1,14 @@
 "use client";
 
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+
+import { OrderBillingChangeReview } from "./order-billing-change-review";
+import { getAuthRuntimeMode } from "@/lib/supabase/config";
+import { useOrderPrework, useOrderPreworkPresentation } from "@/features/fulfillment/use-order-prework";
+import { PatientOrderPrework } from "@/features/fulfillment/components/patient-order-prework";
+import { EmrWorkEntryAction } from "@/components/emr/work-entry-action";
+import { EmrWorkEntrySection, EmrWorkEntrySummary } from "@/components/emr/work-entry-page";
+
 import { useBillingAssignment } from "./use-billing-assignment";
 import { FulfillmentWorkLifecycleAction } from "@/features/fulfillment/components/work-lifecycle-action";
 
@@ -340,6 +349,7 @@ type GuardianCheckoutTransitionRouteResponse =
     };
 
 type BillingPersistedInvoiceSnapshot = {
+  updatedAt?: string;
   createdAt: string;
   discountAmount: number;
   encounterId: string;
@@ -377,6 +387,7 @@ type GuardianCheckoutInvoiceSnapshot = {
 };
 
 type GuardianCheckoutSessionSnapshot = {
+  sourceKey?: string;
   excludedAmount: number;
   excludedCount: number;
   id: string;
@@ -617,6 +628,7 @@ async function saveBillingPaymentStatus({
   action,
   actorHeaders,
   invoiceId,
+  expectedUpdatedAt,
   paymentMethod,
   unpaidReason,
   workspaceId,
@@ -624,6 +636,7 @@ async function saveBillingPaymentStatus({
   action: "select_payment_method" | "mark_unpaid" | "complete_payment";
   actorHeaders?: Record<string, string>;
   invoiceId: string;
+  expectedUpdatedAt?: string;
   paymentMethod: PaymentMethod;
   unpaidReason?: string;
   workspaceId: string;
@@ -635,6 +648,7 @@ async function saveBillingPaymentStatus({
         body: JSON.stringify({
           action,
           invoiceId,
+          expectedUpdatedAt,
           paymentMethod,
           unpaidReason,
         }),
@@ -745,6 +759,7 @@ async function prepareGuardianCheckout({
 async function transitionGuardianCheckoutInvoiceStatus({
   actorHeaders,
   invoiceId,
+  expectedUpdatedAt,
   paymentMethod,
   reason,
   target,
@@ -752,6 +767,7 @@ async function transitionGuardianCheckoutInvoiceStatus({
 }: {
   actorHeaders?: Record<string, string>;
   invoiceId: string;
+  expectedUpdatedAt?: string;
   paymentMethod: PaymentMethod;
   reason: string;
   target: BillingInvoiceStatusTransitionTarget;
@@ -763,6 +779,7 @@ async function transitionGuardianCheckoutInvoiceStatus({
       {
         body: JSON.stringify({
           invoiceId,
+          expectedUpdatedAt,
           paymentMethod,
           reason,
           target,
@@ -1119,7 +1136,13 @@ function useBillingWorkspaceData() {
       : undefined,
     protectedOwnerKey,
   );
-  const protectedInvoice = ownedPaymentSnapshot?.invoice ?? ownedInvoiceSnapshot?.invoice;
+  const latestInvoice = ownedPaymentSnapshot?.invoice ?? ownedInvoiceSnapshot?.invoice;
+  // A payment token is valid only when the displayed lines and payment state
+  // were read at the same invoice revision.
+  const protectedInvoice = latestInvoice ? { ...latestInvoice,
+    updatedAt: ownedInvoiceSnapshot?.invoice.updatedAt === ownedPaymentSnapshot?.invoice.updatedAt
+      ? ownedInvoiceSnapshot?.invoice.updatedAt : undefined,
+  } : undefined;
   const workspaceInvoices = legacySalesDemo
     ? invoices
     : protectedInvoice
@@ -1143,6 +1166,20 @@ function useBillingWorkspaceData() {
         )
       : workspaceInvoiceLines;
   const retrySnapshots = () => setSnapshotReloadKey((current) => current + 1);
+  useEffect(() => {
+    const refresh = (event: Event) => {
+      const target = (event as CustomEvent<{ workspaceId: string; invoiceId: string }>).detail;
+      if (target?.workspaceId === workspaceId && target.invoiceId === effectiveInvoiceId) setSnapshotReloadKey(key => key + 1);
+    };
+    const refreshAssignment = () => setSnapshotReloadKey(key => key + 1);
+    window.addEventListener("clair-billing-order-change", refresh);
+    window.addEventListener("clair-billing-assignment", refreshAssignment);
+    return () => {
+      window.removeEventListener("clair-billing-order-change", refresh);
+      window.removeEventListener("clair-billing-assignment", refreshAssignment);
+    };
+  }, [workspaceId, effectiveInvoiceId]);
+
   const applyWorkspaceInvoiceSnapshot = (
     invoice: BillingPersistedInvoiceSnapshot,
     lines: InvoiceLine[],
@@ -1152,6 +1189,7 @@ function useBillingWorkspaceData() {
       return;
     }
     setProtectedInvoiceSnapshot({ invoice, lines, ownerKey: protectedOwnerKey });
+    window.dispatchEvent(new CustomEvent("clair-billing-order-change", { detail: { workspaceId: invoice.workspaceId, invoiceId: invoice.id } }));
   };
   const applyWorkspacePaymentSnapshot = (
     invoice: BillingPersistedInvoiceSnapshot,
@@ -1166,6 +1204,7 @@ function useBillingWorkspaceData() {
       ownerKey: protectedOwnerKey,
       payments: nextPayments,
     });
+    window.dispatchEvent(new CustomEvent("clair-billing-order-change", { detail: { workspaceId: invoice.workspaceId, invoiceId: invoice.id } }));
   };
   const baseDetail =
     getBillingDetail(
@@ -1232,6 +1271,9 @@ function useBillingWorkspaceData() {
   const baseInvoiceWorkspaceId = queryInvoiceId
     ? workspaceId
     : baseDetail?.invoice.workspaceId;
+  const summaryReadScope = `${protectedOwnerKey}:${queryEncounterId ?? baseEncounterId ?? ""}`;
+  const invoiceReadScope = `${protectedOwnerKey}:${baseInvoiceWorkspaceId}:${baseInvoiceId}`;
+  const [completedReads, setCompletedReads] = useState({ summary: "", invoice: "", payment: "" });
   useEffect(() => {
     const encounterId = queryEncounterId ?? baseEncounterId;
     const candidateWorkspaceId = queryEncounterId
@@ -1279,12 +1321,13 @@ function useBillingWorkspaceData() {
       );
     }
 
-    void loadPersistedCandidates();
+    void loadPersistedCandidates().finally(() => { if (!cancelled) setCompletedReads(previous => ({ ...previous, summary: summaryReadScope })); });
 
     return () => {
       cancelled = true;
     };
   }, [
+    summaryReadScope,
     actorHeaders,
     baseEncounterId,
     baseEncounterWorkspaceId,
@@ -1329,12 +1372,13 @@ function useBillingWorkspaceData() {
       );
     }
 
-    void loadPersistedInvoiceLines();
+    void loadPersistedInvoiceLines().finally(() => { if (!cancelled) setCompletedReads(previous => ({ ...previous, invoice: invoiceReadScope })); });
 
     return () => {
       cancelled = true;
     };
   }, [
+    invoiceReadScope,
     actorHeaders,
     baseInvoiceId,
     baseInvoiceWorkspaceId,
@@ -1378,12 +1422,13 @@ function useBillingWorkspaceData() {
       setPaymentStatusState(billingApiReadyState);
     }
 
-    void loadPersistedPaymentStatus();
+    void loadPersistedPaymentStatus().finally(() => { if (!cancelled) setCompletedReads(previous => ({ ...previous, payment: invoiceReadScope })); });
 
     return () => {
       cancelled = true;
     };
   }, [
+    invoiceReadScope,
     actorHeaders,
     baseInvoiceId,
     baseInvoiceWorkspaceId,
@@ -1410,6 +1455,8 @@ function useBillingWorkspaceData() {
       : null;
 
   return {
+    pagePending: Boolean((queryEncounterId ?? baseEncounterId) && completedReads.summary !== summaryReadScope)
+      || Boolean(baseInvoiceId && baseInvoiceWorkspaceId && (completedReads.invoice !== invoiceReadScope || completedReads.payment !== invoiceReadScope)),
     applyInvoiceSnapshot: applyWorkspaceInvoiceSnapshot,
     applyPaymentStatusSnapshot: applyWorkspacePaymentSnapshot,
     apiState: {
@@ -2701,7 +2748,7 @@ function SelectedCheckoutWorkspace({
                             size="xs"
                             variant="outline"
                             className="bg-card"
-                            disabled={!hasBillingAssignee}
+                            disabled={!hasBillingAssignee || (target === "paid" && !isLegacySalesDemoWorkspace(group.invoice.workspaceId) && !group.invoice.updatedAt)}
                             onClick={() =>
                               onTransitionStatus(group.invoice.id, target)
                             }
@@ -3239,12 +3286,42 @@ function BillingCheckoutStateNotice({
   );
 }
 
+function BillingPreworkHistory({ detail }: { detail: BillingDetail }) {
+  const { session } = useAuthClient();
+  const actorHeaders = useMemo(() => getDemoActorHeader(session), [session]);
+  const [loaded, setLoaded] = useState<{ key: string; data: GuardianCheckoutLedgerRouteResponse } | null>(null);
+  const [retry, setRetry] = useState(0);
+  const guardianId = detail.guardian?.id;
+  const workspaceId = detail.invoice.workspaceId;
+  const key = `${workspaceId}:${guardianId}:${JSON.stringify(actorHeaders)}:${retry}`;
+  const result = loaded?.key === key ? loaded.data : null;
+  usePageReadiness(
+    Boolean(guardianId && !result),
+    `${workspaceId}:${guardianId ?? ""}:${JSON.stringify(actorHeaders)}`,
+  );
+  useEffect(() => {
+    if (!guardianId) return;
+    let active = true;
+    void loadGuardianCheckoutLedger({ actorHeaders, guardianId, workspaceId, includeCoGuardianInvoices: false }).then(data => { if (active) setLoaded({ key, data }); });
+    return () => { active = false; };
+  }, [actorHeaders, guardianId, workspaceId, key]);
+  const rows = result?.ok ? result.rows.filter(row => row.invoiceId !== detail.invoice.id) : [];
+  return <EmrWorkEntrySection title="과거 수납 이력">
+    {!guardianId ? <p className="text-sm text-muted-foreground">보호자 정보를 확인할 수 없어 이력을 표시하지 못했어요.</p>
+      : !result ? <p className="text-sm text-muted-foreground">이력을 불러오는 중이에요.</p>
+      : !result.ok ? <div role="alert" className="text-sm">이력을 불러오지 못했어요. <Button variant="outline" onClick={() => setRetry(value => value + 1)}>다시 조회</Button></div>
+      : rows.length ? rows.map(row => <div key={row.invoiceId} className="flex flex-wrap justify-between gap-4 rounded-lg border border-border p-4 text-sm"><time>{new Date(row.activityAt).toLocaleDateString("ko-KR")}</time><span>{formatAmount(row.totalAmount)}</span><span>{row.status === "paid" ? "수납 완료" : row.status === "refunded" ? "환불" : row.status === "voided" ? "취소" : row.status === "unpaid" ? "미수" : "대기"}</span></div>)
+      : <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">이전 수납 이력이 없어요.</p>}
+  </EmrWorkEntrySection>;
+}
+
 export function BillingContent({
   hasRightPanel,
   workspaceId,
 }: ShellComponentProps) {
   const documentLayout = useWorkspaceDocumentLayout();
   const {
+    pagePending,
     apiState,
     applyInvoiceSnapshot,
     applyPaymentStatusSnapshot,
@@ -3265,6 +3342,12 @@ export function BillingContent({
   const storedInvoices = useBillingStore((state) => state.invoices);
   const storedPayments = useBillingStore((state) => state.payments);
   const editOwnership = useBillingAssignment(detail?.invoice.workspaceId, detail?.invoice.id);
+  const entry = useOrderPrework({
+    scopeKey: `${workspaceId}:${detail?.invoice.id ?? ""}`,
+    requested: Boolean(detail && (getAuthRuntimeMode().authProvider === "supabase" || !isLegacySalesDemoWorkspace(workspaceId)) && !detail.invoice.id.startsWith("invoice-live-") && getBillingFilterForInvoice(detail.invoice) !== "closed"),
+    ownsWork: editOwnership.canExecute,
+    pending: !detail && billingQueue.status === "loading",
+  });
   const selectedInvoiceIds = useBillingStore(
     (state) => state.selectedInvoiceIds,
   );
@@ -3299,6 +3382,10 @@ export function BillingContent({
         : detail,
     [checkoutInvoiceLines, checkoutInvoices, checkoutPayments, detail, legacySalesDemo],
   );
+  const orderReviewKey = !legacySalesDemo && effectiveDetail && /^[0-9a-f-]{36}$/i.test(effectiveDetail.invoice.id)
+    ? `${getBillingProtectedSnapshotOwnerKey(authSession, effectiveDetail.invoice.workspaceId)}:${effectiveDetail.invoice.id}` : null;
+  const orderReview = useBillingStore(state => orderReviewKey ? state.orderChangeReviews[orderReviewKey] : undefined);
+  const orderReviewBlocked = Boolean(orderReviewKey && (orderReview?.status !== "ready" || orderReview.pending));
   const checkoutGroups = useMemo(() => {
     const detailInvoiceIsOutsideStore = effectiveDetail
       ? !checkoutInvoices.some(
@@ -3358,13 +3445,16 @@ export function BillingContent({
   const checkoutWorkspaceId =
     checkoutGroups[0]?.invoice.workspaceId ??
     effectiveDetail?.invoice.workspaceId;
+  const checkoutSourceKey = JSON.stringify([checkoutWorkspaceId, checkoutInvoiceIdsKey, checkoutAmountsKey, effectiveDetail?.invoice.updatedAt, orderReview?.signature]);
+  const checkoutReadKey = `${checkoutSourceKey}:${entry.show}:${editOwnership.canExecute}:${checkoutReloadKey}`;
+  const [finishedCheckoutKey, setFinishedCheckoutKey] = useState<string | null>(null);
   const effectiveCheckoutState = !editOwnership.canExecute
     ? billingApiIdleState
     : !checkoutWorkspaceId || checkoutInvoiceIds.length === 0
       ? billingApiEmptyState
       : checkoutState;
   useEffect(() => {
-    if (!editOwnership.canExecute || !checkoutWorkspaceId || checkoutInvoiceIds.length === 0) {
+    if (entry.show || orderReviewBlocked || !editOwnership.canExecute || !checkoutWorkspaceId || checkoutInvoiceIds.length === 0) {
       return;
     }
 
@@ -3380,13 +3470,14 @@ export function BillingContent({
       });
 
       if (cancelled) return;
+      setFinishedCheckoutKey(checkoutReadKey);
       if (!result.ok) {
         setCheckoutSession(undefined);
         setCheckoutState(getBillingApiFailureState(result));
         return;
       }
 
-      setCheckoutSession(result.checkoutSession);
+      setCheckoutSession({ ...result.checkoutSession, sourceKey: checkoutSourceKey });
       setCheckoutState(billingApiReadyState);
     }
 
@@ -3398,9 +3489,14 @@ export function BillingContent({
   }, [
     actorHeaders,
     checkoutInvoiceIds,
+    checkoutReadKey,
     checkoutAmountsKey,
     checkoutReloadKey,
+    checkoutSourceKey,
+    orderReviewBlocked,
+    orderReview?.signature,
     editOwnership.canExecute,
+    entry.show,
     checkoutWorkspaceId,
   ]);
   useEffect(() => {
@@ -3416,6 +3512,11 @@ export function BillingContent({
   const detailReads = queryInvoiceId
     ? [apiState.invoiceLines, apiState.paymentStatus, apiState.orderSummary]
     : [];
+  usePageReadiness(
+    pagePending || billingQueue.status === "loading" || detailReads.some(read => read.status === "loading") || editOwnership.loading
+      || Boolean(!entry.show && !orderReviewBlocked && editOwnership.canExecute && checkoutWorkspaceId && checkoutInvoiceIds.length && finishedCheckoutKey !== checkoutReadKey),
+    `${workspaceId}:${billingQueue.selectedDate}:${queryInvoiceId ?? selectedInvoiceId}:${entry.show ? "entry" : orderReviewBlocked ? "review" : "checkout"}`,
+  );
   if (!effectiveDetail && (billingQueue.status === "loading" || detailReads.some(read => read.status === "loading"))) {
     return <EmrContentLoadingState testId="billing-content-loading-state" title="수납 업무를 불러오는 중입니다" />;
   }
@@ -3517,13 +3618,14 @@ export function BillingContent({
       (effectiveDetail?.invoice.id === invoiceId
         ? effectiveDetail.invoice
         : undefined);
-    if (!targetInvoice || !editOwnership.canExecute || invoiceId !== detail?.invoice.id) return;
+    if (!targetInvoice || !editOwnership.canExecute || invoiceId !== detail?.invoice.id || orderReviewBlocked || (target === "paid" && orderReviewKey && !targetInvoice.updatedAt)) return;
 
     setLinePersistenceState("saving");
     const result = await transitionGuardianCheckoutInvoiceStatus({
       actorHeaders,
       invoiceId,
       paymentMethod: "card",
+      expectedUpdatedAt: targetInvoice.updatedAt,
       reason: `수납 화면에서 ${getBillingCheckoutTransitionLabel(target)} 상태로 변경`,
       target,
       workspaceId: targetInvoice.workspaceId,
@@ -3538,6 +3640,26 @@ export function BillingContent({
     setLinePersistenceState("saved");
   }
 
+  if (entry.show) return <PatientOrderPrework
+    workItem={{ id: effectiveDetail.invoice.id, workspaceId, encounterId: effectiveDetail.encounter.id, patientId: effectiveDetail.patient?.id,
+      patientName: effectiveDetail.patient?.name, guardianName: effectiveDetail.guardian?.name, requesterName: effectiveDetail.requestedByName, createdAt: effectiveDetail.invoice.createdAt }}
+    encounterNo={effectiveDetail.encounter.encounterNo} label="수납" testId="billing-prework"
+    historyContent={<BillingPreworkHistory key={`${workspaceId}:${effectiveDetail.guardian?.id}`} detail={effectiveDetail} />}
+    actions={editOwnership.data ? <EmrWorkEntryAction
+      scopeKey={`${workspaceId}:${effectiveDetail.invoice.id}`} authorityKey={`${editOwnership.data.revision}:${editOwnership.data.canManage}:${editOwnership.data.assignedToUserId}`}
+      mode={editOwnership.canExecute ? "start" : editOwnership.data.canManage && !editOwnership.data.assignedToUserId ? "claim" : "blocked"}
+      assigneeName={editOwnership.data.assignedToDisplayName} onEntered={entry.enter}
+      description={editOwnership.canExecute ? "수납 업무 화면을 열어요. 결제는 별도로 확인해요." : undefined}
+      context={<><strong>{effectiveDetail.invoice.invoiceNo}</strong><p>미수금 {formatAmount(getBillingBalance(effectiveDetail))}</p></>}
+      onConfirm={() => editOwnership.canExecute ? Promise.resolve(true) : editOwnership.transition("claim")} />
+      : <Button size="sm" variant="outline" onClick={() => void editOwnership.refresh()}>담당 상태 다시 조회</Button>}>
+    <EmrWorkEntrySection title="청구 정보"><EmrWorkEntrySummary items={[
+      ["청구 번호", effectiveDetail.invoice.invoiceNo], ["청구 항목", `${effectiveDetail.lineCount}개`], ["청구 금액", formatAmount(effectiveDetail.invoice.totalAmount)],
+      ["미수금", formatAmount(getBillingBalance(effectiveDetail))], ["수납 담당", editOwnership.data?.assignedToDisplayName ?? (editOwnership.data ? "미지정" : "확인 중")],
+    ]} /></EmrWorkEntrySection>
+    <EmrWorkEntrySection title="청구 항목"><div className="divide-y rounded-lg border border-border">{effectiveDetail.invoiceLines.map(line => <div key={line.id} className="flex items-center justify-between gap-4 p-4 text-sm"><span>{line.description}</span><span>{formatAmount(line.lineTotal)}</span></div>)}</div></EmrWorkEntrySection>
+  </PatientOrderPrework>;
+
   return (
     <div data-slot="billing-content" className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]">
       <ScrollArea data-slot="billing-content-scroll-area" className="min-h-0 flex-1">
@@ -3547,13 +3669,18 @@ export function BillingContent({
             hasRightPanel={Boolean(hasRightPanel)}
           />
           <BillingApiStateNotice apiState={apiState} />
+          {!legacySalesDemo && effectiveDetail && <OrderBillingChangeReview key={effectiveDetail.invoice.id}
+            workspaceId={effectiveDetail.invoice.workspaceId} invoiceId={effectiveDetail.invoice.id} reviewKey={orderReviewKey ?? ""}
+            onApplied={() => { void loadBillingInvoiceLines({ actorHeaders, workspaceId: effectiveDetail.invoice.workspaceId, invoiceId: effectiveDetail.invoice.id }).then(result => {
+              if (result.ok) applyInvoiceSnapshot(result.invoice, result.lines);
+            }); retryCheckout(); }} />}
           <SelectedCheckoutWorkspace
             checkoutSession={
-              editOwnership.canExecute && checkoutInvoiceIds.length ? checkoutSession : undefined
+              !orderReviewBlocked && editOwnership.canExecute && checkoutInvoiceIds.length && checkoutSession?.sourceKey === checkoutSourceKey ? checkoutSession : undefined
             }
-            checkoutState={effectiveCheckoutState}
+            checkoutState={orderReviewBlocked ? billingApiIdleState : effectiveCheckoutState}
             groups={checkoutGroups}
-            editableInvoiceId={editOwnership.canExecute ? detail?.invoice.id : undefined}
+            editableInvoiceId={!orderReviewBlocked && editOwnership.canExecute ? detail?.invoice.id : undefined}
             persistenceState={linePersistenceState}
             onRetryCheckout={retryCheckout}
             onTransitionStatus={handleTransitionInvoiceStatus}
@@ -3655,6 +3782,7 @@ function PaymentStatusNote({
 }
 
 export function BillingRightPanel() {
+  const prework = useOrderPreworkPresentation();
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
   const {
     applyInvoiceSnapshot,
@@ -3683,8 +3811,8 @@ export function BillingRightPanel() {
   >("idle");
   const [paymentFailureContext, setPaymentFailureContext] =
     useState<BillingPaymentFailureContext | null>(null);
-  const [pendingFinancialAction, setPendingFinancialAction] =
-    useState<BillingFinancialAction | null>(null);
+  const [pendingFinancialConfirmation, setPendingFinancialConfirmation] =
+    useState<{ action: BillingFinancialAction; scope: string } | null>(null);
   const [unpaidReason, setUnpaidReason] = useState("");
   const [paymentMemo, setPaymentMemo] = useState("");
   const [adjustmentReason, setAdjustmentReason] = useState("");
@@ -3702,6 +3830,14 @@ export function BillingRightPanel() {
         : null,
     [detail, invoiceLines, invoices, payments],
   );
+  const orderReviewKey = effectiveDetail && !isLegacySalesDemoWorkspace(effectiveDetail.invoice.workspaceId) && /^[0-9a-f-]{36}$/i.test(effectiveDetail.invoice.id)
+    ? `${getBillingProtectedSnapshotOwnerKey(authSession, effectiveDetail.invoice.workspaceId)}:${effectiveDetail.invoice.id}` : null;
+  const orderReview = useBillingStore(state => orderReviewKey ? state.orderChangeReviews[orderReviewKey] : undefined);
+  const orderReviewBlocked = Boolean(orderReviewKey && (orderReview?.status !== "ready" || orderReview.pending));
+  const paymentVersionRef = useRef<string | undefined>(undefined);
+  const financialConfirmationScope = JSON.stringify([effectiveDetail?.invoice.id, effectiveDetail?.invoice.updatedAt, orderReviewBlocked, orderReview?.signature]);
+  const pendingFinancialAction = pendingFinancialConfirmation?.scope === financialConfirmationScope ? pendingFinancialConfirmation.action : null;
+  const setPendingFinancialAction = (action: BillingFinancialAction | null) => setPendingFinancialConfirmation(action ? { action, scope: financialConfirmationScope } : null);
   const selectedCheckoutGroups = useMemo(() => {
     if (!effectiveDetail) return [];
 
@@ -3735,8 +3871,10 @@ export function BillingRightPanel() {
   const checkoutWorkspaceId =
     summaryGroups[0]?.invoice.workspaceId ??
     effectiveDetail?.invoice.workspaceId;
+  const checkoutSourceKey = JSON.stringify([checkoutWorkspaceId, checkoutInvoiceIdsKey, checkoutAmountsKey, effectiveDetail?.invoice.updatedAt, orderReview?.signature, paymentMethod, paymentMemo]);
+  const activeCheckoutSession = !orderReviewBlocked && checkoutSession?.sourceKey === checkoutSourceKey ? checkoutSession : undefined;
   useEffect(() => {
-    if (!ownership.canExecute || !checkoutWorkspaceId || checkoutInvoiceIds.length === 0) return;
+    if (prework || orderReviewBlocked || !ownership.canExecute || !checkoutWorkspaceId || checkoutInvoiceIds.length === 0) return;
 
     const resolvedWorkspaceId = checkoutWorkspaceId;
     let cancelled = false;
@@ -3750,7 +3888,7 @@ export function BillingRightPanel() {
       });
 
       if (cancelled) return;
-      setCheckoutSession(result.ok ? result.checkoutSession : undefined);
+      setCheckoutSession(result.ok ? { ...result.checkoutSession, sourceKey: checkoutSourceKey } : undefined);
     }
 
     void prepareSelectedCheckout();
@@ -3762,8 +3900,12 @@ export function BillingRightPanel() {
     actorHeaders,
     checkoutInvoiceIds,
     checkoutAmountsKey,
+    checkoutSourceKey,
+    orderReviewBlocked,
+    orderReview?.signature,
     checkoutWorkspaceId,
     ownership.canExecute,
+    prework,
     paymentMemo,
     paymentMethod,
   ]);
@@ -3788,9 +3930,9 @@ export function BillingRightPanel() {
     0,
   );
   const dataBackedSummaryBalance =
-    checkoutSession?.payableAmount ?? summaryBalance;
+    activeCheckoutSession?.payableAmount ?? summaryBalance;
   const dataBackedExcludedSummaryGroupCount =
-    checkoutSession?.excludedCount ?? excludedSummaryGroupCount;
+    activeCheckoutSession?.excludedCount ?? excludedSummaryGroupCount;
   const actionDetail =
     payableSummaryGroups.length === 1
       ? (getBillingDetail(
@@ -3819,7 +3961,7 @@ export function BillingRightPanel() {
       ? summaryGroups[0].invoice.invoiceNo
       : `${summaryGroups.length}건 선택`;
   const financialActionDisabled =
-    !actionDetail || payableSummaryGroups.length !== 1 || !ownership.canExecute;
+    !actionDetail || payableSummaryGroups.length !== 1 || !ownership.canExecute || orderReviewBlocked || Boolean(orderReviewKey && !actionDetail?.invoice.updatedAt);
   const handleIssueInvoice = async () => {
     if (!actionDetail || !ownership.canExecute) return false;
     setConfirmationState("saving");
@@ -3908,20 +4050,22 @@ export function BillingRightPanel() {
     return true;
   };
   const handleMarkPaid = async () => {
-    if (!actionDetail || !ownership.canExecute) return false;
+    if (!actionDetail || !ownership.canExecute || orderReviewBlocked) return false;
     setPaymentState("saving");
     const transitionResult = await transitionGuardianCheckoutInvoiceStatus({
       actorHeaders,
+      expectedUpdatedAt: paymentVersionRef.current,
       invoiceId: actionDetail.invoice.id,
       paymentMethod,
       reason: "보호자 수납 완료",
       target: "paid",
       workspaceId: actionDetail.invoice.workspaceId,
     });
-    const result = transitionResult.ok
+    const result = transitionResult.ok || transitionResult.status !== 404
       ? transitionResult
       : await saveBillingPaymentStatus({
           action: "complete_payment",
+          expectedUpdatedAt: paymentVersionRef.current,
           actorHeaders,
           invoiceId: actionDetail.invoice.id,
           paymentMethod,
@@ -3931,6 +4075,7 @@ export function BillingRightPanel() {
     if (!result.ok) {
       setPaymentFailureContext("mark_paid");
       setPaymentState("error");
+      window.dispatchEvent(new CustomEvent("clair-billing-order-change", { detail: { workspaceId: actionDetail.invoice.workspaceId, invoiceId: actionDetail.invoice.id } }));
       return false;
     }
 
@@ -3940,7 +4085,7 @@ export function BillingRightPanel() {
     return true;
   };
   const handleConfirmFinancialAction = async () => {
-    if (!pendingFinancialAction) return;
+    if (!pendingFinancialAction || orderReviewBlocked) return;
     if (pendingFinancialAction === "issue_invoice") {
       await handleIssueInvoice();
     } else if (pendingFinancialAction === "mark_unpaid") {
@@ -4052,6 +4197,9 @@ export function BillingRightPanel() {
                 </EmrInlineAlert>
               ) : null}
 
+              {orderReviewBlocked && <EmrInlineAlert severity="info" title={orderReview?.pending ? "청구 변경 확인 대기" : "청구 변경 확인 중"} className="mt-3">
+                수납 담당자가 변경 내용을 확인하면 결제할 수 있어요.
+              </EmrInlineAlert>}
               <div className="mt-5 emr-text-dense font-semibold">
                 읽기 전용 수납 정보
               </div>
@@ -4161,6 +4309,7 @@ export function BillingRightPanel() {
                       return;
                     }
 
+                    paymentVersionRef.current = actionDetail?.invoice.updatedAt;
                     setPendingFinancialAction(
                       paymentFailureContext === "mark_unpaid"
                         ? "mark_unpaid"
@@ -4180,7 +4329,7 @@ export function BillingRightPanel() {
           disabled={financialActionDisabled}
           paymentState={paymentState}
           onIssueInvoice={() => setPendingFinancialAction("issue_invoice")}
-          onMarkPaid={() => setPendingFinancialAction("mark_paid")}
+          onMarkPaid={() => { paymentVersionRef.current = actionDetail?.invoice.updatedAt; setPendingFinancialAction("mark_paid"); }}
           onMarkUnpaid={() => setPendingFinancialAction("mark_unpaid")}
         />
       </EmrRightPanel>
