@@ -31,7 +31,7 @@ function Combobox<T = string>({ controller: providedController, ...props }: Comb
 }
 
 function ComboboxInput({ className, ...props }: ComponentProps<typeof SdkComboboxInput>) {
-  return <SdkComboboxInput className={cn(inputClassName, className)} {...props} />;
+  return <SdkComboboxInput data-ui-sdk-search-input="" className={cn(inputClassName, className)} {...props} />;
 }
 
 /** UI SDK owns positioning, dismissal and active-descendant navigation. No Base popup or input is nested here. */

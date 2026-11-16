@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { Button } from "./button";
+import { Autocomplete, AutocompleteContent, AutocompleteInput, AutocompleteItem, AutocompleteList } from "./autocomplete";
+import { Combobox, ComboboxContent, ComboboxInput, ComboboxItem, ComboboxList } from "./combobox";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./dialog";
+import { Input } from "./input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select";
 
 type DialogStoryArgs = { description: string; showCloseButton: boolean; title: string; triggerLabel: string };
 
@@ -42,6 +46,37 @@ function DialogExample({ description, showCloseButton, title, triggerLabel }: Di
     </Dialog>
     <output aria-label="합성 확인 결과">확인 {confirmed}회</output>
   </div>;
+}
+
+function NestedSearchDialogExample() {
+  const fixedListId = useId();
+  const [open, setOpen] = useState(false);
+  const [closedCount, setClosedCount] = useState(0);
+  return <>
+    <Dialog open={open} onOpenChange={(next) => { setOpen(next); if (!next) setClosedCount((count) => count + 1); }}>
+      <DialogTrigger render={<Button />}>중첩 검색 열기</DialogTrigger>
+      <DialogContent motion="none">
+        <DialogTitle>합성 중첩 검색</DialogTitle>
+        <DialogDescription>첫 Escape는 추천만 닫고 다음 Escape는 창을 닫습니다.</DialogDescription>
+        <Combobox>
+          <ComboboxInput aria-label="합성 보호자 검색" />
+          <ComboboxContent><ComboboxList><ComboboxItem value="guardian" label="합성 보호자">합성 보호자</ComboboxItem></ComboboxList></ComboboxContent>
+        </Combobox>
+        <Autocomplete openOnFocus>
+          <AutocompleteInput aria-label="합성 품종 검색" />
+          <AutocompleteContent><AutocompleteList><AutocompleteItem value="합성 품종">합성 품종</AutocompleteItem></AutocompleteList></AutocompleteContent>
+        </Autocomplete>
+        <Select defaultValue="dog" items={[{ value: "dog", label: "강아지" }]}>
+          <SelectTrigger aria-label="합성 종류"><SelectValue /></SelectTrigger>
+          <SelectContent><SelectItem value="dog">강아지</SelectItem></SelectContent>
+        </Select>
+        <Input role="combobox" aria-label="합성 고정 검색" aria-expanded="true" aria-controls={fixedListId} />
+        <div id={fixedListId} role="listbox" aria-label="합성 고정 목록"><div role="option" aria-selected="false">고정 결과</div></div>
+      </DialogContent>
+    </Dialog>
+    <output aria-label="합성 창 상태">{open ? "열림" : "닫힘"}</output>
+    <output aria-label="합성 창 닫힘 횟수">{closedCount}</output>
+  </>;
 }
 
 const meta = {
@@ -109,5 +144,41 @@ export const WithoutCloseButton: Story = {
     await userEvent.click(within(popup).getByRole("button", { name: "취소" }));
     await closed(popup);
     await expect(within(canvasElement).getByLabelText("합성 확인 결과")).toHaveTextContent("확인 0회");
+  },
+};
+
+export const NestedSearchEscape: Story = {
+  render: () => <NestedSearchDialogExample />,
+  parameters: { docs: { description: { story: "실제 공통 Base Dialog 안에 UI SDK Combobox/Autocomplete와 기존 Base Select를 넣은 로컬 경계 회귀입니다. 애니메이션 잔여 표시 대신 controlled open 상태와 닫힘 callback 횟수를 검증합니다. 상시 expanded인 비 SDK 고정 목록 검색은 일반 Escape 닫기를 유지합니다. 서버 저장과 실제 등록은 실행하지 않습니다." } } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const doc = within(canvasElement.ownerDocument.body);
+    let expectedCloses = 0;
+    for (const name of ["합성 보호자 검색", "합성 품종 검색", "합성 종류"]) {
+      await userEvent.click(canvas.getByRole("button", { name: "중첩 검색 열기" }));
+      const popup = await doc.findByRole("dialog", { name: "합성 중첩 검색" });
+      const input = within(popup).getByRole("combobox", { name });
+      await userEvent.click(input);
+      if (name !== "합성 종류") await userEvent.type(input, "합성");
+      await waitFor(() => expect(input).toHaveAttribute("aria-expanded", "true"));
+      await userEvent.keyboard("{Escape}");
+      await waitFor(() => expect(input).toHaveAttribute("aria-expanded", "false"));
+      await expect(canvas.getByLabelText("합성 창 상태")).toHaveTextContent("열림");
+      await expect(canvas.getByLabelText("합성 창 닫힘 횟수")).toHaveTextContent(String(expectedCloses));
+      await expect(popup).toHaveAttribute("data-open", "");
+      await waitFor(() => expect(input).toHaveFocus());
+      await userEvent.keyboard("{Escape}");
+      expectedCloses++;
+      await waitFor(() => expect(canvas.getByLabelText("합성 창 상태")).toHaveTextContent("닫힘"));
+      await expect(canvas.getByLabelText("합성 창 닫힘 횟수")).toHaveTextContent(String(expectedCloses));
+      await closed(popup);
+    }
+    await userEvent.click(canvas.getByRole("button", { name: "중첩 검색 열기" }));
+    const popup = await doc.findByRole("dialog", { name: "합성 중첩 검색" });
+    await userEvent.click(within(popup).getByRole("combobox", { name: "합성 고정 검색" }));
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(canvas.getByLabelText("합성 창 상태")).toHaveTextContent("닫힘"));
+    await expect(canvas.getByLabelText("합성 창 닫힘 횟수")).toHaveTextContent("4");
+    await closed(popup);
   },
 };

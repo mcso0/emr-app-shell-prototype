@@ -2753,6 +2753,53 @@ test("patient guardian registration links an existing guardian to a new patient"
   await expect(page.getByText("환자 등록이 완료되었습니다.")).toBeVisible();
 });
 
+for (const popup of [
+  { field: "기존 보호자 검색", list: "기존 보호자 목록", query: "오세아" },
+  { field: "품종", list: "품종 추천", query: "말티" },
+]) {
+  test(`registration ${popup.field} Escape dismisses suggestions before the dialog`, async ({ page }) => {
+    const writes: string[] = [];
+    await page.route("**/api/**", async (route) => {
+      if (route.request().method() !== "GET") {
+        const path = new URL(route.request().url()).pathname;
+        // Navigation persistence is unrelated to this draft. Block it too,
+        // but any registration/clinical write still fails the regression.
+        if (path !== "/api/workspaces/clair-demo/app-shell/workspace-tabs") {
+          writes.push(`${route.request().method()} ${path}`);
+        }
+        await route.abort();
+        return;
+      }
+      await route.continue();
+    });
+    await page.goto("/w/clair-demo/reception");
+    await page.getByRole("button", { name: "환자/보호자 등록", exact: true }).click();
+    await page.getByRole("menuitem", { name: "기존 보호자에 환자 추가" }).click();
+
+    const registration = page.getByRole("dialog", { name: /기존 보호자에 신규 환자 등록/ });
+    const input = registration.getByRole("combobox", { name: popup.field, exact: true });
+    await input.fill(popup.query);
+    await expect(page.getByRole("listbox", { name: popup.list, exact: true })).toBeVisible();
+    await input.press("Escape");
+    await expect(page.getByRole("listbox", { name: popup.list, exact: true })).toHaveCount(0);
+    await expect(input).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByRole("dialog", { name: "입력을 취소할까요?" })).toHaveCount(0);
+    await expect(registration).toHaveAttribute("data-open", "");
+    await expect(input).toBeFocused();
+    await expect(input).toHaveValue(popup.query);
+
+    await input.press("Escape");
+    const confirmation = page.getByRole("dialog", { name: "입력을 취소할까요?" });
+    await expect(confirmation).toBeVisible();
+    await confirmation.getByRole("button", { name: "계속 작성", exact: true }).click();
+    await expect(input).toHaveValue(popup.query);
+    await registration.getByRole("button", { name: "취소", exact: true }).click();
+    await confirmation.getByRole("button", { name: "취소하고 나가기", exact: true }).click();
+    await expect(registration).toHaveCount(0);
+    expect(writes).toEqual([]);
+  });
+}
+
 test("patient guardian registration footer stays in one row at 390px", async ({
   page,
 }) => {

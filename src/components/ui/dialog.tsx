@@ -12,9 +12,20 @@ import { CloseIcon } from "@/components/icons"
 
 type DialogMotion = "default" | "none"
 
-function Dialog({ actionsRef, ...props }: DialogPrimitive.Root.Props) {
+function Dialog({ actionsRef, onOpenChange, ...props }: DialogPrimitive.Root.Props) {
   const panelActions = useModuleSidePanelPopupActions<DialogPrimitive.Root.Actions>(actionsRef);
-  return <DialogPrimitive.Root actionsRef={panelActions} data-slot="dialog" {...props} />
+  const handleOpenChange: NonNullable<DialogPrimitive.Root.Props["onOpenChange"]> = (open, details) => {
+    const target = details.event.target;
+    if (!open && details.reason === "escape-key" && target instanceof Element && target.matches('[data-ui-sdk-search-input][aria-expanded="true"]')) {
+      // SDK suggestions are outside Base's popup tree. Let their own Escape
+      // listener run before a later Escape can dismiss the enclosing dialog.
+      details.cancel();
+      details.allowPropagation();
+      return;
+    }
+    onOpenChange?.(open, details);
+  };
+  return <DialogPrimitive.Root actionsRef={panelActions} onOpenChange={handleOpenChange} data-slot="dialog" {...props} />
 }
 
 function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
