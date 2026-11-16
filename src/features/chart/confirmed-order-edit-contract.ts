@@ -12,7 +12,16 @@ export const orderFinancialValuesSchema = z.object({
   adjustmentReason: z.string().max(500),
 }).strict();
 export type OrderFinancialValues = z.infer<typeof orderFinancialValuesSchema>;
+export const confirmedOrderEditSessionSchema = z.object({
+  orderId: z.uuid(),
+  chartId: z.uuid(),
+  sessionId: z.uuid(),
+  action: z.enum(["begin", "renew", "release"]),
+}).strict();
+export type ConfirmedOrderEditSession = z.infer<typeof confirmedOrderEditSessionSchema>;
+
 export const confirmedOrderEditSchema = z.object({
+  editSessionId: z.uuid().optional(),
   orderId: z.uuid(), chartId: z.uuid(), commandId: z.uuid(), expectedVersion: z.string().min(1).max(100),
   clinical: z.object({ detailInputs: z.record(z.string(), z.unknown()), detailSchemaVersion: z.number().int().positive(),
     actualDispenseMode: z.enum(["automatic", "manual"]), actualDispenseQuantity: z.number().finite().positive().optional(),
@@ -35,6 +44,8 @@ export const confirmedOrderErrors: Record<string, string> = {
   idempotency_conflict: "같은 요청의 내용이 달라졌어요. 최신 내용을 다시 조회해 주세요.",
   payment_locked: "결제 처리 중이거나 완료된 건이에요. 수납 정정·환불 경로를 이용해 주세요.",
   order_unavailable: "수정 가능한 조제·처치 오더를 찾지 못했어요.",
+  order_work_on_hold: "다른 창에서 이 오더를 수정 중이에요. 수정이 끝난 뒤 다시 열어 주세요.",
+  order_edit_session_expired: "수정 시간이 만료됐어요. 최신 내용을 다시 조회해 주세요.",
   invalid_input: "입력값을 확인해 주세요.", billing_review_required: "기존 수납 검토를 먼저 처리해 주세요.",
   billing_owner_required: "세트의 청구 담당 항목에서 금액을 수정해 주세요.",
   unavailable: "내용을 불러오거나 저장하지 못했어요. 다시 시도해 주세요.",

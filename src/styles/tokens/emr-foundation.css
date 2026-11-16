@@ -585,6 +585,9 @@
   --emr-status-info-bg: var(--clair-color-atomic-blue-50);
   --emr-status-info-border: var(--clair-color-atomic-blue-200);
   --emr-status-info-text: var(--clair-color-atomic-blue-700);
+  --emr-status-hold-bg: #f1fbf9;
+  --emr-status-hold-border: #b5e4dd;
+  --emr-status-hold-text: #166861;
   --emr-status-success-bg: var(--clair-color-atomic-green-50);
   --emr-status-success-border: var(--clair-color-atomic-green-200);
   --emr-status-success-text: var(--clair-color-atomic-green-700);

@@ -14,6 +14,12 @@ export const defaultOrderQueueStatuses: OrderQueueStatusDefinition[] = [
     sortOrder: 20,
   },
   {
+    id: "paused",
+    label: "일시중지",
+    colorToken: "--emr-status-hold-text",
+    sortOrder: 25,
+  },
+  {
     id: "waiting",
     label: "대기중",
     colorToken: "--emr-status-neutral-text",

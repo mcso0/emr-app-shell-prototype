@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { getDispensingRerequestChanges } from "@/features/dispensing/instruction-view-model";
+import { getOrderRerequestChanges } from "@/features/dispensing/instruction-view-model";
 import { syntheticInstruction } from "@/features/dispensing/instruction-fixtures";
 import type { InstructionDocument } from "../instruction-contract";
 import { TaskInstructionReview } from "./task-instruction-review";
@@ -99,8 +99,8 @@ function Example({ scenario }: { scenario: Scenario }) {
       <button onClick={() => setTaskId(second)}>작업 전환</button>
       <button onClick={() => { fixture.recover(); void controller.refresh(); }}>응답 복구</button></div>
     <output aria-label="합성 시작 횟수">{starts}</output>
-    <TaskInstructionReview controller={controller} dispensingChanges={scenario === "dispensing-rerequest"
-      ? getDispensingRerequestChanges(dispensingDocument, controller.reviews)
+    <TaskInstructionReview controller={controller} orderChanges={scenario === "dispensing-rerequest"
+      ? getOrderRerequestChanges(dispensingDocument, controller.reviews)
       : undefined} />
   </div>;
 }

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Dialog } from "@/components/ui/dialog";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { formatPlanOrderTableUnit } from "../chart-order-table-presentation";
 import { getDispenseRequestUnit } from "../dispense-request-quantity";
 import { convertDispensingDose, equivalentDispensingQuantity } from "../dispensing-unit-conversion";
 import type { PlanOrderAuthorityConfig } from "../plan-order-authority-domain";
-import { formatOrderFinancialValue, orderFinancialLabels, confirmedOrderContextSchema, confirmedOrderEditSchema, confirmedOrderErrors, type ConfirmedOrderContext, type OrderFinancialValues } from "../confirmed-order-edit-contract";
+import { formatOrderFinancialValue, orderFinancialLabels, confirmedOrderContextSchema, confirmedOrderEditSchema, confirmedOrderErrors, type ConfirmedOrderContext, type ConfirmedOrderEditSession, type OrderFinancialValues } from "../confirmed-order-edit-contract";
 
 const dispenseQuantityFields = [
   "doseBasis", "dose", "doseUnit", "frequency", "durationDays",
@@ -55,6 +55,8 @@ export function ConfirmedOrderEditDialog({ workspaceId, chartId, orderId, name, 
   const [editingQuantity, setEditingQuantity] = useState(false);
   const [confirmedQuantity, setConfirmedQuantity] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
   const [conflict, setConflict] = useState(false);
@@ -68,24 +70,88 @@ export function ConfirmedOrderEditDialog({ workspaceId, chartId, orderId, name, 
   const pending = useRef(false), generation = useRef(0);
   const retry = useRef<{ fingerprint: string; commandId: string } | null>(null);
   const endpoint = `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/confirmed-order-edit`;
+  const editSession = useRef<{ id: string; held?: boolean } | null>(null);
+  const updateSession = useCallback(async (action: ConfirmedOrderEditSession["action"], sessionId: string, keepalive = false) => {
+    const response = await fetch(endpoint, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      keepalive,
+      body: JSON.stringify({ chartId, orderId, sessionId, action }),
+    });
+    const body = await response.json();
+    if (!response.ok || !body.ok) throw new Error(body.error ?? "unavailable");
+    return body;
+  }, [endpoint, chartId, orderId]);
   useEffect(() => {
-    const current = ++generation.current; const abort = new AbortController();
+    const current = ++generation.current;
+    const session = editSession.current ??= { id: crypto.randomUUID() };
     void (async () => {
       try {
-        const response = await fetch(`${endpoint}?chartId=${chartId}&orderId=${orderId}`, { cache: "no-store", signal: abort.signal });
-        const body = await response.json();
-        if (current !== generation.current) return;
+        const body = await updateSession("begin", session.id);
+        if (current !== generation.current) {
+          if (generation.current === current + 1 && body.editSessionId === session.id) {
+            void updateSession("release", session.id, true).catch(() => {});
+          }
+          return;
+        }
         const parsed = confirmedOrderContextSchema.safeParse(body.context);
-        if (!response.ok || !body.ok || !parsed.success) throw new Error(body.error ?? "unavailable");
+        if (!parsed.success) throw new Error("unavailable");
+        session.held = body.editSessionId === session.id;
         setContext(parsed.data); setInputs(parsed.data.detailInputs); setFinancial(parsed.data.pendingFinancial ?? parsed.data.financial);
         setMode(parsed.data.actualDispenseMode); setQuantity(parsed.data.actualDispenseQuantity == null ? "" : String(parsed.data.actualDispenseQuantity));
         setEditingQuantity(false); setConfirmedQuantity(null); setReason("");
         setBillingViewport(null);
         setError(null); setConflict(false); retry.current = null;
-      } catch (cause) { if (!abort.signal.aborted && current === generation.current) setError(confirmedOrderErrors[cause instanceof Error ? cause.message : "unavailable"] ?? confirmedOrderErrors.unavailable); }
+      } catch (cause) {
+        if (current === generation.current) {
+          setConflict(true);
+          setError(confirmedOrderErrors[cause instanceof Error ? cause.message : "unavailable"] ?? confirmedOrderErrors.unavailable);
+        }
+      } finally {
+        if (current === generation.current) setLoading(false);
+      }
     })();
-    return () => { generation.current = current + 1; abort.abort(); };
-  }, [endpoint, chartId, orderId, reload]);
+    const renew = window.setInterval(() => {
+      if (!session.held || pending.current) return;
+      void updateSession("renew", session.id).catch(cause => {
+        if (current !== generation.current || !session.held || pending.current) return;
+        const code = cause instanceof Error ? cause.message : "unavailable";
+        if (code === "order_work_on_hold" || code === "order_edit_session_expired" || code === "permission_missing") {
+          setConflict(true);
+          setError(confirmedOrderErrors[code]);
+        }
+      });
+    }, 60_000);
+    const releaseInBackground = () => {
+      if (session.held !== false) void updateSession("release", session.id, true).catch(() => {});
+    };
+    window.addEventListener("pagehide", releaseInBackground);
+    return () => {
+      generation.current += 1;
+      window.clearInterval(renew);
+      window.removeEventListener("pagehide", releaseInBackground);
+      // A reload replaces this effect immediately with the same session.
+      window.setTimeout(() => {
+        if (generation.current === current + 1) releaseInBackground();
+      }, 0);
+    };
+  }, [updateSession, reload]);
+  const close = async () => {
+    if (pending.current || loading) return;
+    pending.current = true;
+    setClosing(true);
+    const session = editSession.current;
+    try {
+      if (session && session.held !== false) await updateSession("release", session.id, true);
+      if (session) session.held = false;
+      onClose();
+    } catch {
+      setError("일시중지를 해제하지 못했어요. 다시 시도해 주세요.");
+    } finally {
+      pending.current = false;
+      setClosing(false);
+    }
+  };
   const baseFinancial = context?.pendingFinancial ?? context?.financial;
   const normalizedFinancial = financial && { ...financial, billingName: financial.billingName.trim() };
   const financialPatch = normalizedFinancial && baseFinancial ? Object.fromEntries(
@@ -107,7 +173,7 @@ export function ConfirmedOrderEditDialog({ workspaceId, chartId, orderId, name, 
   const manualQuantityValid = quantityValue !== null && Number.isFinite(quantityValue) && quantityValue > 0;
   const needsQuantityConfirmation = mode === "manual" && quantityInputsChanged && confirmedQuantity !== confirmationKey;
   const invalidManualQuantity = clinicalType === "dispensing" && mode === "manual" && !manualQuantityValid;
-  const saveDisabled = busy || !context || !changed || conflict || (clinicalChanged && (
+  const saveDisabled = busy || closing || loading || !context || !changed || conflict || (clinicalChanged && (
     reason.trim().length < 3 || needsQuantityConfirmation || invalidManualQuantity
   ));
   const outputs = context?.calculationOutputs ?? {};
@@ -142,7 +208,9 @@ export function ConfirmedOrderEditDialog({ workspaceId, chartId, orderId, name, 
   };
   const save = async () => {
     if (!context || saveDisabled || pending.current) return;
+    const session = editSession.current;
     const content = { orderId, chartId, expectedVersion: context.version, reason,
+      ...(session?.held ? { editSessionId: session.id } : {}),
       ...(clinicalChanged ? { clinical: { detailInputs: inputs, detailSchemaVersion: context.detailSchemaVersion, actualDispenseMode: mode, ...(mode === "manual" ? { actualDispenseQuantity: quantityValue } : {}) } } : {}),
       ...(financialChanged ? { financial: financialPatch } : {}),
     };
@@ -156,14 +224,15 @@ export function ConfirmedOrderEditDialog({ workspaceId, chartId, orderId, name, 
       const body = await response.json(); if (current !== generation.current) return;
       const result = confirmedOrderContextSchema.safeParse(body.context);
       if (!response.ok || !body.ok || !result.success) {
-        if (body.error === "revision_conflict") setConflict(true);
+        if (["revision_conflict", "order_edit_session_expired", "order_work_on_hold"].includes(body.error)) setConflict(true);
         throw new Error(body.error ?? "unavailable");
       }
+      if (session) session.held = false;
       onSaved(result.data);
     } catch (cause) { if (current === generation.current) setError(confirmedOrderErrors[cause instanceof Error ? cause.message : "unavailable"] ?? confirmedOrderErrors.unavailable); }
     finally { pending.current = false; if (current === generation.current) setBusy(false); }
   };
-  const saveLabel = context?.billingStage === "requested" ? "변경 확인 요청" : clinicalChanged ? "수정 후 요청" : "수정 저장";
+  const saveLabel = context?.billingStage === "requested" ? "변경 확인 요청" : clinicalChanged ? "수정 후 재확정" : "수정 저장";
   const clinicalFields = context && renderClinical(inputs, changeClinicalInputs, busy || !context.canEditClinical);
   const financialDisabled = busy || !context?.canEditFinancial || context.billingStage === "locked";
   const changeAdjustmentSource = (value: string | null) => {
@@ -195,12 +264,12 @@ export function ConfirmedOrderEditDialog({ workspaceId, chartId, orderId, name, 
       setBillingViewport({ ...billingViewport, minimumContentHeight: 0 });
     }
   };
-  return <Dialog open onOpenChange={open => { if (!open && !pending.current) onClose(); }}>
-    <EmrDialogShell title={`${name} · 오더 수정`} variant="wide-form" showCloseButton={!busy}
+  return <Dialog open onOpenChange={open => { if (!open) void close(); }}>
+    <EmrDialogShell title={`${name} · 오더 수정`} variant="wide-form" showCloseButton={!busy && !closing && !loading}
       style={{ height: billingViewport?.dialogHeight }}
       onScrollCapture={event => releaseBillingScrollSpace(event.target)}
       footerClassName="flex-row"
-      secondaryAction={<Button variant="outline" disabled={busy} onClick={onClose}>취소</Button>}
+      secondaryAction={<Button variant="outline" disabled={busy || closing || loading} onClick={() => void close()}>취소</Button>}
       primaryAction={<Button disabled={saveDisabled} onClick={() => void save()}>{busy ? "저장 중…" : saveLabel}</Button>}>
       {!context && !error && <p role="status">최신 오더를 불러오는 중…</p>}
       {context && <div style={{ minHeight: billingViewport?.minimumContentHeight }}>
@@ -288,7 +357,7 @@ export function ConfirmedOrderEditDialog({ workspaceId, chartId, orderId, name, 
           </label>}
         </div>
       </div>}
-      {error && <div role="alert" className="mt-4 space-y-2 text-sm"><p>{error}</p>{(!context || conflict) && <Button variant="outline" disabled={busy} onClick={() => setReload(n => n + 1)}>{conflict ? "입력을 버리고 최신 내용 조회" : "다시 조회"}</Button>}</div>}
+      {error && <div role="alert" className="mt-4 space-y-2 text-sm"><p>{error}</p>{(!context || conflict) && <Button variant="outline" disabled={busy} onClick={() => { setLoading(true); setReload(n => n + 1); }}>{conflict ? "입력을 버리고 최신 내용 조회" : "다시 조회"}</Button>}</div>}
     </EmrDialogShell>
   </Dialog>;
 }

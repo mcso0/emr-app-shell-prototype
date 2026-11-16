@@ -3,7 +3,7 @@ import { instructionCommandSchema, instructionCompletionConfirmation } from "../
 import { executeInstructionRequest } from "../src/features/fulfillment/server-instruction";
 import { syntheticInstruction } from "../src/features/dispensing/instruction-fixtures";
 import type { TaskInstructionReview } from "../src/features/fulfillment/task-instruction-review-contract";
-import { createInstructionView, getDispensingRerequestChanges, getInstructionStatusLabel } from "../src/features/dispensing/instruction-view-model";
+import { createInstructionView, getOrderRerequestChanges, getInstructionStatusLabel } from "../src/features/dispensing/instruction-view-model";
 
 const command = { action: "complete_all" as const, commandId: "00000000-0000-4000-8000-000000000001", expectedRevision: "revision-a" };
 
@@ -116,17 +116,17 @@ test("dispensing change review keeps set items and successive edits separate", (
     },
   });
   const reviews = [review(second, editedAt, "둘째 품목 변경"), review(first, editedAt, "첫째 품목 변경")];
-  const changes = getDispensingRerequestChanges(document, reviews);
+  const changes = getOrderRerequestChanges(document, reviews);
   expect(changes.get(first.taskId)).toMatchObject({
     orderName: first.name, reason: "첫째 품목 변경", fields: [{ key: "frequency", before: "bid", after: "tid" }],
   });
   expect(changes.get(second.taskId)).toMatchObject({
     orderName: second.name, reason: "둘째 품목 변경", fields: [{ key: "frequency", before: "tid", after: "qid" }],
   });
-  expect(getDispensingRerequestChanges(document, [review(first, earlier, "이전 변경")]).get(first.taskId)).toBeNull();
-  expect(getDispensingRerequestChanges(document, [review(first, editedAt, "여러 줄\n사유: 원문")]).get(first.taskId)).toBeNull();
+  expect(getOrderRerequestChanges(document, [review(first, earlier, "이전 변경")]).get(first.taskId)).toBeNull();
+  expect(getOrderRerequestChanges(document, [review(first, editedAt, "여러 줄\n사유: 원문")]).get(first.taskId)).toBeNull();
   document.changes.push({ ...firstRevision, id: "duplicate" });
-  expect(getDispensingRerequestChanges(document, reviews).get(first.taskId)).toBeNull();
+  expect(getOrderRerequestChanges(document, reviews).get(first.taskId)).toBeNull();
 });
 
 test("set instruction is composed for its own children without overwriting individual notes", () => {
