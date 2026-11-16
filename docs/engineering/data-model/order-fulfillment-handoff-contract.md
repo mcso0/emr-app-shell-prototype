@@ -202,9 +202,12 @@ revision.
   toolbar. When completion and other actions are both allowed, the arrow
   beside the completion button opens the available actions. The document menu
   next to the copy link keeps its existing record tools.
+- A dispensing card shows the `수정이력` button and its divider only when the
+  dialog can show a change for an item in that card or for its set's common
+  instruction. The dialog shows those changes. The treatment card keeps its
+  history button available when there are no revisions.
 - The finalized instruction body keeps filters, sorting, density, disclosures,
-  and history available. Row completion and assignment controls are disabled.
-  The table history dialog is available even when there are no revisions.
+  and access to available history. Row completion and assignment controls are disabled.
 - The header's `완료 ⌄` offers `진행 중으로 변경` when the server reports an
   eligible completed item. A set confirmation submits one selected item through
   the existing revision-checked `reopen` command. Other items and queue types

@@ -282,7 +282,7 @@ export function InstructionBody({
   workspaceId,
 }: Props & { focusedItemId?: string }) {
   const [confirmItem, setConfirmItem] = useState<string | null>(null);
-  const [historyItem, setHistoryItem] = useState<string | null | undefined>(
+  const [historyItemIds, setHistoryItemIds] = useState<readonly string[] | null | undefined>(
     undefined,
   );
   const [executionHistory, setExecutionHistory] = useState(false);
@@ -291,9 +291,13 @@ export function InstructionBody({
   const document = controller.document;
   const view = document ? createInstructionView(document) : null;
   const historyEvents = (document?.changes ?? []).flatMap(change => {
-    const event = view?.events.find(event => event.id === change.id);
+    const event = view?.events.find(event => event.id === change.id && (
+      !historyItemIds || event.changes.some(field => historyItemIds.includes(field.itemId))
+    ));
     if (!event) return [];
-    const fields = historyItem ? event.changes.filter(field => field.itemId === historyItem) : event.changes;
+    const fields = historyItemIds
+      ? event.changes.filter(field => historyItemIds.includes(field.itemId))
+      : event.changes;
     return fields.length ? [{ ...event, changes: fields }] : [];
   });
   return (
@@ -336,7 +340,7 @@ export function InstructionBody({
             ),
           }}
           eligibleAssignees={controller.assignees.map((item) => item.userId)}
-          history={(_orderId, itemId) => setHistoryItem(itemId ?? null)}
+          history={setHistoryItemIds}
           notify={setNotice}
           act={async (_orderId, action, extra) => {
             if (!extra?.itemId || !document || document.finalized || controller.busy || controller.loading) return;
@@ -369,9 +373,9 @@ export function InstructionBody({
         onClose={() => setConfirmItem(null)}
       />
       <Dialog
-        open={historyItem !== undefined}
+        open={historyItemIds !== undefined}
         onOpenChange={(open) => {
-          if (!open) setHistoryItem(undefined);
+          if (!open) setHistoryItemIds(undefined);
         }}
       >
         <EmrDialogShell

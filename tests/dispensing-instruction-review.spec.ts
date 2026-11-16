@@ -305,9 +305,8 @@ test("completed dispensing is read-only and reopening a single order can be retr
   await page.getByRole("button", { name: "기본 간격" }).click();
   await page.getByRole("menuitemcheckbox", { name: "넓은 간격" }).click();
   await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "수정이력" }).click();
-  await expect(page.getByRole("dialog", { name: "수정 이력" })).toContainText("수정 이력이 없어요.");
-  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "수정이력" })).toHaveCount(0);
+  await expect(page.locator(".fd-card .fd-toolbar-divider")).toHaveCount(0);
   expect(actions).toEqual(["complete_all"]);
 
   const stateMenu = page.getByRole("button", { name: "업무 상태 변경" });
