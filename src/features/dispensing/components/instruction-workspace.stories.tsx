@@ -284,12 +284,15 @@ const testFilterAndSort: NonNullable<Story["play"]> = async ({ canvasElement }) 
   const activeFilter = canvas.getByRole("button", { name: "필터, 기존 오더, 조건 1개 적용 중" });
 
   for (const [label, order] of [
-    ["항목명 오름차순", ["합성 가", "합성 나", "합성 다"]],
-    ["항목명 내림차순", ["합성 다", "합성 나", "합성 가"]],
+    ["오더명 오름차순", ["합성 가", "합성 나", "합성 다"]],
+    ["오더명 내림차순", ["합성 다", "합성 나", "합성 가"]],
     ["기본순", original],
   ] as const) {
     await userEvent.click(canvas.getByRole("button", { name: /^정렬,/ }));
     await clickMenuOption(label);
+    await expect(canvas.getByRole("button", { name: `정렬, ${label}` })).toHaveTextContent(
+      label === "기본순" ? "정렬" : label
+    );
     await waitFor(() => expect(visibleNames()).toEqual(order));
   }
   await userEvent.click(activeFilter);
