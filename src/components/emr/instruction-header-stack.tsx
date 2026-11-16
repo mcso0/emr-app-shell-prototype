@@ -107,6 +107,7 @@ export function EmrInstructionHistoryToggle({
   );
 }
 
+/** The document menu uses the supplied actions or the default output placeholders. */
 export function EmrInstructionOutputMenu({ children }: { children?: ReactNode }) {
   return (
     <DropdownMenu>
@@ -125,15 +126,18 @@ export function EmrInstructionOutputMenu({ children }: { children?: ReactNode })
         <CdsFilesMoreHorizontalIcon aria-hidden="true" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40">
-        {children}
-        <DropdownMenuItem className="h-8 gap-2 text-xs" disabled>
-          <DownloadIcon aria-hidden="true" />
-          PDF 다운로드
-        </DropdownMenuItem>
-        <DropdownMenuItem className="h-8 gap-2 text-xs" disabled>
-          <PrinterIcon aria-hidden="true" />
-          출력하기
-        </DropdownMenuItem>
+        {children ?? (
+          <>
+            <DropdownMenuItem className="h-8 gap-2 text-xs" disabled>
+              <DownloadIcon aria-hidden="true" />
+              PDF 다운로드
+            </DropdownMenuItem>
+            <DropdownMenuItem className="h-8 gap-2 text-xs" disabled>
+              <PrinterIcon aria-hidden="true" />
+              출력하기
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

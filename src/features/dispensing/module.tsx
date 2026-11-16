@@ -27,7 +27,7 @@ import {
 } from "@/components/cds-icons/actions-and-controls";
 import { CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import { EmrEmptyState, EmrContentLoadingState } from "@/components/emr/empty-state";
-import { EmrCopyLinkButton } from "@/components/emr/copy-link-button";
+import { copyWorkspaceSurfaceLink } from "@/components/emr/copy-link-button";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import { EmrOrderQueueSidePanel } from "@/components/emr/order-queue-side-panel";
@@ -36,7 +36,6 @@ import { EmrStatusBadge } from "@/components/emr/status-badge";
 import {
   EmrInstructionHeaderStack,
   EmrInstructionHistoryToggle,
-  EmrInstructionOutputMenu,
   EmrInstructionTitleBar,
 } from "@/components/emr/instruction-header-stack";
 import { EmrInstructionFilterTabs } from "@/components/emr/instruction-filter-tabs";
@@ -1756,8 +1755,13 @@ export function DispensingContent({
   return (
     <DispensingContentBody
       fulfillmentQueue={fulfillmentQueue}
-      onOpenChart={onNavigateWorkspaceSurface ? encounterId => onNavigateWorkspaceSurface(
-        buildWorkspaceSurfaceRoute({ moduleId: "treatment", params: { encounterId }, workspaceId }), "treatment",
+      onOpenChart={onNavigateWorkspaceSurface ? (encounterId, chartId) => onNavigateWorkspaceSurface(
+        buildWorkspaceSurfaceRoute({
+          moduleId: "treatment",
+          params: chartId ? { encounterId, chartId, orderChart: "1", date: selectedDate } : { encounterId },
+          workspaceId,
+        }),
+        "treatment",
       ) : undefined}
       key={selectedQueueItem?.id ?? "default"}
       hasRightPanel={hasRightPanel}
@@ -1785,7 +1789,7 @@ function DispensingContentBody({
   selectedQueueItem,
 }: DispensingContentBodyProps & {
   focusWorkItemId?: string | null;
-  onOpenChart?: (encounterId: string) => void;
+  onOpenChart?: (encounterId: string, chartId?: string) => void;
   fulfillmentQueue: ReturnType<typeof useDispensingFulfillmentQueue>;
 }) {
   const documentLayout = useWorkspaceDocumentLayout();
@@ -2185,6 +2189,8 @@ function DispensingContentBody({
     });
   };
 
+  const sourceChartId = selectedFulfillmentWorkItem?.originChartId;
+  const sourceEncounterId = selectedFulfillmentWorkItem?.encounterId;
   const titleBar = (
     <EmrInstructionTitleBar
             className={documentLayout ? "min-h-9 flex-wrap gap-2" : "px-4"}
@@ -2200,25 +2206,24 @@ function DispensingContentBody({
               />
             }
             badge={
-              <>
-                <EmrCopyLinkButton
-                  ariaLabel={`${instructionType} 지시서 링크 복사`}
-                  date={selectedDate}
-                  moduleId="dispensing"
-                  params={{
-                    encounterId: selectedFulfillmentWorkItem?.encounterId,
+              <InstructionDocumentOutputMenu
+                workspaceId={workspaceId}
+                controller={instruction}
+                onChanged={fulfillmentQueue.refresh}
+                onOpenChart={onOpenChart && sourceEncounterId && sourceChartId
+                  ? () => onOpenChart(sourceEncounterId, sourceChartId)
+                  : undefined}
+                onCopyLink={() => void copyWorkspaceSurfaceLink({
+                  date: selectedDate,
+                  moduleId: "dispensing",
+                  params: {
+                    encounterId: sourceEncounterId,
                     workItemId: selectedFulfillmentWorkItem?.id,
                     queueItemId: selectedQueueItem.id,
-                  }}
-                  workspaceId={workspaceId}
-                />
-                {usesInstructionWorkspace ? (
-                  <>
-                    <Separator orientation="vertical" className="h-4 data-vertical:self-center" />
-                    <InstructionDocumentOutputMenu workspaceId={workspaceId} controller={instruction} onChanged={fulfillmentQueue.refresh} />
-                  </>
-                ) : null}
-              </>
+                  },
+                  workspaceId,
+                })}
+              />
             }
             actions={
               <>
@@ -2292,7 +2297,6 @@ function DispensingContentBody({
                     }
                   />
                 ) : null}
-                {!usesInstructionWorkspace ? <EmrInstructionOutputMenu /> : null}
               </>
             }
           />

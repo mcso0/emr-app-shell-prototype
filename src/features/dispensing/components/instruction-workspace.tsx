@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup, ButtonGroupDivider, ButtonGroupIconButton, ButtonGroupPrimaryButton } from "@/components/ui/button-group";
 import { CdsActionsCheckCircleIcon } from "@/components/cds-icons/actions-and-controls";
+import { CdsContentLink2Icon } from "@/components/cds-icons/content-and-editor";
+import { CdsFilesFileTextIcon } from "@/components/cds-icons/files-and-layout";
 import { CdsNavigationChevronDownIcon } from "@/components/cds-icons/navigation";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Radio, RadioGroup } from "@/components/ui/radio-group";
@@ -486,21 +488,34 @@ function InstructionRecords({ controller, workspaceId, onChanged, onClose, mode 
   </Dialog>;
 }
 
-export function InstructionDocumentOutputMenu(props: Props) {
+type InstructionDocumentOutputMenuProps = Props & {
+  onOpenChart?: () => void;
+  onCopyLink: () => void;
+};
+
+export function InstructionDocumentOutputMenu(props: InstructionDocumentOutputMenuProps) {
   const document = props.controller.document;
   return <InstructionDocumentOutputActions key={`${props.workspaceId}:${document?.rootTaskId}:${document?.queueType}:${document?.finalized}`} {...props} />;
 }
 
-function InstructionDocumentOutputActions(props: Props) {
+function InstructionDocumentOutputActions(props: InstructionDocumentOutputMenuProps) {
   const [action, setAction] = useState<"amend" | "edit" | null>(null);
   const { document, busy, loading } = props.controller;
   const canEdit = document?.finalized && document.canEditInstruction;
   const canAmend = document?.finalized && document.items.some(item => item.status === "completed" && item.canReopen && item.hasResult);
   return <>
     <EmrInstructionOutputMenu>
+      <DropdownMenuItem disabled={!props.onOpenChart} onClick={props.onOpenChart}>
+        <CdsFilesFileTextIcon aria-hidden="true" />
+        오더 차트로 이동
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={props.onCopyLink}>
+        <CdsContentLink2Icon aria-hidden="true" />
+        지시서 링크 복사
+      </DropdownMenuItem>
+      {(canEdit || canAmend) && <DropdownMenuSeparator />}
       {canEdit && <DropdownMenuItem disabled={busy || loading} onClick={() => setAction("edit")}>{document.isSet ? "세트 공통 지시 수정" : "오더 지시 수정"}</DropdownMenuItem>}
       {canAmend && <DropdownMenuItem disabled={busy || loading} onClick={() => setAction("amend")}>수행기록 정정</DropdownMenuItem>}
-      {(canEdit || canAmend) && <DropdownMenuSeparator />}
     </EmrInstructionOutputMenu>
     {document?.finalized && action === "edit" && <InstructionEdit {...props} completed onClose={() => setAction(null)} />}
     {document?.finalized && action === "amend" && <InstructionRecords {...props} mode="amend" onClose={() => setAction(null)} />}

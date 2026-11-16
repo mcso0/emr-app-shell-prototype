@@ -1,6 +1,7 @@
 "use client";
 
 import type { Encounter, Guardian, Patient } from "@/types/emr-domain";
+import type { ChartPreconsultationContext } from "./preconsultation-context";
 
 const storageKey = "clair-emr:chart-live-encounter-handoffs:v1";
 const maxHandoffs = 20;
@@ -14,6 +15,41 @@ export type ChartLiveEncounterHandoff = {
 };
 
 type StoredHandoffs = Record<string, ChartLiveEncounterHandoff>;
+
+export function saveChartPreconsultationHandoff(workspaceId: string, context: ChartPreconsultationContext) {
+  const { encounter, patient, guardian, veterinarian } = context;
+  const referenceTime = encounter.checkedInAt;
+
+  saveChartLiveEncounterHandoff({
+    encounter: {
+      ...encounter,
+      workspaceId,
+      patientId: patient.id,
+      guardianId: guardian?.id,
+      primaryVeterinarianId: veterinarian?.id,
+      status: encounter.status as Encounter["status"],
+      createdAt: referenceTime,
+      updatedAt: referenceTime,
+    },
+    patient: {
+      ...patient,
+      workspaceId,
+      species: patient.species as Patient["species"],
+      sex: patient.sex as Patient["sex"],
+      handlingCautionLocked: true,
+      status: "active",
+      createdAt: referenceTime,
+      updatedAt: referenceTime,
+    },
+    primaryGuardian: guardian ? {
+      ...guardian,
+      workspaceId,
+      createdAt: referenceTime,
+      updatedAt: referenceTime,
+    } : undefined,
+    veterinarianName: veterinarian?.displayName,
+  });
+}
 
 export function saveChartLiveEncounterHandoff({
   encounter,
