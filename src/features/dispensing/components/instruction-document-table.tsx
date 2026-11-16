@@ -4,8 +4,10 @@ import { formatInstructionValue } from "../instruction-view-model";
 
 import React, { useEffect, useState, useRef, useLayoutEffect } from "react";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
+import { CircleCloseFillIcon } from "@/components/icons";
 import { EmrTableFilterTrigger } from "@/components/emr/table-filter-trigger";
 import { EmrTableCellText, EmrTableColumnResizeHandle } from "@/components/emr/table-primitives";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { usePagePortalVisibility } from "@/components/emr/page-loading-boundary";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -99,28 +101,30 @@ export function InstructionRowNote({ children, modified = false }: {
   );
 }
 
-const groups = [
-  ["added", "추가된 오더"],
-  ["modified", "수정된 오더"],
-  ["existing", "기존 오더"],
-  ["completed", "완료 오더"],
-  ["cancelled", "취소된 오더"],
-];
-const group = (i: Item) =>
-  i.status === "returned"
-    ? "cancelled"
-    : ["completed", "cancelled"].includes(i.status)
-      ? i.status
-      : i.change;
-
-const filterLabels = {
-  all: "전체",
-  unfinished: "미완료",
-  completed: "완료",
-  cancelled: "취소",
-  returned: "반려",
+const orderGroupLabels = {
+  added: "추가된 오더",
+  modified: "수정된 오더",
+  existing: "기존 오더",
+  completed: "완료 오더",
+  cancelled: "취소된 오더",
 };
-type InstructionFilter = keyof typeof filterLabels;
+type OrderGroup = keyof typeof orderGroupLabels;
+
+function getOrderGroup(item: Item): OrderGroup {
+  if (item.status === "returned") return "cancelled";
+  if (item.status === "completed" || item.status === "cancelled") return item.status;
+  return item.change;
+}
+
+type InstructionFilter = "all" | OrderGroup;
+
+const orderGroupChipColors: Record<OrderGroup, string> = {
+  added: "var(--clair-color-atomic-blue-400)",
+  modified: "var(--clair-color-atomic-orange-400)",
+  existing: "var(--clair-color-atomic-gray-500)",
+  completed: "var(--clair-color-atomic-green-400)",
+  cancelled: "var(--clair-color-atomic-red-400)",
+};
 
 const sortLabels = {
   default: "기본순",
@@ -132,11 +136,7 @@ type InstructionSort = keyof typeof sortLabels;
 const itemNameCollator = new Intl.Collator("ko", { numeric: true });
 
 function matchesFilter(item: Item, filter: InstructionFilter) {
-  if (filter === "all") return true;
-  if (filter === "unfinished") {
-    return ["requested", "in_progress", "paused"].includes(item.status);
-  }
-  return item.status === filter;
+  return filter === "all" || getOrderGroup(item) === filter;
 }
 
 function sortItems(items: Item[], sort: InstructionSort) {
@@ -148,20 +148,74 @@ function sortItems(items: Item[], sort: InstructionSort) {
   });
 }
 
+function InstructionOrderGroupFilter({
+  items,
+  trigger,
+  value,
+  onChange,
+}: {
+  items: Item[];
+  trigger: React.ReactElement;
+  value: InstructionFilter;
+  onChange: (value: OrderGroup) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger render={trigger} />
+      <DropdownMenuContent
+        align="end"
+        sideOffset={6}
+        className="w-[201px] min-w-0 max-w-(--available-width) rounded-[var(--clair-radius-md)] border border-border bg-[var(--clair-color-atomic-common-100)] shadow-[var(--clair-shadow-md)] ring-0"
+      >
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="flex h-8 items-center px-2 leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-neutral-600)]">
+            오더 그룹 필터
+          </DropdownMenuLabel>
+          <DropdownMenuRadioGroup value={value} onValueChange={(next) => onChange(next as OrderGroup)}>
+            {(Object.keys(orderGroupLabels) as OrderGroup[]).map((option) => (
+              <DropdownMenuRadioItem
+                key={option}
+                value={option}
+                closeOnClick
+                className="fd-order-filter-option h-8 gap-2 rounded-[var(--clair-radius-sm)] px-2 py-1.5 font-medium leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-neutral-900)] opacity-80"
+              >
+                <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                  <span
+                    aria-hidden="true"
+                    className="size-2.5 shrink-0 rounded-[var(--clair-radius-xs)]"
+                    style={{ backgroundColor: orderGroupChipColors[option] }}
+                  />
+                  <span className="truncate">{orderGroupLabels[option]}</span>
+                  <Badge
+                    aria-hidden="true"
+                    variant="secondary"
+                    className="min-w-5 rounded-[var(--clair-radius-atomic-6)] border-0 bg-[var(--clair-color-atomic-black-alpha-4)] px-1.5 leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-900)] tabular-nums"
+                  >
+                    {items.filter((item) => matchesFilter(item, option)).length}
+                  </Badge>
+                </span>
+                <span aria-hidden="true" className="fd-order-filter-check size-4 shrink-0" />
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function InstructionChoiceMenu<T extends string>({
   label,
   trigger,
   options,
   value,
   onChange,
-  getCount,
 }: {
   label: string;
   trigger: React.ReactElement;
   options: Record<T, string>;
   value: T;
   onChange: (value: T) => void;
-  getCount?: (value: T) => number;
 }) {
   return (
     <DropdownMenu>
@@ -173,7 +227,6 @@ function InstructionChoiceMenu<T extends string>({
             {(Object.keys(options) as T[]).map((option) => (
               <DropdownMenuRadioItem key={option} value={option} closeOnClick className="min-h-8 gap-3 pl-2">
                 {options[option]}
-                {getCount && <span aria-hidden="true" className="ml-auto text-xs text-muted-foreground">{getCount(option)}</span>}
               </DropdownMenuRadioItem>
             ))}
           </DropdownMenuRadioGroup>
@@ -322,6 +375,11 @@ function OrderCard({
   const showHistory = events.some(event =>
     event.orderId === o.id && event.changes.some(change => historyItemIds.includes(change.itemId)),
   );
+
+  function clearFilter() {
+    setFilter("all");
+    filterTriggerRef.current?.focus();
+  }
 
   async function copy(link: boolean) {
     try {
@@ -500,21 +558,40 @@ function OrderCard({
           {o.items.length} 작업완료
         </span>
         <div className="grow" />
-        <InstructionChoiceMenu
-          label="작업 상태 필터"
-          options={filterLabels}
-          value={filter}
-          onChange={setFilter}
-          getCount={(option) => o.items.filter((item) => matchesFilter(item, option)).length}
-          trigger={
-            <EmrTableFilterTrigger
-              ref={filterTriggerRef}
-              activeCount={filter === "all" ? 0 : 1}
-              aria-label={filter === "all" ? "필터" : `필터, ${filterLabels[filter]}, 조건 1개 적용 중`}
-              className="fd-tool fd-choice"
-            />
-          }
-        />
+        <div className="fd-filter-control" data-active={filter !== "all" || undefined}>
+          <InstructionOrderGroupFilter
+            items={o.items}
+            value={filter}
+            onChange={setFilter}
+            trigger={
+              <EmrTableFilterTrigger
+                ref={filterTriggerRef}
+                activeCount={filter === "all" ? 0 : 1}
+                aria-label={filter === "all" ? "필터" : `필터, ${orderGroupLabels[filter]}, 조건 1개 적용 중`}
+                className="fd-tool fd-choice"
+              />
+            }
+          />
+          {filter !== "all" && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="fd-filter-clear"
+                    aria-label="필터 해제"
+                    onClick={clearFilter}
+                  />
+                }
+              >
+                <CircleCloseFillIcon className="size-3.5" aria-hidden="true" />
+              </TooltipTrigger>
+              <TooltipContent>필터 해제</TooltipContent>
+            </Tooltip>
+          )}
+        </div>
         <InstructionChoiceMenu
           label="항목 정렬"
           options={sortLabels}
@@ -606,21 +683,18 @@ function OrderCard({
       {!collapsed && (
         <div className="fd-sections">
           <p className="sr-only" role="status">
-            {filterLabels[filter]} · {visibleItems.length}개 항목 · {sortLabels[sort]}
+            {filter === "all" ? "전체" : orderGroupLabels[filter]} · {visibleItems.length}개 항목 · {sortLabels[sort]}
           </p>
           {!visibleItems.length && (
             <div className="flex flex-col items-center gap-2 p-6">
               <p className="text-sm text-muted-foreground">조건에 맞는 항목이 없어요.</p>
-              <Button type="button" variant="outline" size="sm" onClick={() => {
-                setFilter("all");
-                filterTriggerRef.current?.focus();
-              }}>
+              <Button type="button" variant="outline" size="sm" onClick={clearFilter}>
                 필터 초기화
               </Button>
             </div>
           )}
-          {groups.map(([key, title]) => {
-            const rows = sortItems(visibleItems.filter((item) => group(item) === key), sort);
+          {Object.entries(orderGroupLabels).map(([key, title]) => {
+            const rows = sortItems(visibleItems.filter((item) => getOrderGroup(item) === key), sort);
             if (!rows.length) return null;
             return (
               <section key={key} className={`fd-section fd-${key}`}>
