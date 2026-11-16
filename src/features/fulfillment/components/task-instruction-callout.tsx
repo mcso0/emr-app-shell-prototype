@@ -10,7 +10,7 @@ import { CdsUtilitiesHistoryIcon } from "@/components/cds-icons/utilities-and-mi
 import { OverallInstructionsHistoryDialog } from "@/features/chart/overall-instructions-history-dialog";
 import { createOverallInstructionsClient, InstructionRequestError } from "@/features/chart/overall-instructions-client";
 import { instructionScopeLabels, type OverallInstructions } from "@/features/chart/overall-instructions-contract";
-import type { DispensingOrderChange, EffectiveInstructions } from "../task-instruction-review-contract";
+import type { OrderRerequestChange, EffectiveInstructions } from "../task-instruction-review-contract";
 import styles from "./task-instruction-callout.module.css";
 
 function TaskInstructionHistory({ workspaceId, chartId, onClose, onReview }: { workspaceId: string; chartId: string; onClose: () => void; onReview: () => void }) {
@@ -71,9 +71,10 @@ function InstructionEntry({ item, showScope }: { item: EffectiveInstructions["en
 }
 
 /** One chart/version per card. UI-only actions never acknowledge instructions. */
-export function TaskInstructionCallout({ document, workspaceId, onReview, orderChange }: {
+export function TaskInstructionCallout({ document, workspaceId, onReview, orderChange, orderType = "조제" }: {
   document: EffectiveInstructions; workspaceId?: string; onReview: () => void;
-  orderChange?: DispensingOrderChange;
+  orderChange?: OrderRerequestChange;
+  orderType?: "조제" | "처치";
 }) {
   const [hidden, setHidden] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -89,7 +90,7 @@ export function TaskInstructionCallout({ document, workspaceId, onReview, orderC
   const clinicalChanged = document.entries.some(item => item.kind === "clinical_edit");
   const changed = clinicalChanged || document.entries.some(item => item.revision > 1);
   const single = document.entries.length === 1 ? document.entries[0] : null;
-  const title = orderChange ? "조제 오더가 수정되었습니다" : clinicalChanged ? "업무 내용 변경됨" : single ? single.legacy ? "경구제 지시사항" : `${instructionScopeLabels[single.scope]}사항` : "총괄 지시사항";
+  const title = orderChange ? `${orderType} 오더가 수정되었습니다` : clinicalChanged ? "업무 내용 변경됨" : single ? single.legacy ? "경구제 지시사항" : `${instructionScopeLabels[single.scope]}사항` : "총괄 지시사항";
   const otherEntries = orderChange ? document.entries.filter(entry => entry !== orderChange.entry) : document.entries;
   return <div className={styles.container}>
     {hidden ? <Button ref={restoreRef} size="sm" variant="ghost" onClick={() => { movedFocus.current = true; setHidden(false); }}><CdsAlertsInfoIcon />지시사항 다시 보기</Button> :

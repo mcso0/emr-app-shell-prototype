@@ -9,7 +9,7 @@ const id = "97080000-0000-4000-8000-000000000081";
 const secondId = "97080000-0000-4000-8000-000000000082";
 const patientId = "97080000-0000-4000-8000-000000000083";
 
-async function install(page: Page, options: { beforeNavigate?: () => Promise<void>; queueType?: "dispensing" | "treatment"; set?: boolean; requester?: boolean; failSave?: boolean; failReopen?: boolean; emptyOral?: boolean; profileFailure?: boolean; started?: boolean; canUnassign?: boolean; owner?: "mine" | "other"; failAssignment?: boolean; staleAssignment?: boolean; assignmentDelay?: number; layoutFixture?: boolean; differentPatient?: boolean; itemLayout?: boolean } = {}) {
+async function install(page: Page, options: { beforeNavigate?: () => Promise<void>; queueType?: "dispensing" | "treatment"; set?: boolean; requester?: boolean; failSave?: boolean; failReopen?: boolean; emptyOral?: boolean; profileFailure?: boolean; started?: boolean; hold?: boolean; canUnassign?: boolean; owner?: "mine" | "other"; failAssignment?: boolean; staleAssignment?: boolean; assignmentDelay?: number; layoutFixture?: boolean; differentPatient?: boolean; itemLayout?: boolean } = {}) {
   await page.addInitScript(([key, workspaceId]) => localStorage.setItem(key, JSON.stringify({
     currentWorkspaceId: workspaceId, workspaces: [{ id: workspaceId, displayName: "합성 검증 병원", representativeName: "합성 관리자", contactEmail: "synthetic@example.test", contactPhone: null, subscriptionStatus: "trialing", createdBySessionId: "playwright-default-session", createdAt: "2026-06-14T00:00:00.000Z" }],
     memberships: [{ id: "synthetic-membership", workspaceId, userSessionId: "playwright-default-session", displayName: "합성 관리자", email: "synthetic@example.test", roles: ["hospital_admin"], status: "active", createdAt: "2026-06-14T00:00:00.000Z", activatedAt: "2026-06-14T00:00:00.000Z" }], invitations: [], updatedAt: "2026-06-14T00:00:00.000Z",
@@ -18,6 +18,7 @@ async function install(page: Page, options: { beforeNavigate?: () => Promise<voi
     ...structuredClone(syntheticInstruction), queueType: options.queueType ?? "dispensing", rootOrderId: id, rootTaskId: id, name: "합성 검증 오더", isSet: options.set ?? false,
     mainAssigneeId: options.owner || options.started ? "synthetic-owner" : null, mainAssigneeName: options.owner || options.started ? "합성 기존 담당자" : null, revision: "1", finalized: false,
     canClaim: !options.owner && !options.started, canTakeover: options.owner === "other", canStart: options.owner === "mine" && !options.started, canResume: false, canUnassign: options.canUnassign ?? false, canCompleteAll: options.requester ?? true, canEditInstruction: false,
+    pauseReason: options.hold ? "order_edit" : null,
     changes: [], instruction: "", oralInstruction: { chartId: id, revision: 2,
       instruction: options.emptyOral ? " \n " : "합성 경구제 전체 지시입니다. 긴 지시사항의 줄바꿈과 닫기 버튼을 확인합니다. ".repeat(3),
       history: [{ revision: 1, instruction: "이전 지시", createdAt: "2026-10-30T00:00:00.000Z", actorId: "synthetic-author", actorName: "합성 작성자" }], snapshots: [] },
@@ -58,7 +59,7 @@ async function install(page: Page, options: { beforeNavigate?: () => Promise<voi
   let assignmentFailures = options.failAssignment ? 1 : 0;
   const assignmentWrites: Record<string, unknown>[] = [];
   const workItems = () => document.items.map(item => ({ id: item.id, workspaceId, orderId: item.id, encounterId: id, patientId: options.differentPatient && item.id === secondId ? secondId : patientId,
-    taskId: item.taskId, taskAttemptNo: item.attemptNo, requestCycle: item.attemptNo, rowRevision: Number(document.revision), status: item.status,
+    taskId: item.taskId, taskAttemptNo: item.attemptNo, requestCycle: item.attemptNo, rowRevision: Number(document.revision), status: document.pauseReason ? "paused" : item.status, pauseReason: document.pauseReason,
     queueType: options.queueType ?? "dispensing", assignedToUserId: item.assigneeId, requestedByUserId: id,
     patientName: "합성 환자", guardianName: "합성 보호자", requesterName: "합성 수의사",
     startedAt: item.status === "in_progress" ? "2026-10-31T00:05:00.000Z" : null,
@@ -519,6 +520,27 @@ test("direct start still requires acknowledgement of changed instructions", asyn
 });
 
 for (const queueType of ["dispensing", "treatment"] as const) {
+  test(`${queueType} held instruction stays readable and disables work actions`, async ({ page }) => {
+    const { actions } = await install(page, { queueType, started: true, canUnassign: true, hold: true });
+    const name = queueType === "dispensing" ? "조제" : "처치";
+    await expect(page.getByTestId("instruction-status-label")).toHaveText("일시중지");
+    await expect(page.getByTestId("instruction-status-label-icon")).toHaveAttribute("data-state-icon-state", "hold");
+    await expect(page.getByTestId("order-edit-hold")).toContainText("수의사가 오더를 수정 중입니다.");
+    await expect(page.getByRole("table").getByText("합성 품목 1", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: `${name} 완료`, exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "업무 상태 변경" })).toBeDisabled();
+    await expect(page.getByRole("table").getByRole("button", { name: "합성 품목 1 완료", exact: true })).toBeDisabled();
+    const toggle = page.getByTestId("patient-queue-view-toggle");
+    if (await toggle.getAttribute("aria-pressed") !== "true") await toggle.click();
+    const card = page.getByTestId(`order-queue-item-live-fulfillment-${id}`);
+    await expect(card.getByText("일시중지", { exact: true })).toBeVisible();
+    await toggle.click();
+    const group = page.getByTestId("order-queue-status-paused");
+    await expect(group.locator(card)).toBeVisible();
+    await expect(group.locator('[data-state-icon-state="hold"]').first()).toBeVisible();
+    expect(actions).toEqual([]);
+  });
+
   test(`${queueType} re-request returns to prework after unassign and resumes on reclaim`, async ({ page }, testInfo) => {
     const failAssignment = queueType === "dispensing";
     const { document, actions, assignmentWrites } = await install(page, { queueType, started: true, failAssignment });
@@ -576,17 +598,27 @@ for (const queueType of ["dispensing", "treatment"] as const) {
         })),
         current: { chartId: id, scope: queueType, versions: { [queueType]: version }, versionKey,
           entries: [{ scope: queueType, orderId: id, kind: "clinical_edit", revision: version,
-            instruction: dispensing ? "빈도: bid → tid\n사유: 합성 복용 주기 조정" : "합성 변경 사항을 확인해 주세요.",
+            instruction: dispensing ? "빈도: bid → tid\n사유: 합성 복용 주기 조정" : "처치 방법: 변경 전 합성 처치 → 수정된 합성 처치\n사유: 합성 처치 방법 조정",
             deleted: false, legacy: false, actorName: "합성 수의사",
             createdAt: mismatch ? "2026-10-31T00:25:00Z" : editedAt }] },
       }] } });
     });
 
-    await page.reload();
+    await page.goto(`/w/${workspaceId}/dispensing?date=2026-10-31&modulePanel=open&aside=closed&right=closed`);
+    const card = page.getByTestId(`order-queue-item-live-fulfillment-${id}`);
+    await card.click();
+    const restart = page.getByRole("dialog", { name: dispensing ? "조제 오더 변경 안내" : "처치 오더 변경 안내" });
+    await expect(restart).toBeVisible();
+    await expect(restart.getByRole("button", { name: "업무 시작하기" })).toBeEnabled();
+    if (!dispensing) {
+      await expect(restart.getByRole("table", { name: "처치 오더 변경 전후" })).toContainText("변경 전 합성 처치");
+      await expect(restart.getByRole("table", { name: "처치 오더 변경 전후" })).toContainText("수정된 합성 처치");
+      await expect(restart.getByText("합성 처치 방법 조정", { exact: true })).toBeVisible();
+    }
+    await restart.getByRole("button", { name: "취소", exact: true }).click();
     const toggle = page.getByTestId("patient-queue-view-toggle");
     await expect(toggle).toBeEnabled();
     if (await toggle.getAttribute("aria-pressed") !== "true") await toggle.click();
-    const card = page.getByTestId(`order-queue-item-live-fulfillment-${id}`);
     await expect(card.getByText("재요청", { exact: true })).toBeVisible();
     await expect(card.getByText("09:00 합성 수의사 요청", { exact: true })).toBeVisible();
     await toggle.click();
@@ -607,7 +639,9 @@ for (const queueType of ["dispensing", "treatment"] as const) {
     }
     expect(actions).toEqual([]);
 
-    const continueWork = page.getByRole("button", { name: "업무 계속하기" });
+    const continueWork = page.getByRole("button", { name: "업무 이어가기" });
+    await expect(page.getByRole("button", { name: dispensing ? "조제 완료" : "처치 완료", exact: true })).toHaveCount(0);
+    await expect(page.getByText("합성 기존 담당자", { exact: true }).first()).toBeVisible();
     const review = page.getByRole("dialog", { name: dispensing ? "조제 오더 변경 확인" : "지시사항 확인" });
     const confirmLabel = dispensing ? "변경 확인" : "변경·남은 작업 범위 확인";
     if (dispensing) {
@@ -631,23 +665,21 @@ for (const queueType of ["dispensing", "treatment"] as const) {
       expect(acknowledgementVersions).toEqual([]);
     }
     await continueWork.click();
-    await expect(review).toBeVisible();
+    await expect(restart).toBeVisible();
     expect(actions).toEqual([]);
-    const confirmContinue = review.getByRole("button", {
-      name: queueType === "dispensing" ? "확인하고 조제 계속" : "확인하고 처치 계속",
-    });
+    const confirmContinue = restart.getByRole("button", { name: "업무 시작하기" });
     if (queueType === "dispensing") {
       await confirmContinue.click();
-      await expect(review.getByRole("alert")).toContainText("확인을 저장하지 못했습니다.");
-      await expect(review.getByText("합성 복용 주기 조정")).toBeVisible();
+      await expect(restart.getByRole("alert")).toContainText("확인을 저장하지 못했습니다.");
+      await expect(restart.getByText("합성 복용 주기 조정")).toBeVisible();
       expect(actions).toEqual([]);
       await confirmContinue.click();
-      await expect(review.getByRole("alert")).toContainText("지시가 다시 변경되었습니다.");
+      await expect(restart.getByRole("alert")).toContainText("지시가 다시 변경되었습니다.");
       await expect(page.getByTestId("instruction-status-label")).toHaveText("재요청");
       expect(actions).toEqual([]);
     }
     await confirmContinue.evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
-    await expect(review).not.toBeVisible();
+    await expect(restart).not.toBeVisible();
     await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
     await expect(page.getByTestId("order-queue-status-inProgress").locator(card)).toBeVisible();
     await expect(startedAt).toBeVisible();
@@ -705,7 +737,9 @@ for (const queueType of ["dispensing", "treatment"] as const) {
     version++;
     requiresAcknowledgement = true;
     await claimWork();
-    await confirmContinue.click();
+    await review.getByRole("button", {
+      name: dispensing ? "확인하고 조제 계속" : "확인하고 처치 계속",
+    }).click();
     if (failAssignment) {
       await expect(page.getByText("변경을 저장하지 못했어요. 다시 시도해 주세요.")).toBeVisible();
       await expect(prework.getByTestId("instruction-status-label")).toHaveText("재요청");

@@ -12,6 +12,7 @@ type EmrSidePanelStateIconStoryArgs = {
 const stateLabels: Record<EmrSidePanelStateIconState, string> = {
   cancel: "취소",
   done: "완료",
+  hold: "일시중지",
   "in-progress": "진행",
   rework: "재작업",
   stop: "중지",
@@ -42,7 +43,7 @@ const meta = {
   argTypes: {
     state: {
       control: "radio",
-      options: ["to-do", "in-progress", "done", "rework", "stop", "cancel"],
+      options: ["to-do", "in-progress", "done", "rework", "hold", "stop", "cancel"],
       description: "Supported side-panel state icon API specimen; actual getEmrSidePanelStatusIconState mapping remains in TaskQueueCard and SidePanelCollapsibleGroup caller compositions.",
     },
   },
