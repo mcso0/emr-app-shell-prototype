@@ -2722,10 +2722,12 @@ test("patient guardian registration links an existing guardian to a new patient"
   await extraBreed.fill("푸들"); await extraBreed.press("Enter");
   await expect(page.getByRole("button", { name: "푸들 제거" })).toHaveCount(1);
   await expect(extraBreed).toHaveValue("");
+  await expect(page.getByRole("listbox", { name: "품종 추천 목록" })).toHaveCount(0);
   await extraBreed.fill("합성 직접 품종");
   await extraBreed.press("Enter");
   await expect(page.getByRole("button", { name: "합성 직접 품종 제거" })).toBeVisible();
   await expect(extraBreed).toHaveValue("");
+  await expect(page.getByRole("listbox", { name: "품종 추천 목록" })).toHaveCount(0);
   await page.getByRole("button", { name: "합성 직접 품종 제거" }).click();
   await extraBreed.fill("비숑");
   await page.getByRole("option", { name: "비숑 프리제" }).click();
