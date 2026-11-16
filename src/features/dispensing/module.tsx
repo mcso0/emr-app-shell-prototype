@@ -80,6 +80,7 @@ import {
   type PatientHistoryEntry,
 } from "@/features/fulfillment/patient-history-aside";
 import type {
+  FulfillmentWorkItem as SharedFulfillmentWorkItem,
   FulfillmentWorkItemAction,
   FulfillmentWorkItemStatus,
 } from "@/features/fulfillment/server-fulfillment-work-item-core";
@@ -141,7 +142,7 @@ type FulfillmentQueueType = "dispensing" | "treatment";
 type FulfillmentTransitionCommand =
   | FulfillmentWorkItemAction
   | ({ action: FulfillmentWorkItemAction } & FulfillmentTransitionOptions);
-type FulfillmentWorkItem = {
+type FulfillmentWorkItem = Pick<SharedFulfillmentWorkItem, "pauseReason" | "pauseUntil"> & {
   assignedToDisplayName?: string | null;
   canManage?: boolean;
   assignedToUserId?: string | null;
@@ -428,10 +429,23 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
     let resource = fulfillmentQueueResources.get(cacheKey);
     if (!resource) {
       let previousSnapshot = emptyFulfillmentQueueSnapshot;
+      let holdTimer: number | undefined;
       const created = createSharedVisibleResource<DispensingFulfillmentQueueSnapshot>({
         initialValue: { ...emptyFulfillmentQueueSnapshot, status: "loading" },
         load: signal => readDispensingFulfillmentQueue(workspaceId, effectiveDate, signal, previousSnapshot),
-        onValue: next => { previousSnapshot = next; },
+        onValue: next => {
+          previousSnapshot = next;
+          window.clearTimeout(holdTimer);
+          holdTimer = undefined;
+          if (next.status === "loading") return;
+          const holdExpiry = next.workItems.reduce((earliest, item) =>
+            item.pauseUntil ? Math.min(earliest, Date.parse(item.pauseUntil)) : earliest, Infinity);
+          if (!Number.isFinite(holdExpiry)) return;
+          holdTimer = window.setTimeout(() => {
+            created.publish({ ...next, status: "loading" });
+            void created.refresh(true);
+          }, Math.max(5_000, holdExpiry - Date.now() + 250));
+        },
         onStart: ({ refresh: reload, publish, dispose }) => {
           // One subscription per resource, not one per panel/content consumer.
           const stopQueue = subscribeQueueRealtimeRefresh({ workspaceId, onQueueChange: () => {
@@ -444,6 +458,7 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
           return () => { stopQueue?.(); stopActor?.(); };
         },
         onDispose: () => {
+          window.clearTimeout(holdTimer);
           if (fulfillmentQueueResources.get(cacheKey) === created) fulfillmentQueueResources.delete(cacheKey);
         },
       });
@@ -634,7 +649,7 @@ function createLiveQueueItem(workItem: FulfillmentWorkItem): OrderQueueItem {
       assignedToUserId: workItem.assignedToUserId,
       patientId: workItem.patientId,
       workspaceId: workItem.workspaceId,
-      status: statusId === "reRequested" && queueStatus === "requested" ? "re_requested" : queueStatus,
+      status: statusId === "reRequested" ? "re_requested" : statusId === "waiting" ? "requested" : queueStatus,
       priority: workItem.priority,
       requestedAt: workItem.createdAt,
       originChartId: workItem.originChartId,
@@ -715,15 +730,17 @@ function getFulfillmentRequesterName(workItem: FulfillmentWorkItem) {
 }
 
 function mapFulfillmentToQueueStatusId(
-  { status, assignedToUserId, requestCycle, taskAttemptNo }: FulfillmentWorkItem,
+  { status, assignedToUserId, requestCycle, taskAttemptNo, pauseReason }: FulfillmentWorkItem,
   fallback: string,
 ) {
   if (status === "completed") return "completed";
   if (status === "cancelled") return "canceled";
   if (status === "returned") return "reRequested";
+  if (pauseReason) return "paused";
   if (isPendingFulfillmentRerequest(status, requestCycle ?? taskAttemptNo ?? 1, assignedToUserId)) return "reRequested";
   if (status === "paused" && !assignedToUserId) return "waiting";
-  if (status === "in_progress" || status === "paused") return "inProgress";
+  if (status === "paused") return "paused";
+  if (status === "in_progress") return "inProgress";
   if (status === "requested") return "waiting";
   return fallback;
 }
@@ -1811,7 +1828,7 @@ function DispensingContentBody({
   const instruction = useFulfillmentInstruction(
     !allowLegacyFixtureFallback ? selectedFulfillmentWorkItem?.workspaceId : undefined,
     !allowLegacyFixtureFallback ? selectedFulfillmentWorkItem?.id : undefined,
-    selectedFulfillmentWorkItem ? String(selectedFulfillmentWorkItem.rowRevision) : undefined,
+    selectedFulfillmentWorkItem ? `${selectedFulfillmentWorkItem.rowRevision}:${selectedFulfillmentWorkItem.pauseReason ?? ""}` : undefined,
   );
   const focusedItemId = selectedFulfillmentWorkItem?.id === focusWorkItemId
     ? focusWorkItemId ?? undefined
@@ -1822,7 +1839,8 @@ function DispensingContentBody({
   const keepStartedRerequestOpen = firstStartedAt && instruction.document?.mainAssigneeId
     && hasPendingInstructionRerequest(instruction.document);
   const preworkEligible = !allowLegacyFixtureFallback && instruction.document && selectedFulfillmentWorkItem
-    && !instruction.document.finalized && instruction.document.items.length > 0
+    && !instruction.document.finalized && !instruction.document.pauseReason && !selectedFulfillmentWorkItem.pauseReason
+    && instruction.document.items.length > 0
     && (preworkCompletionRoot === instructionScope
       || (isWaitingInstruction(instruction.document) && !keepStartedRerequestOpen));
   const entry = useOrderPrework({
@@ -1954,14 +1972,14 @@ function DispensingContentBody({
   const instructionAssignee = instruction.document
     ? instruction.document.mainAssigneeName ?? "미지정"
     : selectedQueueItem?.assigneeName ?? primaryAssigneeSummary;
-  const instructionStartStatus = instruction.document
+  const instructionStartStatus = selectedFulfillmentWorkItem?.pauseReason ? "일시중지" : instruction.document
     ? getInstructionStatusLabel(instruction.document)
     : selectedQueueItem
       ? selectedQueueStatusLabel
       : primaryStartStatus;
   const instructionStartedAt = firstStartedAt ? formatOperatingShortTime(firstStartedAt) : selectedQueueItem?.startedAt ?? "미시작";
   const instructionStatusBadge = (
-    <EmrStatusBadge label={instructionStartStatus} marker="none" testId="instruction-status-label" />
+    <EmrStatusBadge label={instructionStartStatus} marker={instructionStartStatus === "일시중지" ? "icon" : "none"} testId="instruction-status-label" />
   );
   const instructionInfoItems: Array<{ label: string; value: ReactNode }> = [
     {

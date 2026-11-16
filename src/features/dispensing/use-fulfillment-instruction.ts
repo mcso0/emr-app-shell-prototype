@@ -8,6 +8,7 @@ import {
   type InstructionCommand,
   type InstructionDocument,
 } from "@/features/fulfillment/instruction-contract";
+import { isAssignedInstructionRerequest } from "./instruction-view-model";
 import type { FulfillmentEligibleAssignee } from "@/features/fulfillment/server-fulfillment-assignee";
 
 export type InstructionIntent = InstructionCommand extends infer Command
@@ -131,7 +132,7 @@ export function useFulfillmentInstruction(
     onReviewRequired?: () => void,
     continueAfterReview?: { label: string; onSuccess: () => void },
   ): Promise<boolean> => {
-    if (!endpoint || !document || loading || (failure?.key === readKey && failure.read) || pending.current) return false;
+    if (!endpoint || !document || document.pauseReason || loading || (failure?.key === readKey && failure.read) || pending.current) return false;
     pending.current = true;
     setBusy(true);
     try {
@@ -183,7 +184,7 @@ export function useFulfillmentInstruction(
           onReviewRequired?.();
           return false;
         }
-        if (body.error === "revision_conflict") { retry.current = null; refresh(); }
+        if (body.error === "revision_conflict" || body.error === "order_work_on_hold") { retry.current = null; refresh(); }
         setError(
           instructionErrorMessages[body.error] ??
             "변경을 저장하지 못했어요. 다시 시도해 주세요.",
@@ -212,7 +213,21 @@ export function useFulfillmentInstruction(
       setBusy(false);
     }
   };
-  return { document, assignees, loading, busy: busy || Boolean(failure?.key === readKey && failure.read), error, refresh, mutate, instructionReview };
+  const openRerequestReview = (onSuccess: () => void) => {
+    if (!document?.canStart || !isAssignedInstructionRerequest(document) || loading || pending.current) return;
+    const selected = selection.current;
+    instructionReview.requireReview({
+      label: "업무 시작하기",
+      restartOrder: document.queueType === "dispensing" ? "조제" : "처치",
+      run: async () => {
+        if (selection.current === selected && await mutate({ action: "start" })) onSuccess();
+      },
+    });
+  };
+  return { document, assignees, loading, openRerequestReview, busy: busy || Boolean(failure?.key === readKey && failure.read), error, refresh, mutate, instructionReview };
 }
 
-export type FulfillmentInstructionController = Omit<ReturnType<typeof useFulfillmentInstruction>, "instructionReview"> & { instructionReview?: TaskInstructionReviewController };
+export type FulfillmentInstructionController = Omit<ReturnType<typeof useFulfillmentInstruction>, "instructionReview" | "openRerequestReview"> & {
+  instructionReview?: TaskInstructionReviewController;
+  openRerequestReview?: ReturnType<typeof useFulfillmentInstruction>["openRerequestReview"];
+};

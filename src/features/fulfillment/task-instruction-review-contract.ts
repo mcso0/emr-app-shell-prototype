@@ -26,7 +26,7 @@ export type EffectiveInstructions = z.infer<typeof effectiveInstructionsSchema>;
 export const instructionReviewTargetId = (item: TaskInstructionReview) => (item.taskId ?? item.orderId)!;
 
 /** Presentation from a dispensing order revision already matched to this review. */
-export type DispensingOrderChange = {
+export type OrderRerequestChange = {
   entry: EffectiveInstructions["entries"][number];
   orderName: string;
   reason: string;

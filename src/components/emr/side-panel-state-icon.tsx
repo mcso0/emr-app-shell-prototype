@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 export type EmrSidePanelStateIconState =
   | "cancel"
   | "done"
+  | "hold"
   | "in-progress"
   | "rework"
   | "stop"
@@ -40,6 +41,7 @@ export function EmrSidePanelStateIcon({
       {state === "cancel" ? <CancelStateIcon /> : null}
       {state === "rework" ? <ReworkStateIcon /> : null}
       {state === "stop" ? <StopStateIcon /> : null}
+      {state === "hold" ? <HoldStateIcon /> : null}
     </svg>
   );
 }
@@ -123,6 +125,19 @@ function StopStateIcon() {
         d="M4.5 6.5C4.5 5.39543 5.39543 4.5 6.5 4.5H9.5C10.6046 4.5 11.5 5.39543 11.5 6.5V9.5C11.5 10.6046 10.6046 11.5 9.5 11.5H6.5C5.39543 11.5 4.5 10.6046 4.5 9.5V6.5Z"
         fill="var(--emr-sidepanel-state-icon-stop-fg)"
       />
+    </>
+  );
+}
+
+// CDS V2, state=hold (27508:16567). Preserve the exported geometry and colors.
+function HoldStateIcon() {
+  return (
+    <>
+      <rect x="0.75" y="0.75" width="14.5" height="14.5" rx="5.25" fill="white"/>
+      <rect x="0.75" y="0.75" width="14.5" height="14.5" rx="5.25" fill="#38B2AC" fillOpacity="0.06"/>
+      <rect x="0.75" y="0.75" width="14.5" height="14.5" rx="5.25" stroke="#7FE5D9" strokeWidth="1.5"/>
+      <path d="M4.75 5.5C4.75 4.94772 5.19772 4.5 5.75 4.5H6.25C6.80228 4.5 7.25 4.94772 7.25 5.5V10.5C7.25 11.0523 6.80228 11.5 6.25 11.5H5.75C5.19772 11.5 4.75 11.0523 4.75 10.5V5.5Z" fill="#3AC4B4"/>
+      <path d="M8.75 5.5C8.75 4.94772 9.19772 4.5 9.75 4.5H10.25C10.8023 4.5 11.25 4.94772 11.25 5.5V10.5C11.25 11.0523 10.8023 11.5 10.25 11.5H9.75C9.19772 11.5 8.75 11.0523 8.75 10.5V5.5Z" fill="#3AC4B4"/>
     </>
   );
 }

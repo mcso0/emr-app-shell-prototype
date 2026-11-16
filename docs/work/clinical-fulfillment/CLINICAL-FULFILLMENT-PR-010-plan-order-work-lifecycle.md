@@ -2255,6 +2255,23 @@ and schema.
 Local browser fixtures verified dispensing and treatment after unassign,
 reload, change review and reclaim, including a failed claim and retry.
 
+### Confirmed order editing hold and assigned re-request — 2026-11-16
+
+승욱 approved the interactive dispensing/treatment flow and shared paused state.
+The local candidate is based on `origin/main` `185f9013`. Migration
+`20261116073600_order_work_hold.sql` adds a private instruction-scoped hold and
+a shared paused queue projection. Begin, renew, cancel, and reconfirm are
+serialized with execution. The assigned replacement stays in the instruction
+workspace. Its change review starts the existing replacement only after
+acknowledgement. See the
+[work hold contract](../../engineering/data-model/order-fulfillment-handoff-contract.md#order-work-holds).
+
+Synthetic checks cover both queues, rejection of completion and unassignment
+during a hold, retention of the assignee and original start, cancel, rejected
+saves, acknowledgement, and restart. The migration was exercised in a
+disposable local PostgreSQL instance. Hosted migration and app delivery are
+outside this local implementation.
+
 ### Chart navigation to a dispensing or treatment instruction — 2026-11-09
 
 Local implementation from `origin/main` `ea2f1ed5`. The user approved the

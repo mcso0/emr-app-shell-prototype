@@ -26,12 +26,12 @@ function visit(node: ts.Node) {
 visit(reception);
 if (!receptionEffect) throw new Error("Reception refresh effect not found");
 
-let browser: EventTarget & { setInterval: typeof setInterval; clearInterval: typeof clearInterval };
+let browser: EventTarget & { setInterval: typeof setInterval; clearInterval: typeof clearInterval; setTimeout: typeof setTimeout; clearTimeout: typeof clearTimeout };
 let doc: EventTarget & { visibilityState: string };
 const cleanups: Array<() => void> = [];
 beforeEach(() => {
   vi.useFakeTimers();
-  browser = Object.assign(new EventTarget(), { setInterval, clearInterval });
+  browser = Object.assign(new EventTarget(), { setInterval, clearInterval, setTimeout, clearTimeout });
   doc = Object.assign(new EventTarget(), { visibilityState: "visible" });
   vi.stubGlobal("window", browser); vi.stubGlobal("document", doc);
 });
@@ -51,7 +51,7 @@ function harness() {
   const same = (a?: unknown[], b?: unknown[]) => a && b && a.length === b.length && a.every((item, i) => Object.is(item, b[i]));
   const exports: { useQueue?: (date?: string) => Hook } = {};
   runInNewContext(script, {
-    exports, Map, Set, Promise, AbortController, crypto, window: browser, document: doc,
+    exports, Map, Set, Promise, AbortController, Date, crypto, window: browser, document: doc,
     createSharedVisibleResource,
     getWorkspaceIdFromPath: () => workspace,
     useModuleSidePanel: () => ({ visible }),
@@ -143,6 +143,28 @@ describe.skipIf(Boolean(baseline))("dispensing lifecycle", () => {
     const second = changed(); await settle(); expect(h.reads).toHaveLength(6);
     h.finish(4, "newest"); await second; h.reads.slice(2, 4).forEach(read => read.finish(200, { ok: true, workItems: [{ id: "older", rowRevision: 1 }] })); await first;
     expect(a.hook.workItems[0].id).toBe("newest");
+  });
+  it("refreshes once when a held order expires and cancels the timer after the last consumer leaves", async () => {
+    const h = harness();
+    const panel = h.mount(), content = h.mount();
+    await settle();
+
+    const hold = () => ({ ok: true, workItems: [{
+      id: "held-order", rowRevision: 1, pauseUntil: new Date(Date.now() + 6_000).toISOString(),
+    }] });
+    h.reads.forEach(read => read.finish(200, hold()));
+    await settle();
+    await vi.advanceTimersByTimeAsync(6_249);
+    expect(h.reads).toHaveLength(2);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(h.reads).toHaveLength(4);
+
+    h.reads.slice(2).forEach(read => read.finish(200, hold()));
+    await settle();
+    panel.stop();
+    content.stop();
+    await vi.advanceTimersByTimeAsync(6_250);
+    expect(h.reads).toHaveLength(4);
   });
   it.each([401, 403])("denial %s clears rows even when the other queue fails", async status => {
     const h = harness(); const a = h.mount(); await settle(); h.finish(); await settle();

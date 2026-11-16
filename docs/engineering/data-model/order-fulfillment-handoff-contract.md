@@ -138,7 +138,7 @@ is not applied remotely. Work/evidence: [CLINICAL-FULFILLMENT-PR-010](../../work
   one command and opens the instruction. Existing timestamps and completed
   items are preserved. The flow uses the existing instruction acknowledgement
   and treatment medication-link checks.
-- An assigned paused item still belongs to 진행중. The start command leaves
+- An assigned paused item appears as 일시중지. The start command leaves
   separately assigned work and the other queue in a mixed set in their
   existing scope. The migration changes the instruction command only.
 
@@ -181,18 +181,37 @@ No new API, role policy, migration or remote data change belongs to this UI slic
 
 - A requested or released (paused and unassigned) replacement attempt appears as 재요청 on the patient card and in the order queue group. The card retains the original request time and requester.
 - A re-request with prior work and a current main assignee keeps the instruction open. The scoped instruction read returns the earliest start time of the displayed items across their attempts. Waiting work with no main assignee opens prework even when an earlier attempt has a start time.
-- The instruction table shows changed rows under 수정된 오더. The re-request leaves the current attempt pending. When 업무 계속하기 opens the review, acknowledging the latest changes continues the same start or claim-and-start command. The order moves to 진행중 when the command succeeds.
+- The instruction table shows changed rows under 수정된 오더. The re-request leaves the current attempt pending. An assigned performer sees the change review when opening the instruction. Cancel leaves the instruction readable in 재요청. 업무 이어가기 reopens the review. 업무 시작하기 acknowledges the current version and starts the existing replacement attempt. Completion returns when the start succeeds.
 - When 변경 내용 보기 or 변경이력 보기 opens the review, acknowledgement records the reviewed version. The order keeps its current work status.
 - After releasing a replacement attempt, the selected prework screen displays 재요청 beside the request time. It stays open on reload. 담당하기 checks the latest instructions and claims and starts the existing attempt for an eligible assignee. When that action requires acknowledgement, confirming the review continues the assignment. Opening 변경 내용 보기 from prework records acknowledgement without assigning or starting work. The earlier start remains in the instruction history.
 
-For a dispensing replacement attempt, the order-change banner names the item
-and previews the first two changes. The review shows saved before and after
-values, including the request quantity and unit, followed by the recorded reason.
+For a dispensing or treatment replacement attempt, the order-change banner
+names the item and previews the first two changes. The review shows saved before
+and after values, followed by the recorded reason. Dispensing includes the
+request quantity and unit when they changed.
 The UI combines values and reason only for a uniquely matched order and revision.
 Otherwise the original instruction text remains available. The review hides
 empty request or completion entries and keeps saved instructions and recorded
 partial work accessible. Opening or closing the review does not acknowledge the
 revision.
+
+## Order work holds
+
+The shared queue projects active work holds as `paused`, with `pauseReason` and
+`pauseUntil`. Plan/Order reads the hold reason alongside the recorded task status
+so it can show the same temporary state. The shared `일시중지` badge and queue group use the CDS V2
+`state=hold` icon. Existing execution status, phases, owner, and history stay
+recorded independently of the temporary hold.
+
+Opening the confirmed-order clinical editor acquires an `order_edit` hold for
+active dispensing or treatment work. A set hold covers one instruction and
+queue type. The existing encounter lock serializes hold management, order
+saves, and execution commands. The hold preserves the previous instruction
+for reading and denies execution mutations, including completion and release
+of the assignee. The chart editor can renew or release only its own session.
+Cancel releases the hold. An abandoned session expires after five minutes
+without renewal. A successful save releases the hold in the same transaction
+as the planned order change. A rejected save keeps the hold.
 
 ## Reopening a completed dispensing or treatment instruction
 
@@ -609,8 +628,9 @@ SOAP charts. Missing patient identities stay task-specific. Names are display
 labels only. Type/status/search counts retain their existing task semantics.
 Urgency is independent of lifecycle status. Patient priority/latest sorting
 uses raw priority/status and immutable request creation time; equal task ranks
-use the chosen request/assignee/wait sort. Assigned paused items belong to
-진행중. Unassigned paused dispensing and treatment items appear as 대기중.
+use the chosen request/assignee/wait sort. Assigned paused items appear as
+일시중지. Released first attempts in dispensing and treatment appear as
+대기중. Released replacement attempts appear as 재요청.
 Assignment filtering uses assignedToUserId, not whether a display name resolves.
 
 Selection still uses exact lab result, imaging study, or fulfillment queue
