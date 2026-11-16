@@ -192,7 +192,7 @@ test("Plan/Order title, tabs, and selection checkbox share the same left edge", 
     .getByRole("heading", { name: "Plan/Order" })
     .locator('xpath=ancestor::section[@data-slot="chart-workspace-panel"]');
   const heading = panel.getByRole("heading", { name: "Plan/Order" });
-  const tabs = panel.locator('[role="tablist"][aria-label="처방/오더 분류"]');
+  const tabs = panel.locator('[role="group"][aria-label="처방/오더 분류"]');
   const selectionHeader = table.locator('thead th[data-column-id="select"]');
   const selectionCheckbox = selectionHeader.getByRole("checkbox", {
     name: "오더 전체 선택",

@@ -950,7 +950,7 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   await expect(page.getByRole("button", { name: "SOAP 추가" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "초안 저장" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /진단명/ })).toHaveCount(0);
-  await expect(page.getByRole("tab", { name: "전체오더" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "전체오더" })).toBeVisible();
   await expect(page.getByLabel("처방 조회 범위")).toHaveCount(0);
   const soapDiagnosisGridMetrics = await page
     .getByTestId("chart-soap-diagnosis-grid")
@@ -1661,7 +1661,7 @@ test("chart Plan/Order keeps the approved pinned region and scrolls detail colum
   expect(Math.abs(pinnedXAfter - pinnedXBefore)).toBeLessThanOrEqual(1);
   expect(scrollXAfter).toBeLessThan(scrollXBefore);
 
-  await page.getByRole("tab", { name: "영상 1", exact: true }).click();
+  await page.getByRole("button", { name: "영상 1", exact: true }).click();
   await expect(
     orderTable.locator('tbody tr[data-emr-data-table-row="true"]'),
   ).toHaveCount(1);
@@ -8445,7 +8445,7 @@ test("chart keeps orders visible when SOAP sections grow", async ({ page }) => {
   await expect(soapDocument).toContainText("SOAP 확장 행 24");
   await expectTopEdgeInViewport(
     page,
-    page.getByRole("tab", { name: "전체오더" }),
+    page.getByRole("button", { name: "전체오더" }),
   );
   await expectTopEdgeInViewport(
     page,
@@ -8461,7 +8461,7 @@ test("chart grab divider resizes the SOAP and order areas", async ({
   const divider = page.getByRole("separator", {
     name: "진료 기록과 처방/오더 영역 높이 조절",
   });
-  const orderHeading = page.getByRole("tab", { name: "전체오더" });
+  const orderHeading = page.getByRole("button", { name: "전체오더" });
 
   await expect(divider).toBeVisible();
   await expect(orderHeading).toBeVisible();
@@ -8544,7 +8544,7 @@ test("chart order table supports single sort without a filter control", async ({
   await restoreKongOrderDraftDefaults(page);
 
   const orderArea = page.locator("section").filter({
-    has: page.getByRole("tablist", { name: "처방/오더 분류" }),
+    has: page.getByRole("group", { name: "처방/오더 분류" }),
   });
   const orderRows = orderArea.locator('[data-testid^="chart-order-row-"]');
   await orderArea
@@ -9146,28 +9146,28 @@ test("chart opens the Kong scenario as one SOAP, assessment, and order flow", as
   await expect(orderDetail).toContainText("구토 완화 처방");
   await orderDetail.getByRole("button", { name: "저장하고 닫기" }).click();
   await expect(
-    page.getByRole("tab", { name: "전체오더 4", exact: true }),
-  ).toHaveAttribute("aria-selected", "true");
+    page.getByRole("button", { name: "전체오더 4", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
   await expect(
-    page.getByRole("tab", { name: "임상 1", exact: true }),
+    page.getByRole("button", { name: "임상 1", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("tab", { name: "영상 1", exact: true }),
+    page.getByRole("button", { name: "영상 1", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("tab", { name: "조제 1", exact: true }),
+    page.getByRole("button", { name: "조제 1", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("tab", { name: "처치 1", exact: true }),
+    page.getByRole("button", { name: "처치 1", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("tab", { name: "원외(검사) 0", exact: true }),
+    page.getByRole("button", { name: "원외(검사) 0", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("tab", { name: "입원 0", exact: true }),
+    page.getByRole("button", { name: "입원 0", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("tab", { name: "기타 0", exact: true }),
+    page.getByRole("button", { name: "기타 0", exact: true }),
   ).toBeVisible();
 });
 
@@ -10700,7 +10700,7 @@ test("chart order add searches active workspace catalog and adds a draft row", a
   await expect(addedRow).toContainText("[CBC 검사] #BASO");
   await expect(addedRow).toContainText("12,000");
   await expect(
-    page.getByRole("tab", { name: /전체오더 \d+/, exact: true }),
+    page.getByRole("button", { name: /전체오더 \d+/, exact: true }),
   ).toBeVisible();
 
   await addedRow.hover();
@@ -11503,10 +11503,10 @@ test("chart quick-add hides only for total-empty and restores after existing fir
   await page.getByTestId("chart-order-catalog-candidate-std-ord-lab-cbc-baso").click();
   await confirmChartOrderCatalogSelection(dialog, 1);
   await expect(composer).toBeVisible();
-  await page.getByRole("tab", { name: "영상 0", exact: true }).click();
+  await page.getByRole("button", { name: "영상 0", exact: true }).click();
   await expect(page.getByTestId("chart-order-empty-body")).toBeVisible();
   await expect(composer).toBeVisible();
-  await page.getByRole("tab", { name: /전체오더 1/, exact: true }).click();
+  await page.getByRole("button", { name: /전체오더 1/, exact: true }).click();
   await page.getByRole("button", { name: "[CBC 검사] #BASO 후보 삭제", exact: true }).click({ force: true });
   await page.getByRole("dialog").getByRole("button", { name: "삭제", exact: true }).click();
   await expect(composer).toHaveCount(0);
@@ -11850,7 +11850,7 @@ test("chart status presentation keeps edits in place until blur and hides unconf
   await expect(orderFooter).not.toContainText("총 오더");
   const initialFooterCounts = await readFooterConfirmationCounts();
   const allOrderCount = Number(
-    (await page.getByRole("tab", { name: /전체오더 \d+/, exact: true }).innerText())
+    (await page.getByRole("button", { name: /전체오더 \d+/, exact: true }).innerText())
       .match(/\d+/)?.[0],
   );
   expect(
