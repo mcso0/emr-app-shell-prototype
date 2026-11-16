@@ -241,7 +241,7 @@ export function ChartPreconsultationContextPanel({
   );
 }
 
-async function loadChartPreconsultationContext({
+export async function loadChartPreconsultationContext({
   actorHeaders,
   encounterId,
   workspaceId,

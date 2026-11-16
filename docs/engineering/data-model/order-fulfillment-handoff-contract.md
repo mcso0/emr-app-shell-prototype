@@ -201,7 +201,13 @@ revision.
   status badge appears beside the request timestamp in the summary below the
   toolbar. When completion and other actions are both allowed, the arrow
   beside the completion button opens the available actions. The document menu
-  next to the copy link keeps its existing record tools.
+  next to the title shows `오더 차트로 이동` and `지시서 링크 복사` in that order.
+  Chart navigation uses the selected work item's encounter and origin chart IDs
+  through existing workspace navigation. The chart context read checks existing
+  chart permissions when the encounter is outside the live queue. An unavailable
+  source chart shows an error. Without an origin chart ID, the action is disabled.
+  Link copying preserves the selected instruction. Available record
+  tools appear below these two actions.
 - Dispensing and treatment cards show the `수정이력` button and its divider
   only when the dialog can show a change for an item in the card or for the
   set's common instruction. The dialog shows those changes.

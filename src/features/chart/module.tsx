@@ -211,10 +211,11 @@ import {
 } from "@/features/chart/data";
 import { useWorkspaceConsultationRooms } from "@/features/chart/use-workspace-consultation-rooms";
 import { ChartDiagnosisHistoryItem } from "@/features/chart/components/chart-diagnosis-history-item";
-import { ChartPreconsultationContextPanel } from "@/features/chart/preconsultation-context-panel";
+import { ChartPreconsultationContextPanel, loadChartPreconsultationContext } from "@/features/chart/preconsultation-context-panel";
 import {
   readChartLiveEncounterHandoff,
   saveChartLiveEncounterHandoff,
+  saveChartPreconsultationHandoff,
 } from "@/features/chart/live-encounter-handoff";
 import type {
   ChartLiveQueueRecord,
@@ -1316,6 +1317,37 @@ function useChartLiveQueueCoordinator(workspaceId: string) {
       return;
     }
 
+    // Order links can target a completed encounter that is no longer on the day's queue.
+    const route = new URL(window.location.href);
+    const orderEncounterId = route.searchParams.get("orderChart") === "1" && route.searchParams.has("chartId")
+      ? route.searchParams.get("encounterId")
+      : null;
+    if (orderEncounterId && result.ok) {
+      const onQueue = result.queue.some((record) => record.encounter.id === orderEncounterId);
+      const directRead = onQueue ? null : await loadChartPreconsultationContext({
+        actorHeaders, encounterId: orderEncounterId, workspaceId,
+      });
+      const latestRoute = new URL(window.location.href);
+      if (requestSeqRef.current !== requestSeq
+        || latestRoute.pathname !== route.pathname
+        || latestRoute.searchParams.get("orderChart") !== "1"
+        || latestRoute.searchParams.get("encounterId") !== orderEncounterId) return;
+
+      const context = directRead?.ok && directRead.context.encounter.id === orderEncounterId
+        ? directRead.context : null;
+      if (context) saveChartPreconsultationHandoff(workspaceId, context);
+      const nextEncounterId = onQueue || context ? orderEncounterId : "";
+      setLiveQueueState({
+        records: result.queue,
+        scope: requestedScope,
+        status: "ready",
+      });
+      setSelectedQueueItem("treatment", nextEncounterId);
+      selectedEncounterIdRef.current = nextEncounterId;
+      void selectEncounter(nextEncounterId);
+      return;
+    }
+
     if (!result.ok) {
       if (legacySalesDemo) {
         setLiveQueueState({
@@ -1336,7 +1368,7 @@ function useChartLiveQueueCoordinator(workspaceId: string) {
         scope: requestedScope,
         status: "error",
       });
-      replaceLiveChartSelection({ encounterId: "", router, workspaceId });
+      if (!orderEncounterId) replaceLiveChartSelection({ encounterId: "", router, workspaceId });
       return;
     }
 
@@ -1842,7 +1874,7 @@ export function ChartSidePanel({
     const href = buildWorkspaceSurfaceRoute({
       moduleId: "treatment",
       params: { encounterId: itemId },
-      removeParams: ["chartId", "historyEncounterId"],
+      removeParams: ["chartId", "historyEncounterId", "orderChart"],
       search: searchParams,
       workspaceId,
     });
@@ -1907,6 +1939,7 @@ export function ChartSidePanel({
             "chartId",
             "encounterId",
             "historyEncounterId",
+            "orderChart",
             "patientId",
             "scenario",
           ],
@@ -2561,6 +2594,7 @@ function ChartHistoryAside({ workspaceId, bundle }: { workspaceId: string; bundl
                         if (row.encounter.id === selectedEncounterId) {
                           url.searchParams.delete("historyEncounterId");
                         } else {
+                          url.searchParams.delete("orderChart");
                           url.searchParams.set(
                             "historyEncounterId",
                             row.encounter.id,
@@ -16000,6 +16034,7 @@ export function ChartContent({
   useScenarioEncounterSync(workspaceId);
 
   const searchParams = useSearchParams();
+  const orderChartId = searchParams.get("orderChart") === "1" ? searchParams.get("chartId") : null;
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
   );
@@ -16103,7 +16138,10 @@ export function ChartContent({
   const chartWorkspaceRef = useRef<HTMLDivElement | null>(null);
   const resizingPointerIdRef = useRef<number | null>(null);
   const scopedEncounterId =
-    queueScopeMatches || allowMockFallback ? selectedEncounterId : "";
+    (queueScopeMatches || allowMockFallback) &&
+    (!orderChartId || searchParams.get("encounterId") === selectedEncounterId)
+      ? selectedEncounterId
+      : "";
   const liveQueueBundle = useMemo(
     () => getLiveQueueBundle(scopedEncounterId, liveQueueRecords),
     [liveQueueRecords, scopedEncounterId],
@@ -16112,7 +16150,7 @@ export function ChartContent({
   // fallback still resolves on each render because it is stored outside React.
   const activeBundle =
     liveQueueBundle ??
-    getSelectedBundle(scopedEncounterId, liveQueueRecords, { allowMockFallback });
+    getSelectedBundle(scopedEncounterId, liveQueueRecords, { allowMockFallback: allowMockFallback && !orderChartId });
   const chartHistoryScopeMatches = Boolean(
     activeBundle &&
     chartHistoryScope?.workspaceId === workspaceId &&
@@ -16126,9 +16164,9 @@ export function ChartContent({
     () => getDisplayedChartBundle({
       activeBundle,
       historyRecords: scopedChartHistoryRecords,
-      historyViewEncounterId,
+      historyViewEncounterId: orderChartId ? "" : historyViewEncounterId,
     }),
-    [activeBundle, historyViewEncounterId, scopedChartHistoryRecords],
+    [activeBundle, historyViewEncounterId, orderChartId, scopedChartHistoryRecords],
   );
   const isHistoricalView = Boolean(
     bundle && activeBundle && bundle.encounter.id !== activeBundle.encounter.id,
@@ -16193,12 +16231,13 @@ export function ChartContent({
     encounterId?: string;
     status: "idle" | "loading" | "saving" | "saved" | "error";
   }>({ status: "idle" });
-  const shouldPrepareInitialChart = !isHistoricalView &&
+  const shouldPrepareInitialChart = !orderChartId && !isHistoricalView &&
     (bundle?.encounter.status === "in_consultation" || bundle?.encounter.status === "ordered");
   const encounterCharts = useEncounterCharts({ workspaceId: activeWorkspaceId, encounterId: activeEncounterId,
     actorKey: authSession?.id ?? "signed-out", actorHeaders, enabled: authHydrated,
     prepareInitialChart: shouldPrepareInitialChart,
-    requestedChartId: historyViewChartId || searchParams.get("chartId") });
+    requestedChartId: orderChartId || historyViewChartId || searchParams.get("chartId"),
+    requireRequestedChart: Boolean(orderChartId) });
   const activeChartId = encounterCharts.selectedChartId;
   const selectedChart = encounterCharts.charts.find((chart) => chart.id === activeChartId);
   const effectiveLatestSoap = persistedSoapState.encounterId === activeEncounterId
@@ -16602,6 +16641,7 @@ export function ChartContent({
           preparedChart.id,
           () => {
             const url = new URL(window.location.href);
+            url.searchParams.delete("orderChart");
             url.searchParams.set("historyEncounterId", result.flow.encounter.id);
             url.searchParams.set("chartId", preparedChart.id);
             window.history.replaceState(
@@ -17277,6 +17317,15 @@ export function ChartContent({
 
     if (liveQueueStatus === "idle" || liveQueueStatus === "loading") {
       return <ChartContentLoadingState fullHeight />;
+    }
+    if (orderChartId && liveQueueStatus === "ready") {
+      return (
+        <div className="p-3">
+          <ChartNotice severity="error" title="오더 차트를 열지 못했어요"
+            action={<Button size="sm" variant="outline" onClick={() => void refreshAction?.onRefresh()}>다시 시도</Button>}
+          />
+        </div>
+      );
     }
 
     return (
@@ -18021,7 +18070,7 @@ export function ChartContent({
       ) : !activeChartId ? (
         <div className="flex min-h-0 flex-1 items-start p-3">
           {encounterCharts.status === "error" ? (
-            <ChartNotice key={`${encounterCharts.scope}-list-${chartListRetryKey}`} severity="error" title="차트 목록을 불러오지 못했어요"
+            <ChartNotice key={`${encounterCharts.scope}-list-${chartListRetryKey}`} severity="error" title={orderChartId ? "오더 차트를 열지 못했어요" : "차트 목록을 불러오지 못했어요"}
               action={<Button size="sm" variant="outline" onClick={() => { setChartListRetryKey((key) => key + 1); void encounterCharts.reload(); }}>다시 시도</Button>} />
           ) : shouldPrepareInitialChart && encounterCharts.initialChartPreparationStatus === "error" ? (
             <ChartNotice key={`${encounterCharts.scope}-prepare`} severity="error" title="진료 차트를 준비하지 못했어요"

@@ -33,7 +33,8 @@ test("copied treatment link reopens the exact instruction when an encounter has 
   await page.goto(`/w/${workspaceId}/dispensing?date=${date}&encounterId=${encounterId}&queueItemId=live-fulfillment-${treatmentId}&modulePanel=closed&aside=closed`);
   await expect(page.getByRole("heading", { name: "처치 지시서" })).toBeVisible();
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(page.url()).origin });
-  await page.getByRole("button", { name: "처치 지시서 링크 복사" }).click();
+  await page.getByRole("button", { name: "문서 추가 작업" }).press("Enter");
+  await page.getByRole("menuitem", { name: "지시서 링크 복사" }).click();
   const copiedLink = await page.evaluate(() => navigator.clipboard.readText());
   const copiedUrl = new URL(copiedLink);
   expect(copiedUrl.searchParams.get("queueItemId")).toBe(`live-fulfillment-${treatmentId}`);
@@ -44,6 +45,77 @@ test("copied treatment link reopens the exact instruction when an encounter has 
   await expect(page.getByRole("heading", { name: "처치 지시서" })).toBeVisible();
   expect(requestedDates).toContain(date);
 });
+
+for (const queueType of ["dispensing", "treatment"] as const) {
+  test(`${queueType} opens the source chart of an encounter outside the live queue`, async ({ page }) => {
+    await grantCheongdamWorkspaceAccess(page);
+    await page.setViewportSize({ width: 1062, height: 866 });
+    const workspaceId = PREPARED_EMPTY_CLINIC_WORKSPACE_ID;
+    const workItemId = "97090000-0000-4000-8000-000000000041";
+    const encounterId = "97090000-0000-4000-8000-000000000042";
+    const originChartId = "97090000-0000-4000-8000-000000000043";
+    const newerChartId = "97090000-0000-4000-8000-000000000044";
+    const date = "2026-09-07";
+    const recordedAt = `${date}T01:30:00.000Z`;
+    const sourceChart = { id: originChartId, encounterId, status: "signed", createdAt: recordedAt, updatedAt: recordedAt };
+    let sourceChartAvailable = true;
+
+    await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items?*`, async (route) => {
+      const query = new URL(route.request().url()).searchParams;
+      await route.fulfill({ json: { ok: true, workItems: query.get("queueType") === queueType ? [{
+        id: workItemId, workspaceId, encounterId, originChartId, orderId: syntheticInstruction.items[0].orderId,
+        queueType, requestCycle: 1, rowRevision: 1, status: "in_progress", startedAt: recordedAt,
+        createdAt: recordedAt, updatedAt: recordedAt, sourceSnapshot: { patientName: "합성 환자", orderDisplayName: "합성 오더" },
+      }] : [] } });
+    });
+    await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}/instruction`, (route) =>
+      route.fulfill({ json: { ok: true, document: { ...syntheticInstruction, queueType, firstStartedAt: recordedAt } } }));
+    await page.route(`**/api/workspaces/${workspaceId}/chart/live-queue?*`, (route) =>
+      route.fulfill({ json: { ok: true, queue: [] } }));
+    await page.route(`**/api/workspaces/${workspaceId}/chart/preconsultation-context?*`, (route) => {
+      expect(new URL(route.request().url()).searchParams.get("encounterId")).toBe(encounterId);
+      return route.fulfill({ json: { ok: true, context: {
+        encounter: { id: encounterId, encounterNo: "합성 진료", status: "completed", receptionType: "walk_in", checkedInAt: recordedAt },
+        patient: { id: "synthetic-patient", patientNo: "합성-01", name: "합성 환자", species: "dog", sex: "unknown" },
+        queue: { id: "synthetic-queue", status: "done" }, priorEncounterCount: 0, vitals: [], history: [],
+      } } });
+    });
+    await page.route(`**/api/workspaces/${workspaceId}/chart/encounter-charts?*`, (route) =>
+      route.fulfill({ json: { ok: true, charts: [
+        { ...sourceChart, id: newerChartId, createdAt: `${date}T02:30:00.000Z` },
+        ...(sourceChartAvailable ? [sourceChart] : []),
+      ] } }));
+    await page.route(`**/api/workspaces/${workspaceId}/chart/soap-notes?*`, (route) => {
+      expect(new URL(route.request().url()).searchParams.get("chartId")).toBe(originChartId);
+      return route.fulfill({ json: { ok: true, soapNote: sourceChart } });
+    });
+
+    await page.goto(`/w/${workspaceId}/dispensing?date=${date}&queueItemId=live-fulfillment-${workItemId}&modulePanel=closed&aside=closed`);
+    const toolbar = page.locator('[data-slot="emr-page-header"]').filter({
+      has: page.getByRole("heading", { name: queueType === "dispensing" ? "조제 지시서" : "처치 지시서" }),
+    });
+    const more = toolbar.getByRole("button", { name: "문서 추가 작업" });
+    await expect(toolbar.getByRole("button", { name: /링크 복사/ })).toHaveCount(0);
+    await expect(more.locator("..").getByRole("separator")).toHaveCount(0);
+    await more.press("Enter");
+    const menu = page.getByRole("menu");
+    await expect(menu.getByRole("menuitem")).toHaveText(["오더 차트로 이동", "지시서 링크 복사"]);
+
+    const soapRead = page.waitForRequest((request) => new URL(request.url()).pathname.endsWith("/chart/soap-notes"));
+    await menu.getByRole("menuitem", { name: "오더 차트로 이동" }).click();
+    const soapQuery = new URL((await soapRead).url()).searchParams;
+    expect(soapQuery.get("encounterId")).toBe(encounterId);
+    expect(soapQuery.get("chartId")).toBe(originChartId);
+    await expect(page).toHaveURL(new RegExp(`/treatment\\?.*chartId=${originChartId}`));
+
+    if (queueType === "treatment") {
+      sourceChartAvailable = false;
+      await page.reload();
+      await expect(page.getByText("오더 차트를 열지 못했어요", { exact: true })).toBeVisible();
+      await expect(page).toHaveURL(new RegExp(`/treatment\\?.*chartId=${originChartId}`));
+    }
+  });
+}
 
 test("patient history combines dispensing and treatment orders and filters by category", async ({ page }) => {
   await page.goto(

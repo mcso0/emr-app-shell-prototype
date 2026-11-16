@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { expect, userEvent, within, waitFor } from "storybook/test";
+import { expect, fn, userEvent, within, waitFor } from "storybook/test";
 import { syntheticInstruction } from "../instruction-fixtures";
 import type { InstructionItem } from "@/features/fulfillment/instruction-contract";
 import type { InstructionIntent } from "../use-fulfillment-instruction";
@@ -24,6 +24,8 @@ function Example({
   queueType = "dispensing",
   displayConditions = false,
   width = 1100,
+  onOpenChart,
+  onCopyLink,
 }: {
   single?: boolean;
   readOnly?: boolean;
@@ -32,6 +34,8 @@ function Example({
   queueType?: typeof syntheticInstruction.queueType;
   displayConditions?: boolean;
   width?: number;
+  onOpenChart: () => void;
+  onCopyLink: () => void;
 }) {
   const [document, setDocument] = useState(() => ({
     ...structuredClone(syntheticInstruction),
@@ -148,7 +152,7 @@ function Example({
     <div style={{ width, maxWidth: "100%" }}>
       <div className="flex items-center justify-end gap-2">
         <InstructionActions inDocumentToolbar workspaceId="synthetic-workspace" controller={controller} onChanged={() => {}} />
-        <InstructionDocumentOutputMenu workspaceId="synthetic-workspace" controller={controller} onChanged={() => {}} />
+        <InstructionDocumentOutputMenu workspaceId="synthetic-workspace" controller={controller} onChanged={() => {}} onOpenChart={onOpenChart} onCopyLink={onCopyLink} />
       </div>
       <InstructionBody
         controller={controller}
@@ -162,6 +166,7 @@ function Example({
 const meta = {
   title: "Features/Dispensing/Instruction workspace",
   component: Example,
+  args: { onOpenChart: fn(), onCopyLink: fn() },
   parameters: { layout: "padded" },
 } satisfies Meta<typeof Example>;
 export default meta;
@@ -196,7 +201,20 @@ export const SetInstruction: Story = {
   },
 };
 export const SingleInstruction: Story = { args: { single: true } };
-export const Compact: Story = { args: { width: 760 } };
+export const Compact: Story = {
+  args: { width: 760 },
+  play: async ({ args, canvasElement }) => {
+    const more = within(canvasElement).getByRole("button", { name: "문서 추가 작업" });
+    const body = within(canvasElement.ownerDocument.body);
+    more.focus();
+    await userEvent.keyboard("{Enter}");
+    await userEvent.click(await body.findByRole("menuitem", { name: "오더 차트로 이동" }));
+    await expect(args.onOpenChart).toHaveBeenCalledTimes(1);
+    await userEvent.click(more);
+    await userEvent.click(await body.findByRole("menuitem", { name: "지시서 링크 복사" }));
+    await expect(args.onCopyLink).toHaveBeenCalledTimes(1);
+  },
+};
 export const TreatmentWithHistory: Story = { args: { queueType: "treatment" } };
 const testFilterAndSort: NonNullable<Story["play"]> = async ({ canvasElement }) => {
   const canvas = within(canvasElement);
