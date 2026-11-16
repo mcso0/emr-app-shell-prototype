@@ -60,14 +60,14 @@ export const HistoricalTableAndDensity: Story = { play: async ({ canvas, canvasE
   await expect(fixture.requests.filter(request => request.method !== "GET")).toHaveLength(0);
 } };
 export const OrderFilters: Story = { play: async ({ canvas }) => {
-  await ready(canvas); const filters = within(canvas.getByRole("tablist", { name: "처방/오더 분류" }));
-  await userEvent.click(filters.getByRole("tab", { name: "임상 1" }));
+  await ready(canvas); const filters = within(canvas.getByRole("group", { name: "처방/오더 분류" }));
+  await userEvent.click(filters.getByRole("button", { name: "임상 1" }));
   await waitFor(() => expect(canvas.queryByTestId(`chart-order-row-${fixture.rows[1].orderId}`)).not.toBeInTheDocument());
   await expect(canvas.getByTestId(`chart-order-row-${fixture.rows[0].orderId}`)).toBeVisible();
-  const treatment = filters.getByRole("tab", { name: "처치 1" }); treatment.focus(); await userEvent.keyboard("{Enter}");
+  const treatment = filters.getByRole("button", { name: "처치 1" }); treatment.focus(); await userEvent.keyboard("{Enter}");
   await waitFor(() => expect(canvas.queryByTestId(`chart-order-row-${fixture.rows[0].orderId}`)).not.toBeInTheDocument());
   await expect(canvas.getByTestId(`chart-order-row-${fixture.rows[1].orderId}`)).toBeVisible();
-  await userEvent.click(filters.getByRole("tab", { name: "전체오더 2" })); await ready(canvas);
+  await userEvent.click(filters.getByRole("button", { name: "전체오더 2" })); await ready(canvas);
 } };
 export const OrderDetailProfileReadOnly: Story = { play: async ({ canvas, canvasElement }) => {
   await ready(canvas);
@@ -483,4 +483,37 @@ export const CatalogFacetKeyboard: Story = { args: { scenario: "dispense-edit" }
   await userEvent.click(dialog.getByRole("button", { name: "취소" }));
   await waitFor(() => expect(body.queryByRole("dialog", { name: "오더 추가" })).not.toBeInTheDocument());
   await expect(fixture.requests.filter(request => request.method !== "GET")).toHaveLength(0);
+} };
+
+export const OrderFilterKeyboard: Story = { play: async ({ canvas, canvasElement }) => {
+  await ready(canvas);
+  const group = canvas.getByLabelText("처방/오더 분류");
+  const buttons = Array.from(group.querySelectorAll("button"));
+  await expect(buttons.filter(button => button.tabIndex === 0)).toHaveLength(1);
+  await expect(group).toHaveAttribute("role", "group");
+  await expect(group).toHaveStyle({ padding: "3px", height: "30px" });
+  const filters = within(group), all = filters.getByRole("button", { name: "전체오더 2" });
+  all.focus(); await userEvent.keyboard("{ArrowRight}");
+  await expect(filters.getByRole("button", { name: "진료 0" })).toHaveFocus();
+  await expect(all).toHaveAttribute("aria-pressed", "true");
+  await userEvent.keyboard("{ArrowRight}");
+  const clinical = filters.getByRole("button", { name: "임상 1" });
+  await expect(clinical).toHaveFocus();
+  clinical.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", keyCode: 229, isComposing: false, bubbles: true, cancelable: true }));
+  await expect(all).toHaveAttribute("aria-pressed", "true");
+  await userEvent.keyboard("{Enter}");
+  await expect(clinical).toHaveAttribute("aria-pressed", "true");
+  await waitFor(() => expect(canvas.queryByTestId(`chart-order-row-${fixture.rows[1].orderId}`)).not.toBeInTheDocument());
+  await expect(canvas.getByTestId(`chart-order-row-${fixture.rows[0].orderId}`)).toBeVisible();
+  await userEvent.keyboard("{End}");
+  const other = filters.getByRole("button", { name: "기타 0" });
+  await expect(other).toHaveFocus(); await userEvent.keyboard(" ");
+  await expect(other).toHaveAttribute("aria-pressed", "true");
+  await expect(canvas.queryByTestId(`chart-order-row-${fixture.rows[0].orderId}`)).not.toBeInTheDocument();
+  await userEvent.keyboard("{Home}{Enter}");
+  await expect(all).toHaveFocus(); await expect(all).toHaveAttribute("aria-pressed", "true");
+  await ready(canvas);
+  await expect(Array.from(group.querySelectorAll("button")).filter(button => button.tabIndex === 0)).toHaveLength(1);
+  await expect(fixture.requests.filter(request => request.method !== "GET")).toHaveLength(0);
+  await expect(within(canvasElement).getByRole("table", { name: "처방/오더 테이블" })).toBeVisible();
 } };

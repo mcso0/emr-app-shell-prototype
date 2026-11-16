@@ -4187,7 +4187,12 @@ function getReceptionMonthDatePickerCells(
   const firstCellDate = new Date(monthStart);
   firstCellDate.setUTCDate(1 - monthStart.getUTCDay());
 
-  return Array.from({ length: 35 }, (_, index) => {
+  // Preserve five rows unless the month's final dates need a sixth week.
+  const cellCount = Math.max(
+    35,
+    Math.ceil((monthStart.getUTCDay() + getDaysInMonth(parts.year, parts.month)) / 7) * 7,
+  );
+  return Array.from({ length: cellCount }, (_, index) => {
     const cellDate = new Date(firstCellDate);
     cellDate.setUTCDate(firstCellDate.getUTCDate() + index);
     const key = getIsoDateFromUtcDate(cellDate);

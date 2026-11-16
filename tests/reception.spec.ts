@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { formatKoreanOperatingDateLabel } from "../src/lib/emr-domain/demo-date";
 import { createDefaultWorkspaceVitalSettingsSnapshot } from "../src/features/patient-vitals/workspace-vital-settings";
 
 type MockKakaoPostcodeResult = {
@@ -9926,3 +9927,44 @@ test("UI SDK mini calendar keeps operating-date reads and keyboard selection", a
   await expect(calendar.getByTestId("side-panel-mini-calendar-day-2026-05-02")).toHaveAttribute("aria-selected", "true");
   await expect(page).toHaveURL(/date=2026-05-02/);
 });
+
+for (const { today, monthEndDates, expectedCells } of [
+  { today: "2027-01-15", monthEndDates: ["2027-01-31"], expectedCells: 42 },
+  { today: "2027-05-15", monthEndDates: ["2027-05-30", "2027-05-31"], expectedCells: 42 },
+  { today: "2027-02-15", monthEndDates: ["2027-02-28"], expectedCells: 35 },
+]) {
+  test(`reservation picker renders the complete month for ${today}`, async ({ page }) => {
+    await freezeBrowserClock(page, `${today}T08:55:00+09:00`);
+    const writes: string[] = [];
+    await page.route("**/api/workspaces/clair-demo/reception/appointments", async route => {
+      if (route.request().method() !== "GET") writes.push(route.request().method());
+      await route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ ok: false, error: "synthetic_no_write" }) });
+    });
+    await page.goto(`/w/clair-demo/reception?date=${today}`);
+    await page.getByTestId("schedule-check-in-button").click();
+    await page.getByRole("menuitem", { name: "예약하기" }).click();
+    const drawer = page.getByTestId("reservation-create-drawer");
+    const trigger = drawer.getByLabel("예약일", { exact: true });
+    const popup = page.locator('[data-slot="popover-content"]').filter({ hasText: `${Number(today.slice(0, 4))}년 ${Number(today.slice(5, 7))}월` });
+    for (const date of monthEndDates) {
+      await trigger.click();
+      const option = popup.getByRole("button", { name: `${formatKoreanOperatingDateLabel(date)} 선택`, exact: true });
+      await expect(option).toBeVisible();
+      await expect(popup.getByRole("button", { name: /\d{2}\.\d{2}\.\d{2}.*선택/ })).toHaveCount(expectedCells);
+      await option.click();
+      await expect(popup).toHaveCount(0);
+      await expect(trigger).toContainText(date.slice(2).replaceAll("-", "."));
+      await expect(trigger).toBeFocused();
+    }
+    await trigger.click();
+    await popup.getByRole("button", { name: "오늘", exact: true }).click();
+    // This legacy synthetic workspace deliberately fixes its operating today.
+    await expect(trigger).toContainText("26.05.01");
+    await trigger.click();
+    const todayPopup = page.locator('[data-slot="popover-content"]').filter({ hasText: "2026년 5월" });
+    await expect(todayPopup.getByRole("button", { name: `${formatKoreanOperatingDateLabel("2026-04-30")} 선택`, exact: true })).toBeDisabled();
+    await expect(todayPopup.getByRole("button", { name: /26\.05\.01.*선택됨/ })).toHaveAttribute("aria-pressed", "true");
+    await page.keyboard.press("Escape");
+    await expect(writes).toEqual([]);
+  });
+}

@@ -1,5 +1,7 @@
 "use client";
 
+import { Toggle, ToggleGroup } from "@ui-sdk/react/toggle";
+
 import { usePageReadiness } from "@/components/emr/page-loading-boundary";
 import type { ConfirmedOrderContext } from "./confirmed-order-edit-contract";
 import { ConfirmedOrderEditDialog } from "@/features/chart/components/confirmed-order-edit-dialog";
@@ -15009,24 +15011,23 @@ const OrderArea = memo(function OrderArea({
         className={collapsed ? "hidden" : "contents"}
       >
         <div className="flex h-11 min-h-11 shrink-0 items-center justify-between gap-3 overflow-x-auto border-b border-[var(--emr-border-default)] pl-2.5 pr-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div
+          <ToggleGroup
             className="flex min-w-max shrink-0 items-center gap-1 rounded-lg bg-[var(--clair-color-atomic-black-alpha-4)] p-[3px]"
-            role="tablist"
+            value={[orderFilter]}
+            deselectable={false}
+            onValueChange={([next]) => { if (next !== undefined) setOrderFilter(next as OrderFilter); }}
             aria-label="처방/오더 분류"
           >
             {orderTabItems.map((tab) => (
-              <button
+              <Toggle
                 key={tab.value}
-                type="button"
-                role="tab"
+                value={tab.value}
                 aria-label={`${tab.label} ${tab.count}`}
-                aria-selected={orderFilter === tab.value}
                 className={cn(
                   "inline-flex min-h-6 min-w-12 items-center justify-center gap-1 rounded-md px-1.5 py-0.5 text-xs leading-4 font-medium tracking-[0.3px] text-[var(--clair-color-atomic-neutral-600)] transition-[background-color,color,box-shadow]",
                   orderFilter === tab.value &&
                     "bg-[var(--clair-color-atomic-common-100)] text-[var(--clair-color-atomic-neutral-800)] shadow-[var(--clair-shadow-sm)]",
                 )}
-                onClick={() => setOrderFilter(tab.value)}
               >
                 {tab.label === "전체오더" ? "전체" : tab.label}
                 <Badge
@@ -15041,9 +15042,9 @@ const OrderArea = memo(function OrderArea({
                 >
                   {tab.count}
                 </Badge>
-              </button>
+              </Toggle>
             ))}
-          </div>
+          </ToggleGroup>
           <div
             data-slot="chart-order-toolbar-actions"
             className="flex shrink-0 items-center gap-2"

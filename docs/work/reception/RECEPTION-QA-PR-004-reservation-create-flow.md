@@ -19,7 +19,7 @@ source_docs:
   - "docs/work/reception/RECEPTION-QA-PR-003-create-drawer-weight.md"
 dependencies:
   - "RECEPTION-QA-PR-003"
-updated: "2026-07-09"
+updated: "2026-11-16"
 ---
 
 # Reception Reservation Creation and Appointment Check-In Flow
@@ -143,3 +143,18 @@ Verification:
 Ready for Human Review.
 
 DEN-516 implements a real reservation creation path plus reservation-to-reception check-in form payloads with server/API/DB validation and focused UI regression coverage. The next issue should account for the shared appointment writer and check-in payload boundary before changing calendar drag or reception detail flows.
+
+## 2026-11-16 Local Reservation Month-End Follow-Up
+
+- The shared reservation date-picker helper's fixed 35-cell layout omitted
+  January 31 and May 30/31 in 2027. Compute complete weeks with the existing
+  five-row minimum and add a sixth row only when necessary.
+- Preserve the existing native/Base picker and its 292px width, 32px day buttons,
+  operating-today return, minimum date, focus return and both caller forms.
+  Date visibility does not bypass closed-day/business-hours or server validation.
+- The local candidate is reconciled from main `23405610`, retaining the separately
+  deployed #1097 Escape fix. Related January/May/February actual-form tests and
+  existing reservation creation passed 4/4 locally; no remote record writes.
+- Scope/readiness is tracked in [DESIGN-SYSTEM-PR-111](../design-system/DESIGN-SYSTEM-PR-111-ui-sdk-rollout.md#pending-reservation-and-planorder-preparation--2026-11-16).
+  No push, PR, merge or deployment is authorized for this follow-up. Notify the
+  owner when the local candidate is ready and wait before delivery.

@@ -1,9 +1,9 @@
 ---
 id: DESIGN-SYSTEM-PR-111
-status: in_progress
+status: human_review
 area: design-system
 priority: P1
-target_pr: Approved UI SDK PR/main/Production delivery; no data/provider side effects
+target_pr: "Local reservation/calendar filter preparation; notify owner before deployment"
 created: 2026-11-16
 source_docs:
   - docs/design/system/DESIGN.md
@@ -302,3 +302,81 @@ public login network timings cannot establish SDK-caused speed or INP changes.
 PR/check/Preview/merge/Production and final smoke evidence will be recorded in
 the correction PR. Human acceptance and exhaustive browser/accessibility
 coverage are not claimed by automated checks.
+
+## Pending Reservation And Plan/Order Preparation — 2026-11-16
+
+The Escape-only correction was delivered by
+[PR #1097](https://github.com/mcso0/emr-app-shell-prototype/pull/1097) at
+`23405610`. Its exact-source Ready Production and authenticated guardian/breed
+Escape smoke passed; [delivery evidence](https://github.com/mcso0/emr-app-shell-prototype/pull/1097#issuecomment-6916094520)
+records the checks and limits. That correction is not duplicated here.
+
+The owner then requested finishing the pending work and being notified when
+deployment is needed. This candidate is **local preparation only**. Do not push,
+open a PR, merge, deploy, change release settings or mutate remote records until
+the owner separately authorizes that next step. The old local checkpoints and
+primary checkout WIP remain preserved.
+
+### Isolated Scope And User Benefit
+
+- Reconcile directly from current main `23405610`, transplanting only the earlier
+  calendar/filter source and regressions. Source/tests equal the previously
+  verified local implementation, while current-main #1097 remains unchanged.
+- Reservation picker: the fixed 35-cell helper omitted January 31 and May 30/31
+  in 2027. Compute complete weeks with a five-row minimum and a sixth row only
+  when required. Keep the existing picker, 292px width, 32px day buttons, today,
+  minimum date and focus return. The shared helper fixes both reservation
+  presentations without a widget/library rewrite. Showing a day does not
+  bypass Sunday/closed-day/business-hour or server write validation.
+- Plan/Order filter: replace nine independent fake tabs with the installed SDK
+  ToggleGroup/Toggle. There is one tab stop; arrows/Home/End move focus and
+  Enter/Space select. Persistent table filters use group/pressed-button
+  semantics, not tab panels. Labels, counts, classes and feature-owned filtering
+  remain. No new wrapper, form layer, table engine or domain state is introduced.
+- Tests adapt role assertions without weakening counts, filtering, table
+  geometry, pinning, sorting, density, permissions or request boundaries.
+
+### Readiness Gate
+
+Refresh focused actual-screen calendar/filter checks, keyboard/IME stories,
+current-main Escape preservation, full types/lint/build/docs/secrets/UX copy,
+diff review and independent read-only review. Record the final local commit
+and latest main. Broader pre-existing router/fixture failures are not silently
+fixed or counted as passing; focused readiness is not exhaustive suite/a11y
+or production acceptance.
+
+After local checks/review, report what is ready and wait for deployment approval.
+Remote Release Check, Ready Preview, exact-head merge and post-deploy smoke are
+future release gates, not steps already performed for this candidate.
+
+### Local Result And Deployment Notice
+
+- **11/11 focused actual-screen E2Es passed** on the reconciled candidate:
+  January 31, May 30/31 and February 35-cell geometry, operating-today/minimum-date
+  and focus return, reservation creation, Plan/Order header/alignment/density,
+  pinning/scroll, single sort and both deployed Escape regressions.
+- **3/3 focused stories and 3/3 project MCP tests passed:** Order Filters,
+  Order Filter Keyboard and retained Nested Search Escape. The first Vitest
+  name filter skipped tests and is not counted; corrected displayed names ran
+  all three. The MCP cold-start UniversalStore channel error was resolved by
+  retrying after the actual preview rendered, without source/config changes.
+- Full types, lint, production build, docs (1083 files), secret scan (5101
+  tracked files), UX copy and diff checks passed. Existing Node 23 engine/Babel
+  size/tracing and synthetic navigation-persistence warnings are not new defects.
+- Independent read-only review against `23405610` found no material issue.
+  Runtime blobs match the previously verified implementation; a fresh extracted
+  calendar helper check covered all 4800 months in 2000–2399. Changed selectors
+  and assertions preserve behavior, including corrected `aria-pressed`.
+- The prior broader Storybook run had six pre-existing focus/router-fixture
+  failures also reproduced in unchanged main `70704694`. Those unrelated fixtures
+  were not modified or rerun as a full suite here; exhaustive a11y/browser and
+  Production acceptance are not claimed.
+
+Local implementation is ready for human review and deployment preparation is
+complete. **Deployment approval is the remaining gate.** Before any delivery,
+notify the owner of this scope; obtain approval, then refresh latest-main and
+candidate checks, create the PR, verify required remote CI/Ready Preview and
+perform the separately approved release/smoke. No remote delivery step has been
+performed for this local candidate.
+
+[Local filter keyboard review](http://localhost:6008/?path=/story/features-chart-actual-workspace--order-filter-keyboard)
