@@ -158,3 +158,7 @@ DEN-516 implements a real reservation creation path plus reservation-to-receptio
 - Scope/readiness is tracked in [DESIGN-SYSTEM-PR-111](../design-system/DESIGN-SYSTEM-PR-111-ui-sdk-rollout.md#pending-reservation-and-planorder-preparation--2026-11-16).
   No push, PR, merge or deployment is authorized for this follow-up. Notify the
   owner when the local candidate is ready and wait before delivery.
+- The owner subsequently approved the bounded PR/CI/Preview/main/Production
+  path after the readiness notice. This supersedes the local-only hold above;
+  no appointment/domain write or provider side effect is authorized by release.
+  Delivery remains gated by the exact-candidate evidence in DESIGN-SYSTEM-PR-111.

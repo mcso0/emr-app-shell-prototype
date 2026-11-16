@@ -3,7 +3,7 @@ id: DESIGN-SYSTEM-PR-111
 status: human_review
 area: design-system
 priority: P1
-target_pr: "Local reservation/calendar filter preparation; notify owner before deployment"
+target_pr: "Approved reservation calendar/filter PR/main/Production delivery after gates"
 created: 2026-11-16
 source_docs:
   - docs/design/system/DESIGN.md
@@ -380,3 +380,27 @@ perform the separately approved release/smoke. No remote delivery step has been
 performed for this local candidate.
 
 [Local filter keyboard review](http://localhost:6008/?path=/story/features-chart-actual-workspace--order-filter-keyboard)
+
+### Authorized Calendar/Filter Delivery
+
+After the readiness notice, the owner explicitly approved PR creation, CI and
+Preview verification, merge/deployment and operating-screen verification for
+this bounded calendar/filter candidate. This supersedes the local-only hold
+above, not data/provider/security/cost boundaries. Checkpoint `e18d63a8` remains
+preserved; the delivery evidence update changes documentation only.
+
+Latest main and current Ready Production were rechecked at `23405610`,
+deployment `dpl_G5KnV2zjaeZxgHhVBpc3ETeKL8xv`. No duplicate candidate PR or
+branch deployment existed before starting delivery. Retain the existing strict
+required Release Check and protected Preview policy; do not enable automatic
+Preview, alter protection/plans, or mutate remote records. A one-off exact-head
+Preview may use the already established release path if the ignore policy
+cancels automatic non-Production builds.
+
+Before merge, record exact head/base, successful required PR check with tested
+merge provenance, Ready Preview, local/focused evidence, expected-head merge
+and rollback reference. After deployment, verify source/alias, public login and
+non-submitting synthetic reservation-date/filter behavior, retaining #1097.
+Do not create appointments or submit registration, clinical/order, email or
+payment writes. Stop on changed scope/head, failed gates, wrong deployment
+source or failed smoke. Final release evidence belongs to the PR conversation.
