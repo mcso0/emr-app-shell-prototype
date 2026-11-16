@@ -879,7 +879,8 @@
   background: var(--card);
   box-shadow: var(--clair-shadow-xs);
 }
-.fd-filter-control[data-active] {
+.fd-filter-control[data-active],
+.fd-toolbar .fd-choice[data-sort-active] {
   border-color: var(--clair-color-atomic-sky-200);
 }
 .fd-toolbar .fd-filter-control button {
@@ -904,10 +905,6 @@
 }
 .fd-toolbar .fd-filter-clear:hover {
   color: var(--clair-color-atomic-neutral-900);
-}
-.fd-toolbar .fd-choice[data-sort-active] {
-  border-color: var(--clair-color-atomic-sky-200);
-  color: var(--emr-text-link);
 }
 .fd-table .fd-complete {
   width: 58px;
