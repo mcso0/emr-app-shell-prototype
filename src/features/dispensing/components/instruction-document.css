@@ -1070,7 +1070,7 @@
   overflow-wrap: anywhere;
 }
 
-.fd-table tr[data-instruction-target] > :is(td, th) {
+.fd-table:where(:not(.fd-prework-table)) tr[data-instruction-target] > :is(td, th) {
   background-color: var(--emr-state-selected);
 }
 
