@@ -1,6 +1,6 @@
 ---
 id: DESIGN-SYSTEM-PR-111
-status: in_progress
+status: human_review
 area: design-system
 priority: P1
 target_pr: User-approved broad local UI SDK adoption; no merge or deployment
@@ -25,7 +25,7 @@ Work starts in an isolated worktree at `c9754c4`. The primary checkout's WIP is
 untouched. Local implementation, synthetic fixtures and verification are in
 scope. Remote data/migrations, provider calls, merge, deploy and release
 configuration changes are excluded. Reconcile the latest main before handing
-off the candidate; upstream progressed through `ca3222a8` to `2cb16b4d` during implementation.
+off the candidate; upstream progressed through `ca3222a8` and `2cb16b4d` to `185f9013` during implementation.
 
 ## Foundation And Sources
 
@@ -84,13 +84,14 @@ client filtering disabled.
 | Multi-breed chip input | Evaluated and reverted this local conversion. Beta SDK controlled `submitOnSelect` reads the pre-render query for partial-label selection, while value-change alone misses exact-label activation. Compensating refs/event glue make this one-off form less simple. Keep its working native/Base behavior and add preservation regressions; do not force SDK usage. |
 | Other date pickers and full scheduling views | Shared simple day picking adopts SDK Calendar. Keep specialized date/range/business-hours behavior and appointment/calendar interaction models; those contracts are not generic day selection. |
 | Command and SOAP editor menus/toolbar | Retain cmdk and BlockNote-owned behavior. SOAP toolbar has an explicit initial style tab stop plus overflow More fallback; ready SDK Toolbar starts at the first item and cannot preserve that contract without a second custom focus layer and trigger rewrites. Editor selection/IME, command execution and layered focus stay with their existing owner. |
+| Chart diagnosis/order result search | Facet lists adopt SDK. Keep diagnosis draft multi-toggle/reorder and virtualized order result search, locked source keys, set-configuration queues and return focus. SDK Combobox would require synchronization glue rather than remove those feature contracts. Ordinary text filtering remains caller-owned. |
 | Table/data grid, pagination, sorting/filter engine and virtualization | Retain TanStack Table/Virtual and server query contracts. Shared segmented/line controls adopt SDK without replacing table state or static table markup. |
 | Scroll area and resizable split panels | Retain tested Base ScrollArea and react-resizable-panels/custom chart persistence contracts. No evidence justifies swapping their functioning integrations. |
 | Drag/reorder, attachments, image/PDF zoom, editor | Retain dnd-kit, existing attachment/provider boundaries, PDF/zoom and BlockNote implementations. SDK is not a reason to rewrite specialized behavior. |
 | Toast, progress/loading, avatar, badge, separator, card, static typography/layout | Retain Sonner and existing primitives/tokens. No speculative SDK wrappers for static or already-efficient elements. |
 | Tree, waterfall, carousel, color picker, rating, navigation menu and other catalog families | No corresponding repeated active requirement identified for this candidate. Do not introduce unused component families or new product behavior. |
 
-## Verification And Remaining Work
+## Verification Scope And Known Limits
 
 Required: focused interaction stories, actual synthetic reception/chart flows,
 changed-file lint, full typecheck, production build, visual geometry review,
@@ -174,5 +175,38 @@ Actual Home checks observe caller-owned local operating date and matching
 work-item reads; Home does not own this date in its URL. Existing reception
 checks continue to verify reception's separate URL/read contract.
 
-Final combined verification and latest-main reconciliation are still pending.
-Do not treat the first tranche's passing counts as evidence for the extension.
+## Final Combined Evidence — 2026-11-16
+
+- Exact code/test candidate `3c48dfa31d0223dd1e9391f210f567413cb020e2`
+  is cleanly rebased onto fetched `origin/main` at
+  `185f9013d25399ae18201fc52e8abe59750ac123`. The upstream fulfillment,
+  dispensing filters and documentation changes are preserved without conflict.
+- **40/40 focused Chromium stories passed:** 39 shared/feature stories across
+  ten files, plus the actual chart catalog facet keyboard/reset story.
+- **15/15 actual-screen synthetic E2Es passed** on that exact candidate,
+  including Home caller-owned date/work-item reads and retained multi-breed
+  form behavior, in addition to the first tranche's reception/chart paths.
+- **9/9 selected official Storybook MCP interaction runs passed** after the
+  final reconciliation, including same-patient activation and the shared
+  date-popup six-week/keyboard/reselect scenario. No exhaustive axe claim.
+- Full typecheck, full lint, production build and docs link check
+  (**1083** docs/agent files) passed. The pre-existing PRD dynamic-filesystem
+  tracing build warning and unrelated baseline failures above remain explicit.
+- The retained form's expanded regression initially reopened suggestions while
+  a previous Base popup was still closing. It now waits for that list's removal
+  before the next gesture. The isolated pair and final combined run pass;
+  no force click, fixed sleep or application workaround was introduced.
+- Visual review confirms the shared date popup's CLAiR styling, 244px width,
+  28px chips and complete 42-cell month. Existing mini-calendar geometry remains
+  separately verified. Same-value activation is tested without duplicate
+  callbacks; adopted keyboard paths include Safari composition guards.
+- Independent behavior review has no unresolved findings. The one-off
+  multi-breed SDK conversion is deliberately reverted, not hidden unfinished
+  work. All remaining family dispositions are recorded above.
+- The isolated worktree contains only this candidate. Next dev's generated-only
+  AGENTS block is backed up outside the checkout and excluded after checking
+  that no non-generated instructions changed. Primary-checkout WIP and its
+  Storybook on 6006 remain outside this work. Local preview stays on 6007.
+
+Ready for **Human Review** of the authorized local implementation, not `Done`.
+No push, PR, merge, deployment, remote-data change or human acceptance is claimed.
