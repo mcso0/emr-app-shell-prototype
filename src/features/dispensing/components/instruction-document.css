@@ -854,6 +854,15 @@
   padding-left: 7px;
   padding-right: 7px;
 }
+.fd-toolbar .fd-tool.fd-choice {
+  width: auto;
+  min-width: 58px;
+  justify-content: center;
+}
+.fd-toolbar .fd-choice[data-sort-active] {
+  border-color: var(--clair-color-atomic-sky-200);
+  color: var(--emr-text-link);
+}
 .fd-table .fd-complete {
   width: 58px;
   height: 24px;
