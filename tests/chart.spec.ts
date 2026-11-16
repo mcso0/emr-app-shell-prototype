@@ -8027,11 +8027,15 @@ for (const [actor, canCancel] of [["user-tech", false], ["user-vet", true]] as c
   });
 }
 
-for (const [queueType, label, waiting] of [["dispensing", "조제", false], ["treatment", "처치", true]] as const) {
-  test(`Plan/Order confirms navigation to the exact ${queueType} instruction item`, async ({ page }) => {
+for (const [queueType, label, waiting] of [
+  ["dispensing", "조제", false],
+  ["dispensing", "조제", true],
+  ["treatment", "처치", true],
+] as const) {
+  test(`Plan/Order confirms navigation to the exact ${queueType} instruction item (${waiting ? "waiting" : "started"})`, async ({ page }) => {
     const workspaceId = "clair-demo";
     const name = waiting
-      ? "합성 처치 세트의 오더명이 길어도 버튼과 전체 이름을 확인할 수 있는지 검증하는 대상 오더"
+      ? `합성 ${label} 세트의 오더명이 길어도 버튼과 전체 이름을 확인할 수 있는지 검증하는 대상 오더`
       : "SYNTHETICCOMPOUNDINGORDERWITHAVERYLONGUNBROKENNAME20261109".repeat(2);
     const createdAt = "2026-05-01T00:00:00Z";
     const dueAt = "2026-05-02T16:00:00Z";
@@ -8183,7 +8187,12 @@ for (const [queueType, label, waiting] of [["dispensing", "조제", false], ["tr
     await expect(target).toBeInViewport();
     await expect(target).toBeFocused();
     if (waiting) {
-      await expect(page.getByRole("row").filter({ hasText: sibling.name })).toBeVisible();
+      const siblingRow = page.getByRole("row").filter({ hasText: sibling.name });
+      await expect(siblingRow).toBeVisible();
+      const cellBackgrounds = (row: typeof target) => row.locator(":scope > :is(th, td)").evaluateAll(
+        cells => cells.map(cell => getComputedStyle(cell).backgroundColor),
+      );
+      expect(await cellBackgrounds(target)).toEqual(await cellBackgrounds(siblingRow));
     } else {
       await expect(target).toHaveAttribute("data-item", workItemId);
       await expect(page.locator(`tr[data-item="${siblingId}"]`)).toBeVisible();
