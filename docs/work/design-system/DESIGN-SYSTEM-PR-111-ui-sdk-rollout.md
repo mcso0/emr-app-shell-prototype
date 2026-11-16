@@ -1,9 +1,9 @@
 ---
 id: DESIGN-SYSTEM-PR-111
-status: human_review
+status: in_progress
 area: design-system
 priority: P1
-target_pr: User-approved broad local UI SDK adoption; no merge or deployment
+target_pr: Approved UI SDK PR/main/Production delivery; no data/provider side effects
 created: 2026-11-16
 source_docs:
   - docs/design/system/DESIGN.md
@@ -210,3 +210,32 @@ checks continue to verify reception's separate URL/read contract.
 
 Ready for **Human Review** of the authorized local implementation, not `Done`.
 No push, PR, merge, deployment, remote-data change or human acceptance is claimed.
+
+## Authorized Release Follow-Up — 2026-11-16
+
+The owner subsequently authorized the remaining PR creation, CI/Preview
+verification, main merge, Production deployment and post-deploy verification for
+this bounded rollout. This supersedes the initial local-only delivery boundary;
+it does not expand application, data, provider, permission or cost scope.
+The owner also requested an honest before/after assessment of problems,
+performance, appearance and behavior, separating visible user benefits from
+internal developer benefits.
+
+The candidate was safely rebased onto main `910512f2`, preserving upstream
+fulfillment/dispensing and queue-refresh changes. The original pre-release
+checkpoint remains preserved locally. Required checks and exact-head Preview
+must be refreshed before merge. Automatic Preview configuration, protection,
+plans, credentials, DB state and providers are not to be changed by this release.
+
+Scoped live smoke: public login and available authenticated, read-only controls
+in the source-allowlisted synthetic workspace. Do not submit patient/guardian,
+clinical/order, invitation, email or payment writes. Compare the same controls
+and viewport before/after where available; label local synthetic comparisons
+and public-route timing separately. Missing authenticated access is a stated
+verification limit, never a passing live-screen check.
+
+Release evidence (PR/head/check/Preview/Production/rollback) is recorded in the
+PR as it becomes available. Stop on failed required checks, unexpected scope,
+non-Ready Preview, secret findings, source mismatch or failed required smoke.
+No additional reservation-picker or Plan/Order redesign is included; those are
+separate possible follow-up opportunities, not unfinished release scope.
