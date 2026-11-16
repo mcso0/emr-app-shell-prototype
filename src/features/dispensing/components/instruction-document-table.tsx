@@ -170,7 +170,7 @@ type Props = {
   editSetInstruction?: () => void;
   refresh?: () => void;
   act: (id: string, type: Action["type"], extra?: Partial<Action>) => void;
-  history: (id: string, item?: string) => void;
+  history: (itemIds: readonly string[] | null) => void;
   notify: (message: string) => void;
 };
 export function InstructionDocumentTable(p: Props) {
@@ -240,6 +240,11 @@ function OrderCard({
     [pending, setPending] = useState(false),
     [hidden, setHidden] = useState<string[]>([]);
   const visibleItems = pending ? o.items.filter(item => !["completed", "cancelled"].includes(item.status)) : o.items;
+  const historyItemIds = o.items.map(item => item.id);
+  if (o.set) historyItemIds.push(o.id);
+  const showHistory = o.kind === "처치" || events.some(event =>
+    event.orderId === o.id && event.changes.some(change => historyItemIds.includes(change.itemId)),
+  );
 
   async function copy(link: boolean) {
     try {
@@ -465,17 +470,21 @@ function OrderCard({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-        <span className="fd-toolbar-divider">
-          <Icon name="toolbar-divider" />
-        </span>
-        <Button
-          variant="outline"
-          className="fd-tool fd-history"
-          onClick={() => history(o.id)}
-        >
-          <Icon name="history" />
-          <span className="fd-button-label">수정이력</span>
-        </Button>
+        {showHistory && (
+          <>
+            <span className="fd-toolbar-divider">
+              <Icon name="toolbar-divider" />
+            </span>
+            <Button
+              variant="outline"
+              className="fd-tool fd-history"
+              onClick={() => history(o.kind === "조제" ? historyItemIds : null)}
+            >
+              <Icon name="history" />
+              <span className="fd-button-label">수정이력</span>
+            </Button>
+          </>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
@@ -709,7 +718,7 @@ function OrderCard({
                                       ))}
                                       <DropdownMenuItem
                                         disabled={busy || !events.some((event) => event.changes.some((change) => change.itemId === i.id))}
-                                        onClick={() => history(o.id, i.id)}
+                                        onClick={() => history([i.id])}
                                       >
                                         이 오더 이력
                                       </DropdownMenuItem>

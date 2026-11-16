@@ -9,11 +9,13 @@ function Example({
   single = false,
   readOnly = false,
   failed = false,
+  splitRoutes = false,
   width = 1100,
 }: {
   single?: boolean;
   readOnly?: boolean;
   failed?: boolean;
+  splitRoutes?: boolean;
   width?: number;
 }) {
   const [document, setDocument] = useState(() => ({
@@ -24,9 +26,20 @@ function Example({
       history: [], snapshots: [],
     },
     isSet: !single,
-    items: single
-      ? [structuredClone(syntheticInstruction.items[0])]
-      : structuredClone(syntheticInstruction.items),
+    items: structuredClone(single ? syntheticInstruction.items.slice(0, 1) : syntheticInstruction.items)
+      .map((item, index) => splitRoutes && index === 1 ? {
+        ...item, plan: { ...item.plan, detailInputs: { ...item.plan.detailInputs as object, route: "topical" } },
+      } : item),
+    changes: splitRoutes ? [
+      ...syntheticInstruction.changes,
+      {
+        ...syntheticInstruction.changes[0],
+        id: "synthetic-internal-change",
+        orderId: syntheticInstruction.items[1].orderId,
+        before: { calculationOutputs: { internalValue: 1 } },
+        after: { calculationOutputs: { internalValue: 2 } },
+      },
+    ] : syntheticInstruction.changes,
   }));
   const [error, setError] = useState<string | null>(null);
   const controller = {
@@ -68,6 +81,18 @@ function Example({
           intent.action === "edit_instruction"
             ? intent.instruction
             : previous.instruction,
+        changes: intent.action === "edit_instruction" ? [
+          ...previous.changes,
+          {
+            id: "synthetic-common-instruction-change",
+            orderId: previous.rootOrderId,
+            createdAt: "2026-10-27T02:00:00Z",
+            actorName: "합성 수의사",
+            changeType: "amendment",
+            before: { instruction: previous.instruction },
+            after: { instruction: intent.instruction },
+          },
+        ] : previous.changes,
         items: previous.items.map((item) => {
           if (item.status === "cancelled") return item;
           if (
@@ -153,6 +178,40 @@ export const SetInstruction: Story = {
 };
 export const SingleInstruction: Story = { args: { single: true } };
 export const Compact: Story = { args: { width: 760 } };
+export const HistoryByRoute: Story = {
+  args: { splitRoutes: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    const oral = canvas.getByRole("button", { name: "합성 품목 A 완료" }).closest<HTMLElement>(".fd-card");
+    const topical = canvas.getByRole("button", { name: "합성 품목 B 완료" }).closest<HTMLElement>(".fd-card");
+    if (!oral || !topical) throw new Error("Expected separate oral and topical cards");
+
+    await expect(within(topical).queryByRole("button", { name: "수정이력" })).not.toBeInTheDocument();
+    await expect(topical.querySelector(".fd-toolbar-divider")).toBeNull();
+    await expect(oral.querySelector(".fd-toolbar-divider")).toBeVisible();
+    await userEvent.click(within(oral).getByRole("button", { name: "수정이력" }));
+    const dialog = await body.findByRole("dialog", { name: "수정 이력" });
+    await expect(dialog).toHaveTextContent("1회량: 0.25 → 0.5");
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(dialog).not.toBeInTheDocument());
+
+    await userEvent.click(within(topical).getByRole("button", { name: "합성 조제 세트 더 보기" }));
+    await userEvent.click(await body.findByRole("menuitem", { name: "세트 공통 지시 수정" }));
+    const edit = within(await body.findByRole("dialog", { name: "세트 공통 지시 수정" }));
+    const instruction = edit.getByRole("textbox", { name: "공통 지시" });
+    await userEvent.clear(instruction);
+    await userEvent.type(instruction, "변경된 공통 지시");
+    await userEvent.click(edit.getByRole("button", { name: "저장" }));
+    await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument());
+
+    await expect(topical.querySelector(".fd-toolbar-divider")).toBeVisible();
+    await userEvent.click(within(topical).getByRole("button", { name: "수정이력" }));
+    const topicalHistory = await body.findByRole("dialog", { name: "수정 이력" });
+    await expect(topicalHistory).toHaveTextContent("세트 공통 지시사항입니다. → 변경된 공통 지시");
+    await expect(topicalHistory).not.toHaveTextContent("1회량");
+  },
+};
 export const ReadOnly: Story = {
   args: { readOnly: true },
   play: async ({ canvasElement }) => {
