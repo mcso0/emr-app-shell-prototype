@@ -638,6 +638,9 @@ export type LabResult = {
   resultDefinitionOrigin?: "canonical" | "legacy" | "quarantined";
   resultDefinitionSnapshotSha256?: string;
   resultProfileLabel?: string;
+  taskId?: string | null;
+  taskAttemptNo?: number | null;
+  priorResults?: { resultId: string; taskId: string | null; taskAttemptNo: number | null; createdAt: string }[];
   collectedAt?: IsoDateTime;
   receivedAt?: IsoDateTime;
   enteredAt?: IsoDateTime;

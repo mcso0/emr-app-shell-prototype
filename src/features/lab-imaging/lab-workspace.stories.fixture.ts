@@ -5,7 +5,7 @@ import { evaluateLabProfileValue, type LabProfileRule } from "./result-profile-c
 import { parsePersistedLabResult } from "./persisted-result-contract";
 import { parseLabProfileConfiguration } from "./server-result-profile-core";
 
-export type LabWorkspaceScenario = "ready" | "readonly" | "queue-error" | "queue-denied" | "empty" | "entries-error" | "row-save-error" | "numeric-no-interval";
+export type LabWorkspaceScenario = "ready" | "readonly" | "queue-error" | "queue-denied" | "empty" | "entries-error" | "row-save-error" | "numeric-no-interval" | "assigned-request" | "rerequest";
 const workItemId = "97000000-0000-4000-8000-000000000001";
 const pendingWorkItemId = "97000000-0000-4000-8000-000000000002";
 const numeric: LabProfileRule = { testMasterKey: "synthetic-numeric", code: "SYN-N", resultValueKind: "numeric", unit: "synthetic-unit", decimalScale: 1, supported: true, numericMin: 0, numericMax: 100, referenceInterval: { low: 1, high: 5, lowInclusive: true, highInclusive: true }, displayRange: { low: 0, high: 20 }, codes: [], referenceStatus: "synthetic_functional_fixture", provenance: {}, allowedQualifiers: ["exact", "less_than", "greater_than"] };
@@ -20,13 +20,15 @@ export function createLabWorkspaceFixture(scenario: LabWorkspaceScenario) {
   const writes: Array<Record<string, unknown>> = [];
   const lifecycle: Array<Record<string, unknown>> = [];
   const copied: string[] = [];
-  let queueReads = 0, entryReads = 0;
+  let queueReads = 0, entryReads = 0, acknowledgements = 0;
+  let held = false;
+  const hasTask = ["assigned-request", "rerequest"].includes(scenario);
   const instance = createPhase2Fixture(scenario === "readonly" ? "readonly" : "ready", { workspaceId, handleAdditionalRequest: async (url, method, body) => {
     const queuePath = `/api/workspaces/${workspaceId}/fulfillment/work-items`;
     const entriesPath = `/api/workspaces/${workspaceId}/lab-imaging/result-entries`;
     if (url.pathname === queuePath && method === "GET") {
       queueReads++;
-      if (url.searchParams.get("queueType") !== "lab") throw new Error("Synthetic queue type mismatch");
+      if (url.searchParams.get("queueType") !== "lab") return Response.json({ ok: true, workItems: [], summary: { totalCount: 0 } });
       if (scenario === "queue-denied") return Response.json({ ok: false, denialReason: "permission_missing" }, { status: 403 });
       if (!queueHealthy) return Response.json({ ok: false }, { status: 503 });
       const patientId = url.searchParams.get("patientId");
@@ -34,12 +36,20 @@ export function createLabWorkspaceFixture(scenario: LabWorkspaceScenario) {
       const items = scenario === "empty" || (date && date !== "2026-10-11") ? [] : workItems.filter(item => !patientId || item.patientId === patientId);
       return Response.json({ ok: true, workItems: structuredClone(items), summary: { totalCount: items.length } });
     }
+    if (url.pathname.startsWith(`/api/workspaces/${workspaceId}/customer/`) || url.pathname.startsWith(`/api/workspaces/${workspaceId}/patient-vitals/`) || url.pathname === `/api/workspaces/${workspaceId}/vital-settings`) return Response.json({ ok: false, error: "permission_missing" }, { status: 403 });
+    if (url.pathname === `/api/workspaces/${workspaceId}/fulfillment/instruction-review`) {
+      if (method === "POST") { acknowledgements++; return Response.json({ ok: true }); }
+      return Response.json({ ok: true, reviews: [{ taskId: baseItem.taskId, requiresAcknowledgement: scenario === "rerequest" && acknowledgements === 0,
+        current: { chartId: "97000000-0000-4000-8006-000000000001", scope: "clinical_lab", versions: { overall: 1 }, versionKey: "1".repeat(64),
+          entries: [{ scope: "overall", revision: 1, instruction: "합성 검사 변경 지시", deleted: false, actorName: "합성 수의사", createdAt: "2026-10-11T00:00:00Z" }] }, previous: null, snapshots: [] }] });
+    }
+    if (held && ["POST", "PUT"].includes(method) && [entriesPath, `/api/workspaces/${workspaceId}/lab-imaging/result-phase2`].includes(url.pathname)) return Response.json({ ok: false, error: "order_work_on_hold" }, { status: 409 });
     if (url.pathname === `/api/workspaces/${workspaceId}/staff` && method === "GET") return Response.json({ ok: true, staff: [{ id: "user-tech", displayName: "합성 검사 담당" }] });
     const commandItem = workItems.find(item => url.pathname === `${queuePath}/${item.id}`);
     if (commandItem && method === "PATCH") {
       if (!body || body.expectedRevision !== commandItem.rowRevision || typeof body.commandId !== "string") throw new Error("Synthetic lifecycle revision mismatch");
       const action = String(body.action); const item = commandItem; lifecycle.push(structuredClone(body));
-      const statuses: Record<string, FulfillmentWorkItem["status"]> = { start: "in_progress", resume: "in_progress", pause: "paused", complete: "completed", return: "returned", claim: "requested", assign: "requested", handoff: item.status, unassign: "requested" };
+      const statuses: Record<string, FulfillmentWorkItem["status"]> = { start: "in_progress", resume: "in_progress", pause: "paused", complete: "completed", return: "returned", claim: "in_progress", assign: "requested", handoff: item.status, unassign: "requested" };
       if (!(action in statuses)) throw new Error("Unsupported synthetic lifecycle command");
       item.status = statuses[action]; item.rowRevision++;
       if (["claim", "start"].includes(action)) item.assignedToUserId = "user-tech";
@@ -86,8 +96,9 @@ export function createLabWorkspaceFixture(scenario: LabWorkspaceScenario) {
     { id: "97000000-0000-4000-8001-000000000002", analyteName: "합성 선택", resultValueKind: "coded", interpretationRule: coded, value: "synthetic-clear", resultPresence: "value", qualifier: "exact", judgment: "normal" },
     { id: "97000000-0000-4000-8001-000000000003", analyteName: "합성 관찰", resultValueKind: "text", interpretationRule: text, value: "합성 관찰 내용", resultPresence: "value", qualifier: "exact", judgment: "not_judged" },
   ];
-  instance.result.rows = initialRows.map(evaluated);
-  const baseItem: FulfillmentWorkItem = { id: workItemId, workspaceId, orderId: instance.result.orderId!, encounterId: instance.result.encounterId, patientId: instance.result.patientId, patientName: "합성 환자 A", guardianName: "합성 보호자 A", queueType: "lab", orderType: "lab", priority: "normal", status: "in_progress", assignedToUserId: "user-tech", requestedByUserId: "synthetic-vet", requesterName: "합성 수의사", requestCycle: 1, rowRevision: 2, createdAt: "2026-10-11T00:00:00Z", updatedAt: "2026-10-11T00:00:00Z", sourceSnapshot: { billingReflectionEnabled: false, orderDisplayName: instance.result.resultName, instruction: "합성 직원 전달 사항", detail: { breed: "합성 품종", age: "합성 나이" } } };
+  instance.result.rows = initialRows.map(row => evaluated(scenario === "rerequest" ? { ...row, value: undefined, note: undefined } : row));
+  if (scenario === "rerequest") { instance.state.overallFinding = ""; instance.state.attachments = []; }
+  const baseItem: FulfillmentWorkItem = { id: workItemId, workspaceId, orderId: instance.result.orderId!, encounterId: instance.result.encounterId, patientId: instance.result.patientId, patientName: "합성 환자 A", guardianName: "합성 보호자 A", queueType: "lab", orderType: "lab", priority: "normal", status: hasTask ? "requested" : "in_progress", canManage: true, ...(hasTask ? { taskId: "97000000-0000-4000-8007-000000000001", taskAttemptNo: scenario === "rerequest" ? 2 : 1 } : {}), assignedToUserId: "user-tech", requestedByUserId: "synthetic-vet", requesterName: "합성 수의사", requestCycle: 1, rowRevision: 2, createdAt: "2026-10-11T00:00:00Z", updatedAt: "2026-10-11T00:00:00Z", sourceSnapshot: { billingReflectionEnabled: false, orderDisplayName: instance.result.resultName, instruction: "합성 직원 전달 사항", detail: { breed: "합성 품종", age: "합성 나이" } } };
   const workItems: FulfillmentWorkItem[] = [baseItem, { ...baseItem, id: pendingWorkItemId, orderId: "97000000-0000-4000-8004-000000000002", patientId: "97000000-0000-4000-8002-000000000002", patientName: "합성 환자 B", guardianName: "합성 보호자 B", status: "requested", assignedToUserId: null }];
   function evaluated(row: LabResultRow): LabResultRow {
     const evaluation = evaluateLabProfileValue(row.interpretationRule!, { value: row.value ?? null, qualifier: row.qualifier, deviceFlag: row.deviceFlag, resultState: row.resultPresence });
@@ -95,9 +106,10 @@ export function createLabWorkspaceFixture(scenario: LabWorkspaceScenario) {
     return { ...row, judgment: evaluation.judgment, resultState: evaluation.state };
   }
   function payload() {
-    const value = { ok: true, workspaceId, workItemId, orderId: instance.result.orderId, encounterId: instance.result.encounterId, resultId: instance.result.id, entryWriteRevision: instance.result.entryWriteRevision, resultDefinitionSnapshot: { schemaVersion: 2, resultProfile: { profileKey: "synthetic-functional", revision: 1, clinicalUseAllowed: false, integrationStatus: "not_integrated", device: { name: "합성 수동 입력" } } }, rows: instance.result.rows.map(row => ({ ...row, value: row.value ?? null, unit: row.interpretationRule!.unit, decimalScale: row.interpretationRule!.decimalScale, deviceFlag: row.deviceFlag ?? null })) };
+    const value = { ok: true, workspaceId, workItemId, ...(hasTask ? { taskId: baseItem.taskId, taskAttemptNo: baseItem.taskAttemptNo } : {}), orderId: instance.result.orderId, encounterId: instance.result.encounterId, resultId: instance.result.id, entryWriteRevision: instance.result.entryWriteRevision, resultDefinitionSnapshot: { schemaVersion: 2, resultProfile: { profileKey: "synthetic-functional", revision: 1, clinicalUseAllowed: false, integrationStatus: "not_integrated", device: { name: "합성 수동 입력" } } }, rows: instance.result.rows.map(row => ({ ...row, value: row.value ?? null, unit: row.interpretationRule!.unit, decimalScale: row.interpretationRule!.decimalScale, deviceFlag: row.deviceFlag ?? null })) };
     if (!parsePersistedLabResult(value, { workspaceId, workItemId, orderId: instance.result.orderId!, encounterId: instance.result.encounterId }, instance.result)) throw new Error("Invalid synthetic canonical readback");
     return value;
   }
-  return { ...instance, workItems, writes, lifecycle, copied, get queueReads() { return queueReads; }, get entryReads() { return entryReads; }, selectedLabResultId: `live-lab-${workItemId}`, recoverQueue: () => { queueHealthy = true; }, recoverEntries: () => { entriesHealthy = true; } };
+  return { ...instance, workItems, writes, lifecycle, copied, get acknowledgements() { return acknowledgements; },
+    setHeld: (value: boolean) => { held = value; baseItem.pauseReason = value ? "order_edit" : null; baseItem.status = value ? "paused" : "in_progress"; baseItem.rowRevision++; instance.state.canEdit = !value; window.dispatchEvent(new Event("focus")); }, get queueReads() { return queueReads; }, get entryReads() { return entryReads; }, selectedLabResultId: `live-lab-${workItemId}`, recoverQueue: () => { queueHealthy = true; }, recoverEntries: () => { entriesHealthy = true; } };
 }

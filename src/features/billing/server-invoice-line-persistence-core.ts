@@ -59,7 +59,7 @@ export type InvoiceLinePersistencePayload = {
 export type InvoiceLinePersistenceGatewayResult =
   | ({ ok: true } & InvoiceLinePersistencePayload)
   | { ok: false; status: 403; denialReason: "permission_missing" }
-  | { ok: false; status: 409; denialReason: "invoice_unavailable" | "line_unavailable" }
+  | { ok: false; status: 409; denialReason: "order_work_on_hold" | "invoice_unavailable" | "line_unavailable" }
   | { ok: false; status: 500; error: "db_read_failed" | "db_write_failed" };
 
 export type InvoiceLinePersistenceGateway = {
@@ -82,7 +82,7 @@ export type InvoiceLineReadResult =
     } & InvoiceLinePersistencePayload)
   | { ok: false; status: 400; error: "invalid_input"; fieldErrors: Partial<Record<"invoiceId", string>> }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "invoice_unavailable" | "line_unavailable" }
+  | { ok: false; status: 409; denialReason: "order_work_on_hold" | "invoice_unavailable" | "line_unavailable" }
   | { ok: false; status: 500; error: "db_read_failed" | "supabase_client_missing" };
 
 export type InvoiceLineSaveResult =
@@ -98,7 +98,7 @@ export type InvoiceLineSaveResult =
       fieldErrors: Partial<Record<"invoiceId" | "lines", string>>;
     }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "invoice_unavailable" | "line_unavailable" }
+  | { ok: false; status: 409; denialReason: "order_work_on_hold" | "invoice_unavailable" | "line_unavailable" }
   | { ok: false; status: 500; error: "db_write_failed" | "supabase_client_missing" };
 
 type StoredInvoice = BillingPersistedInvoice;
@@ -401,6 +401,7 @@ function mapPersistenceError(
   message: string | undefined,
   fallback: "db_read_failed" | "db_write_failed"
 ): InvoiceLinePersistenceGatewayResult {
+  if (message?.includes("order_work_on_hold")) return { ok: false, status: 409, denialReason: "order_work_on_hold" };
   if (message?.includes("current_assignee_required") || message?.includes("permission_missing") || message?.includes("actor_mismatch")) return { ok: false, status: 403, denialReason: "permission_missing" };
   if (message?.includes("invoice_unavailable")) return { ok: false, status: 409, denialReason: "invoice_unavailable" };
   if (message?.includes("line_unavailable")) return { ok: false, status: 409, denialReason: "line_unavailable" };

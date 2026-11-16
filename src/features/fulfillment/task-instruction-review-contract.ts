@@ -22,6 +22,7 @@ export const instructionAcknowledgementSchema = z.union([
 ]);
 export type TaskInstructionReview = z.infer<typeof taskInstructionReviewSchema>;
 export type EffectiveInstructions = z.infer<typeof effectiveInstructionsSchema>;
+export type InstructionOrderLabel = "조제" | "처치" | "임상병리" | "영상";
 
 export const instructionReviewTargetId = (item: TaskInstructionReview) => (item.taskId ?? item.orderId)!;
 

@@ -15,10 +15,120 @@ source_docs:
 dependencies:
   - "CLINICAL-FULFILLMENT-PR-009"
   - "CLINICAL-MASTER-PR-023"
-updated: "2026-11-09"
+updated: "2026-11-17"
 ---
 
 # Plan/Order Work Lifecycle And RPC Boundary
+
+## Shared order workflow — 2026-11-16 local implementation scope
+
+승욱 approved local implementation and verification of the reviewed design from
+`origin/main` `d4179f4a`. Merge and deployment are explicitly prohibited. This
+approval covers local code/schema changes and disposable synthetic verification;
+it does not authorize remote DB writes, real records, or payment/provider effects.
+The implementation uses `codex/common-order-workflow` in the initially clean
+checkout. Existing dispensing/treatment behavior is the regression baseline.
+
+- Reuse the existing fulfillment flow for assignment/start, editing holds,
+  changed-order acknowledgement and explicit `업무 이어가기` in lab/imaging.
+- Preserve dispensing/treatment completion, assignment exceptions, set/item
+  semantics, instruction-review scope, expiry, history and notifications.
+- Re-requested examinations require new lab/imaging results. Preserve prior
+  records/history; do not implement result reuse or reuse approvals. Existing
+  lab profile, specimen, retest and imaging save/completion contracts remain.
+- Before payment, opening a relevant confirmed-order edit pauses the linked
+  billing. Cancel/no financial change releases the edit hold; a financial
+  proposal still requires the current assignee's `확인 후 금액 반영`.
+- Keep invoice/payment/unpaid states and pending/paid financial guards. Exclude
+  cross-work dependency holds, new collection tasks, refund/additional-charge
+  workflows, new permissions and external integrations.
+
+Completion requires focused UI/Storybook, server and isolated SQL coverage of
+normal execution, edit cancel/failure/expiry, re-request/restart, new-result
+completion, stale writes, assignment changes and edit/payment races. Run the
+applicable type/lint/build/docs checks. Record actual evidence and limitations
+here. The initial intake had no candidate evidence; the following record supersedes it.
+
+### Local implementation and verification — 2026-11-17
+
+Implemented the shared examination entry/re-request flow, per-attempt canonical
+lab results with read-only prior history, imaging draft reset by task, and
+independent unpaid-invoice editing leases. Existing dispensing/treatment rules
+remain the baseline. No remote DB mutation, merge, push or deployment occurred.
+The separately modified `AGENTS.md` is unrelated WIP and was not edited here.
+
+Verification uses synthetic HTTP fixtures or the owned `clair-common-order-workflow`
+PostgreSQL container with network disabled. No real patient/payment/provider data
+was used. Five rollback-only SQL suites pass, including existing dispensing/
+treatment editing and holds, shared clinical/external-lab/imaging attempts, and
+billing leases. Six two-connection races pass: existing financial proposal/payment
+races plus checkout-row-first overlap with edit begin and session-less save.
+Failed post-release validation restores the lease; prepared sessions stay expired.
+
+Focused checks cover 48 Playwright app/core/autosave cases, 10 Node server/client
+contracts, 8 assignment refresh cases and 81 Storybook interaction cases across
+seven affected files (run in focused batches). They include explicit first start,
+acknowledgement/restart, new empty results, old-write rejection, edit-hold recovery,
+stale confirmation invalidation, actor changes and previous unsaved draft recovery.
+Existing stories were aligned with the actual registry prework provider and explicit
+entry. A menu animation wait and the hook test's indexed state scheduler correct
+stale test assumptions without changing the application behavior they exercise.
+
+TypeScript, full lint, production build, documentation links, secret scan and UX
+copy checks pass. The build retains the existing docs-reader dynamic-path warnings.
+Local logs and the test adapter are in `.artifacts/common-order-workflow/`; SQL
+receipts and race outcomes are in `.artifacts/confirmed-order-edit/`. Both directories
+are excluded locally from Git. Storybook 10.6's router fixture lacks Next 16.4's
+render-tree cache field, so these browser tests use a test-only compatibility
+adapter with the real redirect boundary and explicit mock authentication. No
+application or default Storybook configuration was changed to hide that issue.
+
+Limits: the SQL setup restores an existing schema then applies subsequent migrations;
+it does not prove a full historical empty-database replay. Isolated PostgreSQL does
+not deliver Realtime broadcasts; RPC state and notification rows are verified.
+Browser fixtures verify actual components and API contracts, not authenticated
+hosted acceptance. Three new migrations and the app remain a local candidate.
+Human acceptance and any later remote/release work are separate.
+
+### Final review and PR-only authorization — 2026-11-17
+
+승욱 authorized final review, in-scope corrections, commit, push and a PR for this
+candidate. Merge, deployment and remote DB application remain prohibited. The
+branch still compares against `main` `d4179f4a`; the unrelated generated
+`AGENTS.md` change is excluded and preserved.
+
+Four read-only review scopes covered clinical SQL/API boundaries, billing
+transactions, examination result state, and existing dispensing/treatment entry
+behavior. Two findings were reproduced and corrected:
+
+- A brief edit hold during an in-flight lab save could clear the newer draft's
+  timer without resuming it. Resume now drains unblocked pending input after the
+  first response, retaining its returned revision and existing error/authority
+  guards. All 12 autosave regressions pass, including the new race.
+- Billing proposal reads could remain stale after a hold ended. A scoped refresh
+  now follows availability changes, deferring while approval is pending. Ordinary
+  failed approvals retain their error. Four focused review stories and the ten
+  actual billing-workspace stories pass without artificial focus/assignment events
+  in the new cases. Narrow re-review found no remaining defect in either fix.
+
+Review limits: the new examination SQL fixture uses V1 frozen definitions and
+authorized actors. V2 profiles and direct foreign-workspace, revoked-permission
+and wrong-actor denials on the new attempt/history paths still need hosted-release
+preparation coverage. The six concurrency cases use one invoice/encounter and do
+not cover renewal exactly at expiry. No hosted acceptance is claimed.
+
+Read-only Vercel inspection confirms that non-Production builds are skipped by
+the existing ignored-build command. This task does not enable Preview or change
+provider configuration. The automatic PR Release Check remains enabled; Ready
+Preview and migration/application rollout remain future release gates.
+
+Separate existing dependency finding: `npm audit` reports 36 findings (12 high,
+23 moderate, one low) with the unchanged lockfile. Next 16.4.2 is within
+[GHSA-mfr8-8qww-v76h](https://github.com/vercel/next.js/security/advisories/GHSA-mfr8-8qww-v76h)'s
+affected range; its affected nested cache pattern was not found in application
+source. This is not an exploitability assessment of all dependencies. Dependency
+remediation is outside this workflow PR. Local Next commands initially stopped
+with the existing upgrade advisory and were retried without changing dependencies.
 
 ## Single-entry response ordering — 2026-11-09
 

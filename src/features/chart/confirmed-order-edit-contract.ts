@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+export const confirmedOrderClinicalTypes = ["dispensing", "treatment", "clinical_lab", "external_lab", "imaging"] as const;
+export type ConfirmedOrderClinicalType = typeof confirmedOrderClinicalTypes[number];
+export function supportsConfirmedOrderEdit(value: string): value is ConfirmedOrderClinicalType {
+  return (confirmedOrderClinicalTypes as readonly string[]).includes(value);
+}
+
 export const orderFinancialValuesSchema = z.object({
   billingName: z.string().trim().min(1).max(200),
   billingQuantity: z.number().finite().positive().max(999999999.999).multipleOf(0.001),
@@ -43,7 +49,7 @@ export const confirmedOrderErrors: Record<string, string> = {
   revision_conflict: "다른 사람이 내용을 변경했어요. 입력은 보존했어요. 최신 내용을 다시 조회해 주세요.",
   idempotency_conflict: "같은 요청의 내용이 달라졌어요. 최신 내용을 다시 조회해 주세요.",
   payment_locked: "결제 처리 중이거나 완료된 건이에요. 수납 정정·환불 경로를 이용해 주세요.",
-  order_unavailable: "수정 가능한 조제·처치 오더를 찾지 못했어요.",
+  order_unavailable: "수정 가능한 오더를 찾지 못했어요.",
   order_work_on_hold: "다른 창에서 이 오더를 수정 중이에요. 수정이 끝난 뒤 다시 열어 주세요.",
   order_edit_session_expired: "수정 시간이 만료됐어요. 최신 내용을 다시 조회해 주세요.",
   invalid_input: "입력값을 확인해 주세요.", billing_review_required: "기존 수납 검토를 먼저 처리해 주세요.",

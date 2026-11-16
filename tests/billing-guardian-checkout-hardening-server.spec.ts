@@ -158,6 +158,17 @@ test("invoice status transition core requires reason and emits audited side effe
   });
 });
 
+async function claimSyntheticInvoice(request: import("@playwright/test").APIRequestContext, invoiceId: string, actor: string) {
+  const url = `/api/workspaces/${workspaceId}/billing/assignment`;
+  const headers = { "x-clair-demo-session-user-id": actor };
+  let assignment = (await (await request.get(`${url}?invoiceId=${invoiceId}`, { headers })).json()).assignment;
+  if (assignment.assignedToUserId && assignment.assignedToUserId !== actor) {
+    expect((await request.patch(url, { headers: { "x-clair-demo-session-user-id": assignment.assignedToUserId }, data: { invoiceId, action: "unassign", expectedRevision: assignment.revision } })).status()).toBe(200);
+    assignment = (await (await request.get(`${url}?invoiceId=${invoiceId}`, { headers })).json()).assignment;
+  }
+  if (!assignment.assignedToUserId) expect((await request.patch(url, { headers, data: { invoiceId, action: "claim", expectedRevision: assignment.revision } })).status()).toBe(200);
+}
+
 test("guardian checkout route exposes ledger, prepared checkout, and status transition", async ({ request }) => {
   const unauthenticated = await request.get(
     `/api/workspaces/${workspaceId}/billing/guardian-checkout?guardianId=${guardianId}`,
@@ -174,6 +185,9 @@ test("guardian checkout route exposes ledger, prepared checkout, and status tran
     expect.objectContaining({ invoiceId: "invoice-coco-history-paid-260414", amountInclusion: "excluded" }),
   );
 
+  await claimSyntheticInvoice(request, "invoice-coco-260501", "user-front-desk");
+  await claimSyntheticInvoice(request, "invoice-coco-history-paid-260414", "user-front-desk");
+  await claimSyntheticInvoice(request, "invoice-coco-history-voided-260328", "user-front-desk");
   const prepared = await request.post(`/api/workspaces/${workspaceId}/billing/guardian-checkout`, {
     data: {
       invoiceIds: ["invoice-coco-260501", "invoice-coco-history-paid-260414"],
@@ -199,7 +213,9 @@ test("guardian checkout route exposes ledger, prepared checkout, and status tran
   expect(transitionedBody.invoice).toMatchObject({ status: "draft", paymentState: "none" });
 });
 
-test("billing screen uses guardian checkout route for ledger and checkout totals", async ({ page }) => {
+test("billing screen uses guardian checkout route for ledger and checkout totals", async ({ page, request }) => {
+  await claimSyntheticInvoice(request, "invoice-coco-260501", "user-admin");
+  await claimSyntheticInvoice(request, "invoice-coco-history-unpaid-260429", "user-admin");
   await page.setViewportSize({ width: 1920, height: 1080 });
   const guardianCheckoutCalls: Array<{ method: string; status: number; url: string }> = [];
   page.on("response", (response) => {

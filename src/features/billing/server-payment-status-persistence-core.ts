@@ -44,7 +44,7 @@ export type BillingPaymentStatusPayload = {
 export type BillingPaymentStatusGatewayResult =
   | ({ ok: true } & BillingPaymentStatusPayload)
   | { ok: false; status: 403; denialReason: "permission_missing" }
-  | { ok: false; status: 409; denialReason: "billing_review_required" | "invoice_unavailable" | "invoice_revision_conflict" | "payment_in_progress" | "billing_change_pending" }
+  | { ok: false; status: 409; denialReason: "order_work_on_hold" | "billing_review_required" | "invoice_unavailable" | "invoice_revision_conflict" | "payment_in_progress" | "billing_change_pending" }
   | { ok: false; status: 500; error: "db_read_failed" | "db_write_failed" };
 
 export type BillingPaymentStatusGateway = {
@@ -67,7 +67,7 @@ export type BillingPaymentStatusReadResult =
     } & BillingPaymentStatusPayload)
   | { ok: false; status: 400; error: "invalid_input"; fieldErrors: Partial<Record<"invoiceId", string>> }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "billing_review_required" | "invoice_unavailable" | "invoice_revision_conflict" | "payment_in_progress" | "billing_change_pending" }
+  | { ok: false; status: 409; denialReason: "order_work_on_hold" | "billing_review_required" | "invoice_unavailable" | "invoice_revision_conflict" | "payment_in_progress" | "billing_change_pending" }
   | { ok: false; status: 500; error: "db_read_failed" | "supabase_client_missing" };
 
 export type BillingPaymentStatusSaveResult =
@@ -83,7 +83,7 @@ export type BillingPaymentStatusSaveResult =
       fieldErrors: Partial<Record<"action" | "invoiceId" | "paymentMethod" | "unpaidReason", string>>;
     }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "billing_review_required" | "invoice_unavailable" | "invoice_revision_conflict" | "payment_in_progress" | "billing_change_pending" }
+  | { ok: false; status: 409; denialReason: "order_work_on_hold" | "billing_review_required" | "invoice_unavailable" | "invoice_revision_conflict" | "payment_in_progress" | "billing_change_pending" }
   | { ok: false; status: 500; error: "db_write_failed" | "supabase_client_missing" };
 
 const paymentStatusStore = new Map<string, BillingPaymentStatusPayload>();
@@ -459,6 +459,7 @@ function mapPaymentStatusError(
   message: string | undefined,
   fallback: "db_read_failed" | "db_write_failed"
 ): BillingPaymentStatusGatewayResult {
+  if (message?.includes("order_work_on_hold")) return { ok: false, status: 409, denialReason: "order_work_on_hold" };
   if (message?.includes("current_assignee_required") || message?.includes("permission_missing") || message?.includes("actor_mismatch")) return { ok: false, status: 403, denialReason: "permission_missing" };
   if (message?.includes("billing_review_required")) return { ok: false, status: 409, denialReason: "billing_review_required" };
   for (const denialReason of ["invoice_revision_conflict", "payment_in_progress", "billing_change_pending"] as const) {

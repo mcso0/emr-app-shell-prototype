@@ -25,18 +25,19 @@ const displayValue = (value: unknown) => value === null || value === undefined ?
 
 type ExecutionResultDialogProps = {
   workspaceId: string; workItemId: string; taskId?: string; open: boolean;
-  ownershipAllowed?: boolean; ownershipKey?: string; authorityStatus?: string;
+  ownershipAllowed?: boolean; ownershipKey?: string; authorityStatus?: string; authorityRevision?: number;
   /** Instruction completion may save directly from requested/paused; the server checks roles. */
   onOpenChange: (open: boolean) => void; onSaved: () => Promise<void>;
 };
 export function ExecutionResultDialog(props: ExecutionResultDialogProps) {
   return props.open ? <ExecutionResultDialogContent key={`${props.workspaceId}:${props.workItemId}:${props.taskId ?? "current"}`} {...props} /> : null;
 }
-function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, ownershipAllowed, ownershipKey, authorityStatus, onOpenChange, onSaved }: ExecutionResultDialogProps) {
+function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, ownershipAllowed, ownershipKey, authorityStatus, authorityRevision, onOpenChange, onSaved }: ExecutionResultDialogProps) {
+  const [historyTaskId, setHistoryTaskId] = useState<string | null>(null);
   const [context, setContext] = useState<ExecutionContext | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [settledRequest, setSettledRequest] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [draft, setDraft] = useState<Record<string, string>>({});
@@ -50,6 +51,9 @@ function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, o
   const pendingSave = useRef(false);
   const command = useRef<{ fingerprint: string; id: string } | null>(null);
   const endpoint = `/api/workspaces/${encodeURIComponent(workspaceId)}/fulfillment/work-items/${encodeURIComponent(workItemId)}/execution`;
+
+  const requestKey = JSON.stringify([endpoint, refreshKey, taskId, ownershipKey]);
+  const loading = settledRequest !== requestKey;
 
   useEffect(() => {
     mounted.current = true;
@@ -71,10 +75,10 @@ function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, o
         if (!loaded) { setError(executionErrorMessage("invalid_execution_response")); return; }
         setContext(loaded);
       } catch { if (scope.current === generation && !abort.signal.aborted) setError(executionErrorMessage("request_failed")); }
-      finally { if (scope.current === generation) setLoading(false); }
+      finally { if (scope.current === generation) setSettledRequest(requestKey); }
     })();
     return () => { scope.current = generation + 1; abort.abort(); };
-  }, [endpoint, refreshKey, taskId, workItemId, workspaceId, ownershipKey]);
+  }, [endpoint, refreshKey, taskId, workItemId, workspaceId, ownershipKey, requestKey]);
 
   const instructionReview = useTaskInstructionReview(workspaceId, context ? [context.taskId] : [], ownershipKey);
   const fields = context ? getExecutionResultFields(context) : [];
@@ -88,7 +92,7 @@ function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, o
     if (!value) continue;
     payload[field.key] = ["number", "signed_number"].includes(field.type) ? Number(value) : field.type === "lines" ? value.split("\n").map(x => x.trim()).filter(Boolean) : value;
   }
-  const canWrite = ownershipAllowed !== false && (!authorityStatus || authorityStatus === context?.status) && context?.canRecord && context.isCurrentAttempt &&
+  const canWrite = !loading && (authorityRevision === undefined || authorityRevision === context?.workItemRevision) && ownershipAllowed !== false && (!authorityStatus || authorityStatus === context?.status) && context?.canRecord && context.isCurrentAttempt &&
     (context.status === "in_progress" && context.results.length === 0 || context.status === "completed" && amending);
   const valid = context && parseExecutionPayload(context.clinicalOrderType, payload, context.planSnapshot) && performedAt &&
     Number.isFinite(new Date(performedAt).getTime()) && (!amending || amendmentReason.trim());
@@ -113,7 +117,7 @@ function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, o
         if (isExecutionRecord(result) && result.error === "instruction_ack_required") { instructionReview.requireReview(); command.current = null; return; }
         setError(executionErrorMessage(isExecutionRecord(result) && typeof result.error === "string" ? result.error : "request_failed")); return;
       }
-      const saved = parseExecutionContext(result.context, workspaceId, workItemId);
+      const saved = parseExecutionContext(result.context, workspaceId, workItemId, taskId);
       if (!saved) { setError(executionErrorMessage("invalid_execution_response")); return; }
       // A same-item ownership refresh may overtake this POST. Reconcile the
       // successful save, but never replace newer read authority with its reply.
@@ -141,13 +145,18 @@ function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, o
       secondaryAction={<Button variant="outline" disabled={saving} onClick={() => onOpenChange(false)}>닫기</Button>}
       primaryAction={canWrite ? <Button disabled={!valid || saving} onClick={() => void save()}>{saving ? "저장 중" : amending ? "정정 저장" : "수행기록 저장 및 완료"}</Button> : null}>
       <div className="space-y-4" data-testid="execution-result-dialog">
-        <TaskInstructionReview controller={instructionReview} />
+        <TaskInstructionReview controller={instructionReview} readOnly={ownershipAllowed === false || !context?.isCurrentAttempt} />
         {loading ? <p role="status">확정 계획과 수행기록을 불러오는 중입니다.</p> : null}
         {error ? <div role="alert" className="space-y-2"><p>{error}</p><Button variant="outline" onClick={() => {
           setContext(null); setError(null); setNotice(null); setDraft({}); setDeviceParameters([]); setPerformedAt(""); setVarianceReason("");
-          setAmendmentReason(""); setAmending(false); setLoading(true); command.current = null; setRefreshKey(x => x + 1);
+          setAmendmentReason(""); setAmending(false); command.current = null; setRefreshKey(x => x + 1);
         }}>입력 초기화 및 최신 기록 불러오기</Button></div> : null}
         {notice ? <p role="status">{notice}</p> : null}
+        {context?.isCurrentAttempt && !!context.priorTasks?.length && <div className="flex flex-wrap gap-2">
+          {context.priorTasks.map(prior => <Button key={prior.taskId} size="sm" variant="outline" onClick={() => setHistoryTaskId(prior.taskId)}>{prior.attemptNo}회차 수행기록</Button>)}
+        </div>}
+        {historyTaskId && <ExecutionResultDialog workspaceId={workspaceId} workItemId={workItemId} taskId={historyTaskId} open
+          ownershipAllowed={false} onOpenChange={next => { if (!next) setHistoryTaskId(null); }} onSaved={onSaved} />}
         {context ? <>
           <section className="space-y-2 rounded-lg border p-3">
             <h3 className="font-semibold">확정 계획 · {context.attemptNo}회차</h3>
@@ -215,8 +224,8 @@ function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, o
   </Dialog>;
 }
 
-export function FulfillmentExecutionActions({ workspaceId, workItemId, onSaved, children, ...lifecycle }: {
-  workspaceId: string; workItemId: string; onSaved: () => Promise<void>;
+export function FulfillmentExecutionActions({ workspaceId, workItemId, taskId, taskAttemptNo, workItemRevision, onSaved, children, ...lifecycle }: {
+  workspaceId: string; workItemId: string; taskId?: string; taskAttemptNo?: number; workItemRevision?: number; onSaved: () => Promise<void>;
   children?: ReactNode;
 } & Parameters<typeof FulfillmentWorkLifecycleAction>[0]) {
   const [open, setOpen] = useState(false);
@@ -227,6 +236,6 @@ export function FulfillmentExecutionActions({ workspaceId, workItemId, onSaved, 
       if (action === "complete") { setOpen(true); return true; }
       return lifecycle.onTransition(action, options);
     }} />
-    <ExecutionResultDialog key={`${workspaceId}:${workItemId}`} workspaceId={workspaceId} workItemId={workItemId} open={open} ownershipAllowed={lifecycle.canManage} ownershipKey={`${lifecycle.assignedToUserId}:${lifecycle.canManage}:${lifecycle.status}`} authorityStatus={lifecycle.status} onOpenChange={setOpen} onSaved={onSaved} />
+    <ExecutionResultDialog key={`${workspaceId}:${workItemId}:${taskId}:${taskAttemptNo}`} workspaceId={workspaceId} workItemId={workItemId} taskId={taskId} authorityRevision={workItemRevision} open={open} ownershipAllowed={lifecycle.canManage} ownershipKey={`${lifecycle.assignedToUserId}:${lifecycle.canManage}:${lifecycle.status}:${workItemRevision}`} authorityStatus={lifecycle.status} onOpenChange={setOpen} onSaved={onSaved} />
   </>;
 }

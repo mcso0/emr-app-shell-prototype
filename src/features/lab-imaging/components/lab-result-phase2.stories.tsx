@@ -3,6 +3,7 @@ import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { useMockAuthStore } from "@/features/auth/session-store";
 import { Button } from "@/components/ui/button";
 import { LabOverallFinding, LabResultHistoryDialog, LabResultRowDetail } from "./lab-result-phase2";
 import { useLabResultPhase2 } from "../use-lab-result-phase2";
@@ -71,7 +72,12 @@ function Example() {
 const meta = {
   title: "Features/Lab/Result Phase 2", component: Example, tags: ["autodocs"], args: { scenario: "ready" as Args["scenario"] }, argTypes: { scenario: { control: false } },
   parameters: { nextjs: { appDirectory: true }, docs: { story: { inline: false, height: "980px" }, description: { component: "실제 항목 상세, 종합소견, 첨부 영역과 수정 이력 컴포넌트를 useLabResultPhase2로 연결합니다. 종합소견 저장·재시도·응답 유실 확인, 첨부 prepare/finalize/discard/삭제와 XMLHttpRequest PUT·진행률·취소는 모두 합성 상태에 반영합니다. 다운로드는 URL 요청만 기록합니다. 항목별 소견 콜백은 로컬 행 변경 비교용이며 전체 검사 테이블의 저장 계약은 별도입니다. TXT·CSV 바이트만 사용하며 실제 환자·검사·스토리지에 접근하지 않습니다." } } },
-  beforeEach: ({ args }) => { fixture = createPhase2Fixture(args.scenario); return fixture.install(); },
+  beforeEach: ({ args }) => {
+    const auth = useMockAuthStore.getState();
+    useMockAuthStore.setState({ hydrated: true, session: { id: "synthetic-phase2-actor", role: "nurse", roleLabel: "합성 검사 담당", storageMode: "session", issuedAt: "2026-11-16T00:00:00Z" } });
+    fixture = createPhase2Fixture(args.scenario); const restore = fixture.install();
+    return async () => { await restore(); useMockAuthStore.setState(auth, true); };
+  },
   render: () => <Example key={fixture.result.id} />,
 } satisfies Meta<Args>;
 export default meta;

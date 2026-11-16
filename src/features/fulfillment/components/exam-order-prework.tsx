@@ -9,7 +9,7 @@ import type { FulfillmentWorkItem } from "../server-fulfillment-work-item-core";
 import { getFulfillmentOrderDisplayName } from "../patient-history-aside";
 
 export function ExamOrderPrework({ workItem, review, busy, error, onConfirm, onEntered }: {
-  workItem: Pick<FulfillmentWorkItem, "id" | "workspaceId" | "encounterId" | "patientId" | "patientName" | "guardianName" | "requesterName" | "queueType" | "rowRevision" | "canManage" | "assignedToUserId" | "assignedToDisplayName"> & { createdAt?: string; sourceSnapshot?: Record<string, unknown> };
+  workItem: Pick<FulfillmentWorkItem, "id" | "workspaceId" | "encounterId" | "patientId" | "patientName" | "guardianName" | "requesterName" | "queueType" | "rowRevision" | "canManage" | "assignedToUserId" | "assignedToDisplayName" | "taskId" | "taskAttemptNo" | "pauseReason"> & { createdAt?: string; sourceSnapshot?: Record<string, unknown> };
   review: TaskInstructionReviewController;
   busy: boolean;
   error?: string | null;
@@ -21,11 +21,12 @@ export function ExamOrderPrework({ workItem, review, busy, error, onConfirm, onE
   const name = getFulfillmentOrderDisplayName(workItem.sourceSnapshot) ?? "검사 오더";
   const instruction = workItem.sourceSnapshot?.instruction;
   return <PatientOrderPrework workItem={workItem} label={label} testId={`${workItem.queueType}-prework`} excludeWorkItemIds={[workItem.id]}
-    actions={<EmrWorkEntryAction scopeKey={`${workItem.workspaceId}:${workItem.id}`} authorityKey={`${workItem.rowRevision}:${workItem.canManage}:${workItem.assignedToUserId}`}
-      mode={owns ? "start" : workItem.canManage && !workItem.assignedToUserId ? "claim" : "blocked"}
+    actions={<EmrWorkEntryAction scopeKey={`${workItem.workspaceId}:${workItem.id}:${workItem.taskId}`} authorityKey={`${workItem.rowRevision}:${workItem.canManage}:${workItem.assignedToUserId}:${workItem.pauseReason}`}
+      description={workItem.pauseReason ? "오더 수정이 끝난 뒤 다시 진행해 주세요." : !owns ? "담당을 지정하면 업무가 바로 시작됩니다." : undefined}
+      mode={workItem.pauseReason ? "blocked" : owns ? "start" : workItem.canManage && !workItem.assignedToUserId ? "claim" : "blocked"}
       assigneeName={workItem.assignedToDisplayName} busy={busy} error={error} onConfirm={onConfirm} onEntered={onEntered}
       context={<><strong>{label} · {name}</strong><p>현재 담당: {workItem.assignedToDisplayName ?? "미지정"}</p></>} /> }>
-    <TaskInstructionReview controller={review} />
+    <TaskInstructionReview controller={review} orderType={workItem.queueType === "lab" ? "임상병리" : "영상"} readOnly={Boolean(workItem.pauseReason)} />
     <EmrWorkEntrySection title="요청 정보"><EmrWorkEntrySummary items={[
       ["요청 일시", workItem.createdAt ? new Date(workItem.createdAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }) : "—"],
       ["요청 수의사", workItem.requesterName ?? "—"], ["요청 항목", name], ["담당자", workItem.assignedToDisplayName ?? "미지정"], ["시작 상태", "미시작"],

@@ -6,7 +6,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { TaskInstructionCallout } from "./task-instruction-callout";
 import { instructionScopeLabels } from "@/features/chart/overall-instructions-contract";
-import { instructionReviewTargetId, type OrderRerequestChange, type EffectiveInstructions } from "../task-instruction-review-contract";
+import { instructionReviewTargetId, type OrderRerequestChange, type EffectiveInstructions, type InstructionOrderLabel } from "../task-instruction-review-contract";
 import type { TaskInstructionReviewController } from "../use-task-instruction-review";
 
 function InstructionContent({ document }: { document: EffectiveInstructions | null }) {
@@ -18,7 +18,7 @@ function InstructionContent({ document }: { document: EffectiveInstructions | nu
   </section>)}</div> : <p className="text-sm text-muted-foreground">작성된 지시 없음</p>;
 }
 
-function OrderChangeContent({ change, orderType }: { change: OrderRerequestChange; orderType: "조제" | "처치" }) {
+function OrderChangeContent({ change, orderType }: { change: OrderRerequestChange; orderType: InstructionOrderLabel }) {
   return <>
     <h3 className="break-words text-base font-semibold">{change.orderName}</h3>
     {change.entry.createdAt && <p className="mt-1 text-xs text-muted-foreground">
@@ -48,7 +48,7 @@ export function TaskInstructionReview({ controller, renderInstructions, orderCha
   controller: TaskInstructionReviewController;
   renderInstructions?: (documents: EffectiveInstructions[]) => ReactNode;
   orderChanges?: ReadonlyMap<string, OrderRerequestChange | null>;
-  orderType?: "조제" | "처치";
+  orderType?: InstructionOrderLabel;
   readOnly?: boolean;
 }) {
   const visible = controller.reviews.filter(item => item.current?.entries.length);

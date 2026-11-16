@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { useBillingStore } from "./store";
 import { orderBillingChangeSchema } from "./order-billing-change-contract";
 import { orderFinancialLabels as labels, formatOrderFinancialValue as format, confirmedOrderErrors, type OrderFinancialValues } from "@/features/chart/confirmed-order-edit-contract";
-export function OrderBillingChangeReview({ workspaceId, invoiceId, reviewKey, onApplied }: { workspaceId: string; invoiceId: string; reviewKey: string; onApplied: () => void }) {
+export function OrderBillingChangeReview({ workspaceId, invoiceId, reviewKey, onApplied, blocked = false }: { workspaceId: string; invoiceId: string; reviewKey: string; onApplied: () => void; blocked?: boolean }) {
  const [changes, setChanges] = useState<z.infer<typeof orderBillingChangeSchema>[]>([]), [error, setError] = useState<string | null>(null), [busy, setBusy] = useState(false), [reload, setReload] = useState(0);
  const lastLoadedSignature = useRef<string | null>(null);
  const pending = useRef(false), generation = useRef(0), readVersion = useRef(0);
+ const refreshCurrent = useRef<(() => void) | null>(null);
+ const previousBlocked = useRef(blocked), availabilityRefreshPending = useRef(false);
  const hasPersistedInvoice = z.uuid().safeParse(invoiceId).success;
  const [settledReviewKey, setSettledReviewKey] = useState<string | null>(null);
  usePageReadiness(hasPersistedInvoice && settledReviewKey !== reviewKey, reviewKey);
@@ -39,12 +41,22 @@ export function OrderBillingChangeReview({ workspaceId, invoiceId, reviewKey, on
       if (!abort.signal.aborted && current === generation.current && version === readVersion.current) setSettledReviewKey(reviewKey);
     }
   };
-  void read(); const focus = () => { if (!pending.current) void read(); }; window.addEventListener("focus", focus); window.addEventListener("clair-billing-assignment", focus);
+  void read(); const focus = () => { if (!pending.current) void read(); }; refreshCurrent.current = focus; window.addEventListener("focus", focus); window.addEventListener("clair-billing-assignment", focus);
   const timer = window.setInterval(() => { if (document.visibilityState === "visible") focus(); }, 15000);
-  return () => { generation.current = current + 1; abort.abort(); window.removeEventListener("focus", focus); window.removeEventListener("clair-billing-assignment", focus); window.clearInterval(timer); };
+  return () => { if (refreshCurrent.current === focus) refreshCurrent.current = null; generation.current = current + 1; abort.abort(); window.removeEventListener("focus", focus); window.removeEventListener("clair-billing-assignment", focus); window.clearInterval(timer); };
  }, [endpoint, hasPersistedInvoice, invoiceId, reload, reviewKey, workspaceId]);
+ useEffect(() => {
+  if (previousBlocked.current !== blocked) {
+   previousBlocked.current = blocked;
+   availabilityRefreshPending.current = true;
+  }
+  if (!busy && availabilityRefreshPending.current) {
+   availabilityRefreshPending.current = false;
+   refreshCurrent.current?.();
+  }
+ }, [blocked, busy]);
  const approve = async (change: z.infer<typeof orderBillingChangeSchema>) => {
-  if (pending.current) return; pending.current = true; ++readVersion.current; setBusy(true); const current = generation.current;
+  if (pending.current || blocked) return; pending.current = true; ++readVersion.current; setBusy(true); const current = generation.current;
   try {
    const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ invoiceId, orderId: change.orderId, proposalId: change.proposalId, version: change.version }) }); const body = await response.json();
    if (current !== generation.current) return;
@@ -63,7 +75,7 @@ export function OrderBillingChangeReview({ workspaceId, invoiceId, reviewKey, on
  return <section className="rounded-xl border bg-card p-4" aria-label="청구 변경 확인"><h2 className="text-sm font-semibold">청구 변경 확인 대기</h2>
   {changes.map(change => <div key={change.proposalId} className="mt-3 border-t pt-3"><h3 className="text-sm font-medium">{change.before.billingName}</h3>
    <dl className="my-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">{(Object.keys(labels) as (keyof OrderFinancialValues)[]).filter(key => change.before[key] !== change.proposed[key]).map(key => <div className="contents" key={key}><dt className="text-muted-foreground">{labels[key]}</dt><dd>{format(change.before[key])} → {format(change.proposed[key])}</dd></div>)}</dl>
-   <Button size="sm" disabled={busy || !change.canApprove} onClick={() => void approve(change)}>{busy ? "반영 중…" : "확인 후 금액 반영"}</Button>
+   <Button size="sm" disabled={busy || blocked || !change.canApprove} onClick={() => void approve(change)}>{busy ? "반영 중…" : "확인 후 금액 반영"}</Button>
    {!change.canApprove && <p className="mt-2 text-xs text-muted-foreground">현재 수납 담당자만 결제 전에 반영할 수 있어요.</p>}
   </div>)}
   {error && <div role="alert" className="mt-3 text-sm"><p>{error}</p><Button variant="outline" size="sm" disabled={busy} onClick={() => setReload(n => n + 1)}>최신 변경안 조회</Button></div>}

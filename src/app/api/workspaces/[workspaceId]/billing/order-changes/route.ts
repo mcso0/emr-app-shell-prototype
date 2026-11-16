@@ -22,7 +22,7 @@ async function handle(request: Request, context: Context, mutate: boolean) {
   ...(command?.success ? { p_order_id: command.data.orderId, p_proposal_id: command.data.proposalId, p_version: command.data.version } : {}),
  });
  const parsed = z.array(orderBillingChangeSchema).safeParse(data);
- if (error || !parsed.success) return Response.json({ ok: false, error: ["permission_missing", "current_assignee_required", "revision_conflict", "payment_locked"].find(code => error?.message.includes(code)) ?? "unavailable" }, { status: error?.code === "42501" ? 403 : 409, headers });
+ if (error || !parsed.success) return Response.json({ ok: false, error: ["order_work_on_hold", "permission_missing", "current_assignee_required", "revision_conflict", "payment_locked"].find(code => error?.message.includes(code)) ?? "unavailable" }, { status: error?.code === "42501" ? 403 : 409, headers });
  return Response.json({ ok: true, changes: parsed.data }, { headers });
 }
 export const GET = (request: Request, context: Context) => handle(request, context, false);

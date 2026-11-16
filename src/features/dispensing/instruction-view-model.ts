@@ -1,3 +1,4 @@
+import { isPendingFulfillmentRerequest } from "../fulfillment/rerequest";
 import { getClinicalOrderFieldSchema } from "@/features/chart/order-execution-domain";
 import { formatPlanOrderTableUnit } from "@/features/chart/chart-order-table-presentation";
 import { getDispenseRequestCourseQuantity, getDispenseRequestUnit } from "@/features/chart/dispense-request-quantity";
@@ -53,13 +54,7 @@ export type InstructionViewAction = {
   assignees?: string[];
 };
 
-export function isPendingFulfillmentRerequest(
-  status: InstructionItem["status"],
-  attemptNo: number,
-  assigneeId?: string | null,
-) {
-  return attemptNo > 1 && (status === "requested" || (status === "paused" && !assigneeId));
-}
+export { isPendingFulfillmentRerequest } from "../fulfillment/rerequest";
 
 export function hasPendingInstructionRerequest(document: InstructionDocument) {
   return document.items.some((item) => isPendingFulfillmentRerequest(item.status, item.attemptNo, item.assigneeId));

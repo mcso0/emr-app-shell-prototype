@@ -5,7 +5,8 @@ import { usePageReadiness } from "@/components/emr/page-loading-boundary";
 import { useOrderPrework } from "@/features/fulfillment/use-order-prework";
 import { ExamOrderPrework } from "@/features/fulfillment/components/exam-order-prework";
 
-import { useTaskInstructionReview } from "@/features/fulfillment/use-task-instruction-review";
+import { isPendingFulfillmentRerequest } from "@/features/fulfillment/rerequest";
+import { useExaminationWorkflow } from "@/features/fulfillment/use-examination-workflow";
 import { TaskInstructionReview } from "@/features/fulfillment/components/task-instruction-review";
 
 import { useModuleSidePanel, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
@@ -130,6 +131,7 @@ import type {
 } from "@/features/fulfillment/server-fulfillment-work-item-core";
 import { useLabImagingStore } from "@/features/lab-imaging/store";
 import { evaluateLabProfileValue } from "./result-profile-contract";
+import { PriorLabResults } from "./components/prior-lab-results";
 import { usePersistedLabResult } from "./use-persisted-lab-result";
 import { AtomicLabRetestAction } from "./components/atomic-retest-dialog";
 import { useQueueRealtimeRefresh } from "@/features/work-queue/queue-realtime-refresh";
@@ -414,6 +416,8 @@ type FulfillmentTransitionCommand =
   | FulfillmentWorkItemAction
   | ({ action: FulfillmentWorkItemAction } & FulfillmentTransitionOptions);
 type FulfillmentWorkItem = {
+  pauseReason?: "order_edit" | null;
+  pauseUntil?: string | null;
   taskId?: string | null;
   taskAttemptNo?: number | null;
   assignedToDisplayName?: string | null;
@@ -501,7 +505,7 @@ type LabResultSaveOutcome =
   | {
       message: string;
       ok: false;
-      reason: "error" | "invalid" | "permission_denied" | "conflict";
+      reason: "error" | "invalid" | "permission_denied" | "conflict" | "held" | "superseded";
       retryable: boolean;
     };
 
@@ -692,7 +696,7 @@ function getLiveOrderFromWorkItem(workItem: FulfillmentWorkItem): QueueOrder {
     status:
       workItem.status === "completed"
         ? "completed"
-        : workItem.status === "returned"
+        : workItem.status === "returned" || isPendingFulfillmentRerequest(workItem.status, workItem.taskAttemptNo ?? 1, workItem.assignedToUserId)
           ? "re_requested"
           : "in_progress",
     workStatus: workItem.status === "completed" ? "completed" : "pending",
@@ -806,8 +810,17 @@ function useFulfillmentQueue(
   useEffect(() => {
     if (!enabled) return;
     void load();
-    return () => { requestSeq.current += 1; };
+    const focus = () => { if (document.visibilityState === "visible") void load(); };
+    window.addEventListener("focus", focus);
+    return () => { requestSeq.current += 1; window.removeEventListener("focus", focus); };
   }, [enabled, load]);
+
+  const hasHeldWork = snapshot.workItems.some(item => item.pauseReason);
+  useEffect(() => {
+    if (!enabled || !hasHeldWork) return;
+    const timer = window.setInterval(() => { if (document.visibilityState === "visible") void load(); }, 10000);
+    return () => window.clearInterval(timer);
+  }, [enabled, hasHeldWork, load]);
 
   const updateStatus = useCallback(
     async (workItemId: string, transitions: FulfillmentTransitionCommand[], onError?: (code: string) => void) => {
@@ -1050,6 +1063,9 @@ async function saveLabResultEntry({
       };
     }
 
+    const errorCode = body.error ?? body.denialReason;
+    if (errorCode === "order_work_on_hold") return { ok: false, reason: "held", retryable: true, message: "오더 수정 중입니다. 수정이 끝난 뒤 다시 저장해 주세요." };
+    if (errorCode === "lab_result_attempt_changed") return { ok: false, reason: "superseded", retryable: false, message: "오더가 재요청되었습니다. 이전 검사 결과에서 미저장 입력을 확인해 주세요." };
     if (response.status === 409) {
       return { ok: false, reason: "conflict", retryable: false,
         message: "다른 수정이 저장됐습니다. 입력을 확인한 뒤 새로고침해 주세요." };
@@ -1488,7 +1504,7 @@ function getPatientQueueRows(items: Array<LabWorkItem | ImagingWorkItem>, workIt
       : getImagingTaskQueueCardItem({ item, testId: `imaging-queue-item-${id}`, actionTestId: `imaging-queue-item-action-${id}` });
     const requestedAt = work?.createdAt ?? item.order?.requestedAt;
     return { id, card, assigneeSortName: card.assigneeName, assignedToUserId: work ? work.assignedToUserId : item.order?.currentAssigneeUserId, patientId: work ? work.patientId : item.patient.id, workspaceId: work?.workspaceId ?? item.patient.workspaceId,
-      status: work?.status ?? item.order?.status ?? (isLab ? item.result.status : item.study.status), priority: work?.priority ?? item.order?.priority,
+      status: work && isPendingFulfillmentRerequest(work.status, work.taskAttemptNo ?? 1, work.assignedToUserId) && !work.pauseReason ? "re_requested" : work?.status ?? item.order?.status ?? (isLab ? item.result.status : item.study.status), priority: work?.priority ?? item.order?.priority,
       requestedAt, originChartId: work?.originChartId, originChartCreatedAt: work?.originChartCreatedAt,
       waitMinutes: requestedAt ? Math.max(0, Math.floor((Date.now() - Date.parse(requestedAt)) / 60000)) : 0 };
   });
@@ -2158,6 +2174,7 @@ function LabResultInputSection({
   phase2,
   phase2Status,
   onPhase2Refresh,
+  paused = false,
   result,
 }: {
   assigneeName: string;
@@ -2175,6 +2192,7 @@ function LabResultInputSection({
   phase2: LabResultPhase2Data | null;
   phase2Status: "loading" | "ready" | "error" | "permission_denied";
   onPhase2Refresh: () => void;
+  paused?: boolean;
   result: LabResult;
 }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -2192,6 +2210,7 @@ function LabResultInputSection({
     snapshot => snapshot.some(row => row.interpretationRule && !evaluateLabProfileValue(row.interpretationRule, {
       value: row.value ?? null, qualifier: row.qualifier, deviceFlag: row.deviceFlag, resultState: row.resultPresence,
     }).valid) ? "선택한 프로필의 값 형식과 결과 상태를 확인해 주세요." : null,
+    paused,
   );
   const currentSaveState = autosave.state.value;
   const rows = useMemo(() => (autosave.state.draft ?? result.rows).map(row => {
@@ -3407,10 +3426,11 @@ export function LabContent({
       ),
     [detail?.order?.id, fulfillmentQueue.workItems],
   );
-  const instructionReview = useTaskInstructionReview(workspaceId, !allowDemoContent && fulfillmentWorkItem?.taskId ? [fulfillmentWorkItem.taskId] : [], String(fulfillmentWorkItem?.rowRevision ?? ""));
+  const workflow = useExaminationWorkflow(workspaceId, fulfillmentWorkItem, !allowDemoContent, fulfillmentQueue.status === "loading", fulfillmentQueue.updateStatus);
+  const instructionReview = workflow.review;
   const entry = useOrderPrework({
-    scopeKey: `${workspaceId}:${fulfillmentWorkItem?.id ?? ""}`,
-    requested: !allowDemoContent && fulfillmentWorkItem?.status === "requested",
+    scopeKey: `${workspaceId}:${fulfillmentWorkItem?.id ?? ""}:${fulfillmentWorkItem?.taskId}:${fulfillmentWorkItem?.taskAttemptNo}`,
+    requested: !allowDemoContent && fulfillmentWorkItem?.status === "requested" && !workflow.assignedRerequest,
     ownsWork: Boolean(fulfillmentWorkItem?.canManage && fulfillmentWorkItem.assignedToUserId),
     pending: !allowDemoContent && fulfillmentQueue.status === "loading" && !fulfillmentWorkItem,
   });
@@ -3419,11 +3439,11 @@ export function LabContent({
     workItem: fulfillmentWorkItem,
     workspaceId,
   });
-  const persistedResult = usePersistedLabResult(workspaceId, fulfillmentWorkItem?.id, detail?.result, !allowDemoContent);
+  const persistedResult = usePersistedLabResult(workspaceId, fulfillmentWorkItem?.id, detail?.result, !allowDemoContent, fulfillmentWorkItem?.taskId, fulfillmentWorkItem?.taskAttemptNo);
   const reloadPersistedResult = persistedResult.retry;
   const effectiveDetail = useMemo(() => {
     if (!detail) return null;
-    if (!allowDemoContent) return { ...detail, result: persistedResult.result ?? { ...detail.result, rows: [] } };
+    if (!allowDemoContent) return { ...detail, result: persistedResult.result ?? { ...detail.result, rows: [], priorResults: persistedResult.priorResults } };
     if (detail.result.rows.length > 0 || catalogRowsState.rows.length === 0)
       return detail;
 
@@ -3434,9 +3454,11 @@ export function LabContent({
         rows: catalogRowsState.rows,
       },
     };
-  }, [allowDemoContent, catalogRowsState.rows, detail, persistedResult.result]);
+  }, [allowDemoContent, catalogRowsState.rows, detail, persistedResult.result, persistedResult.priorResults]);
   const phase2 = useLabResultPhase2(workspaceId, effectiveDetail?.result.id, !allowDemoContent && Boolean(persistedResult.result), fulfillmentWorkItem?.rowRevision);
   usePageReadiness(fulfillmentQueue.status === "loading" || (!allowDemoContent && Boolean(fulfillmentWorkItem) && (persistedResult.status === "loading" || phase2.status === "loading")), `${workspaceId}:${selectedDate}:${queryLabResultId ?? selectedLabResultId}:${entry.show ? "entry" : "instruction"}`);
+  const resultPhase2 = phase2.data ? { ...phase2.data, canEdit: phase2.data.canEdit && !fulfillmentWorkItem?.pauseReason && fulfillmentWorkItem?.status === "in_progress",
+    canRequestRetest: phase2.data.canRequestRetest && !fulfillmentWorkItem?.pauseReason && !workflow.assignedRerequest } : null;
   const refreshPhase2 = phase2.refresh;
   const [savedEntryRevision, setSavedEntryRevision] = useState<{
     workspaceId: string;
@@ -3449,7 +3471,8 @@ export function LabContent({
       : effectiveDetail?.result.entryWriteRevision;
   const saveResultRows = useCallback(
     async (rows: LabResultRow[], requestId: string, expectedRevision: number) => {
-      if (!phase2.data?.canEdit) return { ok: false, reason: "permission_denied", message: "현재 담당자만 수정할 수 있습니다.", retryable: false } satisfies LabResultSaveOutcome;
+      if (fulfillmentWorkItem?.pauseReason) return { ok: false, reason: "held", message: "오더 수정 중입니다. 입력은 이 화면에 보관됩니다.", retryable: true } satisfies LabResultSaveOutcome;
+      if (!phase2.data?.canEdit || fulfillmentWorkItem?.status !== "in_progress") return { ok: false, reason: "permission_denied", message: "현재 담당자만 수정할 수 있습니다.", retryable: false } satisfies LabResultSaveOutcome;
       if (!effectiveDetail) {
         return Promise.resolve({
           message: "선택된 검사 결과가 없습니다.",
@@ -3565,16 +3588,7 @@ export function LabContent({
       status: "requested",
     });
   };
-  const transitionFulfillment = async (
-    action: FulfillmentWorkItemAction,
-    options?: FulfillmentTransitionOptions,
-  ) => {
-    if (!fulfillmentWorkItem) return false;
-    if (["start", "resume", "complete"].includes(action) && !await instructionReview.check()) return "review_required" as const;
-    return fulfillmentQueue.updateStatus(fulfillmentWorkItem.id, [{ action, ...options }], code => {
-      if (code === "instruction_ack_required") instructionReview.requireReview();
-    });
-  };
+  const transitionFulfillment = workflow.transition;
   const loadEligibleAssignees = () =>
     fulfillmentWorkItem
       ? loadFulfillmentEligibleAssigneesRoute({
@@ -3681,7 +3695,7 @@ export function LabContent({
     onConfirm={async () => {
       if (!fulfillmentWorkItem.canManage) return false;
       if (!fulfillmentWorkItem.assignedToUserId) return transitionFulfillment("claim");
-      return true;
+      return transitionFulfillment("start", { detailedPhase: "inputting" });
     }} />;
 
   const displayDetail = {
@@ -3743,7 +3757,8 @@ export function LabContent({
                     </span>
                   ) : null}
                 </Button>
-                {fulfillmentWorkItem ? (
+                {fulfillmentWorkItem?.pauseReason ? <Button disabled size="sm" variant="outline">오더 수정 중</Button> : workflow.assignedRerequest ?
+                  <Button size="sm" disabled={!fulfillmentWorkItem?.canManage} onClick={workflow.openRerequestReview}>업무 이어가기</Button> : fulfillmentWorkItem ? (
                   <FulfillmentWorkLifecycleAction
                     activityLabel="검사"
                     assignedToUserId={fulfillmentWorkItem.assignedToUserId}
@@ -3794,7 +3809,7 @@ export function LabContent({
                     {formatShortDateTime(displayDetail.order?.requestedAt)}
                   </span>
                   <EmrStatusBadge
-                    label={getStatusLabel(
+                    label={fulfillmentWorkItem?.pauseReason ? "일시중지" : workflow.assignedRerequest ? "재요청" : getStatusLabel(
                       "labResult",
                       displayDetail.result.status,
                     )}
@@ -3863,9 +3878,9 @@ export function LabContent({
 
       <ScrollArea data-slot="lab-result-scroll-area" className="min-h-0 flex-1">
         <div data-slot="instruction-result-scroll-content" className={cn("flex flex-col gap-4 pb-10 pt-4", !documentLayout && "px-4")}>
-          <TaskInstructionReview controller={instructionReview} />
-          {phase2.status === "ready" && !phase2.data?.canEdit ? <div role="status" className="rounded-lg border border-border bg-card px-4 py-3 emr-text-dense text-muted-foreground">
-            {!fulfillmentWorkItem?.assignedToUserId ? "담당하기 후 결과·소견·첨부자료를 입력할 수 있습니다." : "현재 담당자만 결과·소견·첨부자료를 수정할 수 있습니다."}
+          <TaskInstructionReview controller={instructionReview} orderType={fulfillmentWorkItem?.queueType === "lab" ? "임상병리" : "영상"} readOnly={Boolean(fulfillmentWorkItem?.pauseReason)} />
+          {phase2.status === "ready" && !resultPhase2?.canEdit ? <div role="status" className="rounded-lg border border-border bg-card px-4 py-3 emr-text-dense text-muted-foreground">
+            {fulfillmentWorkItem?.pauseReason ? "오더 수정 중입니다." : workflow.assignedRerequest ? "변경 내용을 확인하고 업무를 이어가 주세요." : !fulfillmentWorkItem?.assignedToUserId ? "담당하기 후 결과·소견·첨부자료를 입력할 수 있습니다." : "현재 담당자만 결과·소견·첨부자료를 수정할 수 있습니다."}
           </div> : null}
           <LabResultInputSection
             key={`${workspaceId}:${displayDetail.result.id}:rows`}
@@ -3886,11 +3901,13 @@ export function LabContent({
             result={effectiveDetail.result}
             onCatalogRetry={allowDemoContent ? catalogRowsState.retry : persistedResult.retry}
             onSave={saveResultRows}
-            phase2={phase2.data}
+            paused={Boolean(fulfillmentWorkItem?.pauseReason) || phase2.status === "loading"}
+            phase2={resultPhase2}
             phase2Status={phase2.status}
             onPhase2Refresh={phase2.refresh}
           />
-          <LabOverallFinding key={`${workspaceId}:${displayDetail.result.id}:overall`} result={displayDetail.result} phase2={phase2.data} readStatus={phase2.status} refresh={phase2.refresh} />
+          <PriorLabResults key={`${workspaceId}:${displayDetail.result.id}:prior`} result={displayDetail.result} />
+          <LabOverallFinding key={`${workspaceId}:${displayDetail.result.id}:overall`} result={displayDetail.result} paused={Boolean(fulfillmentWorkItem?.pauseReason) || phase2.status === "loading"} phase2={resultPhase2} readStatus={phase2.status} refresh={phase2.refresh} />
           {displayDetail.attachments.length || allowDemoContent ? <AttachmentStrip
             allowDemoContent={allowDemoContent} attachments={displayDetail.attachments}
             showImageExample title="공통 첨부자료"
@@ -4347,10 +4364,11 @@ export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentPro
       ),
     [detail?.order?.id, fulfillmentQueue.workItems],
   );
-  const instructionReview = useTaskInstructionReview(workspaceId, !allowDemoContent && fulfillmentWorkItem?.taskId ? [fulfillmentWorkItem.taskId] : [], String(fulfillmentWorkItem?.rowRevision ?? ""));
+  const workflow = useExaminationWorkflow(workspaceId, fulfillmentWorkItem, !allowDemoContent, fulfillmentQueue.status === "loading", fulfillmentQueue.updateStatus);
+  const instructionReview = workflow.review;
   const entry = useOrderPrework({
-    scopeKey: `${workspaceId}:${fulfillmentWorkItem?.id ?? ""}`,
-    requested: !allowDemoContent && fulfillmentWorkItem?.status === "requested",
+    scopeKey: `${workspaceId}:${fulfillmentWorkItem?.id ?? ""}:${fulfillmentWorkItem?.taskId}:${fulfillmentWorkItem?.taskAttemptNo}`,
+    requested: !allowDemoContent && fulfillmentWorkItem?.status === "requested" && !workflow.assignedRerequest,
     ownsWork: Boolean(fulfillmentWorkItem?.canManage && fulfillmentWorkItem.assignedToUserId),
     pending: !allowDemoContent && fulfillmentQueue.status === "loading" && !fulfillmentWorkItem,
   });
@@ -4385,16 +4403,7 @@ export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentPro
       studyId: initialAssignment.studyId,
     });
   };
-  const transitionFulfillment = async (
-    action: FulfillmentWorkItemAction,
-    options?: FulfillmentTransitionOptions,
-  ) => {
-    if (!fulfillmentWorkItem) return false;
-    if (["start", "resume", "complete"].includes(action) && !await instructionReview.check()) return "review_required" as const;
-    return fulfillmentQueue.updateStatus(fulfillmentWorkItem.id, [{ action, ...options }], code => {
-      if (code === "instruction_ack_required") instructionReview.requireReview();
-    });
-  };
+  const transitionFulfillment = workflow.transition;
   const loadEligibleAssignees = () =>
     fulfillmentWorkItem
       ? loadFulfillmentEligibleAssigneesRoute({
@@ -4556,10 +4565,12 @@ export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentPro
                 <Button variant="outline" size="sm" className="bg-card">
                   PACS
                 </Button>
-                {fulfillmentWorkItem ? (
+                {fulfillmentWorkItem?.pauseReason ? <Button disabled size="sm" variant="outline">오더 수정 중</Button> : workflow.assignedRerequest ?
+                  <Button size="sm" disabled={!fulfillmentWorkItem?.canManage} onClick={workflow.openRerequestReview}>업무 이어가기</Button> : fulfillmentWorkItem ? (
                   <FulfillmentExecutionActions
                     workspaceId={fulfillmentWorkItem.workspaceId}
                     workItemId={fulfillmentWorkItem.id}
+                    taskId={fulfillmentWorkItem.taskId ?? undefined} taskAttemptNo={fulfillmentWorkItem.taskAttemptNo ?? undefined} workItemRevision={fulfillmentWorkItem.rowRevision}
                     onSaved={fulfillmentQueue.refresh}
                     activityLabel="판독"
                     assignedToUserId={fulfillmentWorkItem.assignedToUserId}
@@ -4668,7 +4679,7 @@ export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentPro
         className="min-h-0 flex-1"
       >
         <div data-slot="instruction-result-scroll-content" className={cn("flex flex-col gap-4 pb-10 pt-4", !documentLayout && "px-4")}>
-          <TaskInstructionReview controller={instructionReview} />
+          <TaskInstructionReview controller={instructionReview} orderType={fulfillmentWorkItem?.queueType === "lab" ? "임상병리" : "영상"} readOnly={Boolean(fulfillmentWorkItem?.pauseReason)} />
           <ImagingOrderDetailTable
             detail={detail}
             requesterName={allowDemoContent

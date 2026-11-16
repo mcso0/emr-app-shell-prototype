@@ -33,7 +33,9 @@ export async function POST(request: Request, { params }: RouteContext) {
       p_attachment_id: attachmentId, p_file_name: metadata.name,
       p_mime_type: metadata.mimeType, p_byte_size: metadata.size,
     });
-    if (inserted.error || inserted.data !== path) return Response.json({ ok: false, error: "attachment_prepare_failed" }, { status: 500 });
+    if (inserted.error || inserted.data !== path) return Response.json({ ok: false, error: "attachment_prepare_failed" }, {
+      status: inserted.error?.code === "42501" ? 403 : ["lab_result_attempt_changed", "lab_result_read_only", "order_work_on_hold"].some(code => inserted.error?.message?.includes(code)) ? 409 : 500,
+    });
     const signed = await context.trusted!.storage.from(LAB_RESULT_ATTACHMENT_BUCKET).createSignedUploadUrl(path);
     if (signed.error || !signed.data?.token || !signed.data?.signedUrl) {
       await context.trusted!.from("lab_result_attachments").delete().eq("workspace_id", workspaceId).eq("id", attachmentId).is("ready_at", null);

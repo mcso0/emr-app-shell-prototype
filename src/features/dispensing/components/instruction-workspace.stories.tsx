@@ -233,6 +233,7 @@ export const Compact: Story = {
     await userEvent.keyboard("{Enter}");
     await userEvent.click(await body.findByRole("menuitem", { name: "오더 차트로 이동" }));
     await expect(args.onOpenChart).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(getComputedStyle(more).pointerEvents).not.toBe("none"));
     await userEvent.click(more);
     await userEvent.click(await body.findByRole("menuitem", { name: "지시서 링크 복사" }));
     await expect(args.onCopyLink).toHaveBeenCalledTimes(1);

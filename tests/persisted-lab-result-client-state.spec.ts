@@ -106,3 +106,13 @@ test("a cancelled effect preserves the next owner after its read settles but bef
   expect(requestSignal?.aborted).toBe(true);
   expect(state).toBe(nextOwner);
 });
+
+test("current task identity rejects an earlier attempt even when the work item is reused", () => {
+  const current = { taskId: "synthetic-task-v2", taskAttemptNo: 2 };
+  const read = (taskId: string, taskAttemptNo: number) => getPersistedLabResultView({
+    enabled: true, state: { key, status: "ready", payload: { ...payload(), taskId, taskAttemptNo } }, key, base,
+    workspaceId: scope.workspaceId, workItemId: scope.workItemId, ...current,
+  });
+  expect(read("synthetic-task-v1", 1)).toEqual({ status: "error", result: null });
+  expect(read(current.taskId, current.taskAttemptNo).result).toMatchObject(current);
+});

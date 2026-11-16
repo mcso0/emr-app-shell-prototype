@@ -11,7 +11,7 @@ import { formatPlanOrderTableUnit } from "../chart-order-table-presentation";
 import { getDispenseRequestUnit } from "../dispense-request-quantity";
 import { convertDispensingDose, equivalentDispensingQuantity } from "../dispensing-unit-conversion";
 import type { PlanOrderAuthorityConfig } from "../plan-order-authority-domain";
-import { formatOrderFinancialValue, orderFinancialLabels, confirmedOrderContextSchema, confirmedOrderEditSchema, confirmedOrderErrors, type ConfirmedOrderContext, type ConfirmedOrderEditSession, type OrderFinancialValues } from "../confirmed-order-edit-contract";
+import { formatOrderFinancialValue, orderFinancialLabels, confirmedOrderContextSchema, confirmedOrderEditSchema, confirmedOrderErrors, type ConfirmedOrderClinicalType, type ConfirmedOrderContext, type ConfirmedOrderEditSession, type OrderFinancialValues } from "../confirmed-order-edit-contract";
 
 const dispenseQuantityFields = [
   "doseBasis", "dose", "doseUnit", "frequency", "durationDays",
@@ -37,7 +37,7 @@ function hasDispenseQuantityChange(
 }
 
 export function ConfirmedOrderEditDialog({ workspaceId, chartId, orderId, name, clinicalType, dispensingAuthority = null, fieldLabels, renderClinical, onClose, onSaved }: {
-  workspaceId: string; chartId: string; orderId: string; name: string; clinicalType: "dispensing" | "treatment"; fieldLabels?: Record<string, string>;
+  workspaceId: string; chartId: string; orderId: string; name: string; clinicalType: ConfirmedOrderClinicalType; fieldLabels?: Record<string, string>;
   dispensingAuthority?: PlanOrderAuthorityConfig | null;
   renderClinical: (inputs: Record<string, unknown>, change: (inputs: Record<string, unknown>) => void, disabled: boolean) => {
     fields: ReactNode;
@@ -347,7 +347,7 @@ export function ConfirmedOrderEditDialog({ workspaceId, chartId, orderId, name, 
             {clinicalChanged && <><p>업무 내용 변경을 담당자에게 전달해요. 기존 수행 기록은 보존해요.</p>{changedFields.map(key => <p key={key}>{fieldLabels?.[key] ?? key}: {String(context.detailInputs[key] ?? "—")} → {String(inputs[key] ?? "—")}</p>)}</>}
             {Object.entries(financialPatch).map(([key, value]) => <p key={key}>{orderFinancialLabels[key as keyof OrderFinancialValues]}: {formatOrderFinancialValue(baseFinancial?.[key as keyof OrderFinancialValues])} → {formatOrderFinancialValue(value)}</p>)}
             {quantityChanged && <p>요청 조제량: {context.actualDispenseQuantity ?? "—"} ({context.actualDispenseMode === "manual" ? "수동 지정" : "자동 계산"}) → {mode === "manual" ? `${quantity || "—"} (수동 지정)` : "자동 계산"}</p>}
-            {!clinicalChanged && <p>조제·처치 변경 안내는 보내지 않아요.</p>}
+            {!clinicalChanged && <p>{clinicalType === "dispensing" || clinicalType === "treatment" ? "조제·처치" : "검사 오더"} 변경 안내는 보내지 않아요.</p>}
             {context.billingStage === "requested" && <p className="mt-2">수납 담당자가 확인하기 전에는 기존 청구금액을 유지해요.</p>}
             {context.taskStatus === "complete" && clinicalChanged && <p className="mt-2">새 작업을 요청해요. 수행기록만 바로잡으려면 지시서의 기록 정정을 이용해 주세요.</p>}
           </section>}

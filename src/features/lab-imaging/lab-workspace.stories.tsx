@@ -9,7 +9,7 @@ import { useMockAuthStore } from "@/features/auth/session-store";
 import { getModule } from "@/modules/registry";
 import { WorkspaceDocumentLayout } from "@/shell/workspace-document-layout";
 import { useLayoutStore } from "@/stores/layout-store";
-import { LabContent, LabSidePanel, LabSlotAvailabilityProvider } from "./module";
+import { LabContent, LabSidePanel } from "./module";
 import { useLabImagingStore } from "./store";
 import { createLabWorkspaceFixture, type LabWorkspaceScenario } from "./lab-workspace.stories.fixture";
 
@@ -25,13 +25,14 @@ async function waitForCanonical(root: HTMLElement, instance: typeof fixture) {
     expect(root.querySelector(`[data-testid='lab-result-row-${instance.result.rows[0].id}']`)).toBeInTheDocument();
   }, { timeout: 5000 });
 }
+const LabStorySlots = getModule("lab").slotAvailabilityProvider!;
 function ActualDocument({ instance }: { instance: typeof fixture }) {
   const props = { workspaceId: instance.result.workspaceId, moduleId: "lab", moduleLabel: "검사", onNavigateWorkspaceSurface: (href: string) => {
     instance.copied.push(`route:${href}`);
     const resultId = new URL(href, window.location.origin).searchParams.get("labResultId");
     if (resultId) useLabImagingStore.getState().selectLabResult(resultId);
   } };
-  return <LabSlotAvailabilityProvider {...props}>{availability => <WorkspaceDocumentLayout moduleDefinition={getModule("lab")} slotProps={{ ...props, ...availability }} />}</LabSlotAvailabilityProvider>;
+  return <LabStorySlots {...props}>{availability => <WorkspaceDocumentLayout moduleDefinition={getModule("lab")} slotProps={{ ...props, ...availability }} />}</LabStorySlots>;
 }
 async function settleAutosave(root: HTMLElement) {
   const status = (id: string) => root.querySelector(`[data-testid='${id}']`)?.textContent ?? "";
@@ -248,8 +249,8 @@ export const QueueSelectionAndPendingResult: Story = { play: async ({ canvas, ca
   const pending = fixture.workItems[1];
   const pendingCard = canvas.getByTestId(`lab-queue-card-live-lab-${pending.id}`);
   await userEvent.click(pendingCard);
-  await waitFor(() => expect(canvas.getByTestId("lab-result-catalog-status")).toHaveTextContent("연결된 결과지 항목이 없습니다."));
-  await expect(canvas.getByRole("textbox", { name: "검사결과 종합소견" })).toBeDisabled();
+  await waitFor(() => expect(canvas.getByTestId("lab-prework")).toBeVisible());
+  await expect(canvas.queryByRole("textbox", { name: "검사결과 종합소견" })).not.toBeInTheDocument();
   await expect(canvas.queryByRole("textbox", { name: "합성 수치 결과값" })).not.toBeInTheDocument();
   await expect(fixture.commands.filter(command => command.method === "GET" && command.path.endsWith("result-phase2"))).toHaveLength(phaseReads);
   const originalCard = canvas.getByTestId(`lab-queue-card-live-lab-${fixture.workItems[0].id}`);
@@ -258,3 +259,47 @@ export const QueueSelectionAndPendingResult: Story = { play: async ({ canvas, ca
 export const QueueReadErrorAndRetry: Story = { args: { scenario: "queue-error", view: "content" }, play: async ({ canvas }) => { await waitFor(() => expect(canvas.getByText("검사 업무를 불러오지 못했습니다")).toBeVisible()); const reads = fixture.queueReads; fixture.recoverQueue(); await userEvent.click(canvas.getByRole("button", { name: "재시도" })); await ready(canvas); await expect(fixture.queueReads).toBeGreaterThan(reads); } };
 export const QueuePermissionDenied: Story = { args: { scenario: "queue-denied", view: "content" }, play: async ({ canvas }) => { await waitFor(() => expect(canvas.getByText("검사 업무를 볼 권한이 없습니다")).toBeVisible()); await expect(canvas.queryByRole("button", { name: "재시도" })).not.toBeInTheDocument(); } };
 export const EmptyQueue: Story = { args: { scenario: "empty", view: "content" }, play: async ({ canvas }) => { await waitFor(() => expect(canvas.getByText("검사 업무가 없습니다")).toBeVisible()); const reads = fixture.queueReads; await userEvent.click(canvas.getByRole("button", { name: "새로고침" })); await waitFor(() => expect(fixture.queueReads).toBeGreaterThan(reads)); } };
+
+
+export const AssignedFirstRequestStarts: Story = { args: { scenario: "assigned-request", view: "content" }, play: async ({ canvas, canvasElement }) => {
+  await userEvent.click(await canvas.findByRole("button", { name: "업무 시작하기" }));
+  const dialog = within(await within(canvasElement.ownerDocument.body).findByRole("dialog", { name: "업무를 시작할까요?" }));
+  await userEvent.click(dialog.getByRole("button", { name: "업무 시작하기" }));
+  await ready(canvas);
+  await expect(fixture.lifecycle.map(command => command.action)).toEqual(["start"]);
+  await expect(fixture.workItems[0].status).toBe("in_progress");
+  await expect(canvas.getByRole("textbox", { name: "합성 수치 결과값" })).toBeEnabled();
+} };
+
+export const RerequestRequiresExplicitRestart: Story = { args: { scenario: "rerequest", view: "content" }, play: async ({ canvas, canvasElement }) => {
+  const body = within(canvasElement.ownerDocument.body);
+  const dialog = within(await body.findByRole("dialog"));
+  await expect(fixture.lifecycle).toHaveLength(0);
+  await expect(fixture.workItems[0].status).toBe("requested");
+  await userEvent.click(dialog.getByRole("button", { name: "업무 시작하기" }));
+  await waitFor(() => expect(canvas.getByRole("textbox", { name: "합성 수치 결과값" })).toBeEnabled());
+  await expect(canvas.getByRole("textbox", { name: "합성 수치 결과값" })).toHaveValue("");
+  await expect(canvas.getByRole("textbox", { name: "검사결과 종합소견" })).toHaveValue("");
+  await expect(fixture.acknowledgements).toBe(1);
+  await expect(fixture.lifecycle.map(command => command.action)).toEqual(["start"]);
+} };
+
+export const DraftResumesAfterEditHold: Story = { args: { view: "content" }, play: async ({ canvas }) => {
+  await ready(canvas);
+  const input = canvas.getByRole("textbox", { name: "합성 수치 결과값" });
+  await userEvent.clear(input); await userEvent.type(input, "4");
+  fixture.setHeld(true);
+  await waitFor(() => expect(canvas.getByRole("textbox", { name: "합성 수치 결과값" })).toBeDisabled());
+  const writes = fixture.writes.length;
+  await new Promise(resolve => setTimeout(resolve, 900));
+  await expect(fixture.writes).toHaveLength(writes);
+  fixture.setHeld(false);
+  await waitFor(() => expect(canvas.getByRole("textbox", { name: "합성 수치 결과값" })).toBeEnabled());
+  await waitFor(() => expect(fixture.result.rows[0].value).toBe("4"));
+  const overall = canvas.getByRole("textbox", { name: "검사결과 종합소견" });
+  await userEvent.clear(overall); await userEvent.type(overall, "합성 중지 후 소견");
+  fixture.setHeld(true); await waitFor(() => expect(canvas.getByRole("textbox", { name: "검사결과 종합소견" })).toBeDisabled());
+  await new Promise(resolve => setTimeout(resolve, 900));
+  fixture.setHeld(false); await waitFor(() => expect(canvas.getByRole("textbox", { name: "검사결과 종합소견" })).toBeEnabled());
+  await waitFor(() => expect(fixture.state.overallFinding).toBe("합성 중지 후 소견"));
+} };

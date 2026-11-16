@@ -444,6 +444,9 @@ function normalizeSupabaseLabResultEntryResponse(data: unknown, operation: "read
 }
 
 function mapSupabaseLabResultError(message: string | undefined, operation: "read" | "write") {
+  for (const reason of ["lab_result_attempt_changed", "lab_result_read_only", "order_work_on_hold"]) {
+    if (message?.includes(reason)) return { ok: false, status: 409, denialReason: reason };
+  }
   if (message?.includes("workspace_membership_missing")) {
     return { ok: false, status: 403, denialReason: "workspace_membership_missing" };
   }
