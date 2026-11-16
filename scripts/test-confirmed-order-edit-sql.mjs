@@ -10,8 +10,13 @@ if (!container || !database || !/^[a-zA-Z0-9_-]+$/.test(container) || !/^[a-zA-Z
 const inspection = spawnSync("docker", ["inspect", "--format", "{{.HostConfig.NetworkMode}}", container], { encoding: "utf8" });
 if (inspection.status !== 0 || inspection.stdout.trim() !== "none") throw new Error("Only an isolated Docker container with network mode none is accepted.");
 const baseSql = readFileSync(new URL("../tests/sql/confirmed-order-edit.sql", import.meta.url), "utf8");
-const followupSql = baseSql.slice(0, baseSql.indexOf("do $$\ndeclare d jsonb; r jsonb;")) + readFileSync(new URL("../tests/sql/selected-billing-prepayment.sql", import.meta.url), "utf8");
-for (const [name, sql] of [["sql", baseSql], ["selected-billing-prepayment", followupSql]]) {
+const fixture = baseSql.slice(0, baseSql.indexOf("do $$\ndeclare d jsonb; r jsonb;"));
+const followup = (file) => fixture + readFileSync(new URL(`../tests/sql/${file}.sql`, import.meta.url), "utf8");
+for (const [name, sql] of [
+  ["sql", baseSql],
+  ["selected-billing-prepayment", followup("selected-billing-prepayment")],
+  ["work-hold", followup("confirmed-order-work-hold")],
+]) {
 const result = spawnSync("docker", ["exec", "-i", container, "psql", "-X", "-U", "supabase_admin", "-d", database, "-v", "ON_ERROR_STOP=1"], {
   input: sql, encoding: "utf8", maxBuffer: 4 * 1024 * 1024,
 });

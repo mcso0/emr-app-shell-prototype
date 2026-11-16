@@ -10,6 +10,7 @@ import { CdsAlertsLoaderIcon } from "@/components/cds-icons/alerts-and-status";
 import { CdsFilesClockIcon } from "@/components/cds-icons/files-and-layout";
 import { CdsUtilitiesCircleIcon } from "@/components/cds-icons/utilities-and-misc";
 import type { AppIcon } from "@/components/icons";
+import { EmrSidePanelStateIcon } from "./side-panel-state-icon";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -68,6 +69,8 @@ const statusTone: Record<string, string> = {
     "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]",
   진행중:
     "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]",
+  일시중지:
+    "border-[var(--emr-status-hold-border)] bg-[var(--emr-status-hold-bg)] text-[var(--emr-status-hold-text)]",
   대기중:
     "border-[var(--emr-status-neutral-border)] bg-[var(--emr-status-neutral-bg)] text-[var(--emr-status-neutral-text)]",
   완료:
@@ -114,7 +117,9 @@ export function EmrStatusBadge({
       )}
       variant="outline"
     >
-      {marker === "icon" ? (
+      {marker === "icon" && label === "일시중지" ? (
+        <EmrSidePanelStateIcon state="hold" className="size-3" aria-hidden="true" data-testid={testId ? `${testId}-icon` : undefined} />
+      ) : marker === "icon" ? (
         <Icon
           className="size-3 shrink-0"
           aria-hidden="true"

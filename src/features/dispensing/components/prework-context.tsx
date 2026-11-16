@@ -15,7 +15,7 @@ import { PatientOrderPrework, type PatientOrderPreworkItem } from "@/features/fu
 import { TaskInstructionReview } from "@/features/fulfillment/components/task-instruction-review";
 import type { InstructionDocument } from "@/features/fulfillment/instruction-contract";
 import type { EffectiveInstructions } from "@/features/fulfillment/task-instruction-review-contract";
-import { createInstructionView, formatInstructionValue, getDispensingRerequestChanges, hasPendingInstructionRerequest } from "../instruction-view-model";
+import { createInstructionView, formatInstructionValue, getOrderRerequestChanges, hasPendingInstructionRerequest } from "../instruction-view-model";
 import type { FulfillmentInstructionController } from "../use-fulfillment-instruction";
 import { InstructionItemRow, InstructionRowDisclosure, InstructionRowNote } from "./instruction-document-table";
 import { InstructionActions } from "./instruction-workspace";
@@ -248,7 +248,7 @@ export function DispensingPreworkContext({ controller, focusedItemId, workItem, 
       </Section>
       {review
         ? <TaskInstructionReview controller={review} renderInstructions={renderInstructions}
-            dispensingChanges={rerequest && document.queueType === "dispensing" ? getDispensingRerequestChanges(document, review.reviews) : undefined} />
+            orderChanges={rerequest && document.queueType === "dispensing" ? getOrderRerequestChanges(document, review.reviews) : undefined} />
         : renderInstructions([])}
     </PatientOrderPrework>
   );

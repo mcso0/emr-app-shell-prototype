@@ -2,6 +2,9 @@ import { z } from "zod";
 import { oralInstructionSchema } from "@/features/chart/chart-oral-instruction-contract";
 
 const id = z.string().min(1);
+export const orderWorkPauseReasonSchema = z.literal("order_edit");
+export type OrderWorkPauseReason = z.infer<typeof orderWorkPauseReasonSchema>;
+
 const snapshot = z.record(z.string(), z.unknown());
 export const instructionCommandSchema = z.discriminatedUnion("action", [
   z.object({
@@ -79,6 +82,7 @@ export const instructionItemSchema = z.object({
 });
 
 export const instructionDocumentSchema = z.object({
+  pauseReason: orderWorkPauseReasonSchema.nullish(),
   oralInstruction: oralInstructionSchema.nullable().optional(),
   encounterNo: z.string().nullable().optional(),
   firstStartedAt: z.iso.datetime({ offset: true }).nullish(),
@@ -141,6 +145,7 @@ export function instructionCompletionConfirmation(
 }
 
 export const instructionErrorMessages: Record<string, string> = {
+  order_work_on_hold: "수의사가 오더를 수정 중이에요. 수정이 끝난 뒤 다시 시도해 주세요.",
   instruction_ack_required: "최신 지시사항을 확인한 뒤 다시 시도해 주세요.",
   revision_conflict:
     "다른 사용자가 오더를 변경했어요. 최신 내용을 확인한 뒤 다시 시도해 주세요.",

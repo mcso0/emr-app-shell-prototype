@@ -4,7 +4,7 @@ import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ConfirmedOrderEditDialog } from "./confirmed-order-edit-dialog";
-import { confirmedOrderEditSchema, type ConfirmedOrderContext } from "../confirmed-order-edit-contract";
+import { confirmedOrderEditSchema, confirmedOrderEditSessionSchema, type ConfirmedOrderContext } from "../confirmed-order-edit-contract";
 import { updateDispensingPrescriptionInput } from "../dispense-request-quantity";
 import { OrderBillingChangeReview } from "@/features/billing/order-billing-change-review";
 import { PartialOrderWorkDialog } from "@/features/fulfillment/components/partial-order-work-dialog";
@@ -26,6 +26,7 @@ function createFixture(scenario: Scenario) {
     context.actualDispenseQuantity = 4;
   }
   const requests: Record<string, unknown>[] = [];
+  let editSessionId: string | null = null;
   let failed = false, saved = 0, release: (() => void) | undefined;
   let changes = [{ orderId: id(1), proposalId: id(3), version: 1, before: context.financial!, proposed: { ...context.financial!, unitPriceKrw: 6000 }, canApprove: true, createdAt: "2026-11-03T00:00:00Z" }];
   const partial = { taskId: id(4), revision: 1, canRecord: true, notes: [] as { taskId: string; note: string; createdAt: string; actorName: string; attemptNo: number }[] };
@@ -41,6 +42,12 @@ function createFixture(scenario: Scenario) {
       if (post && scenario === "late") await new Promise<void>(resolve => { release = resolve; });
       if (post && ["retry", "billing", "partial"].includes(scenario) && !failed) { failed = true; return Response.json({ ok: false, error: "unavailable" }, { status: 503 }); }
       if (url.pathname.endsWith("/confirmed-order-edit")) {
+        if (init?.method === "PATCH") {
+          const session = confirmedOrderEditSessionSchema.parse(JSON.parse(String(init.body)));
+          if (session.chartId !== context.chartId || session.orderId !== context.orderId) throw new Error("Invalid hold target");
+          if (scenario === "clinical") editSessionId = session.action === "release" ? null : session.sessionId;
+          return Response.json({ ok: true, context, editSessionId });
+        }
         if (command) {
           const parsed = confirmedOrderEditSchema.parse(command);
           if (scenario === "conflict") return Response.json({ ok: false, error: "revision_conflict" }, { status: 409 });
@@ -58,7 +65,7 @@ function createFixture(scenario: Scenario) {
     globalThis.fetch = handle;
     return () => { release?.(); if (globalThis.fetch === handle) globalThis.fetch = old; };
   };
-  return { context, requests, install, approveExternally: () => { changes = []; }, saved: () => saved, recordSaved: () => { saved++; }, release: () => release?.() };
+  return { context, requests, install, editSessionId: () => editSessionId, approveExternally: () => { changes = []; }, saved: () => saved, recordSaved: () => { saved++; }, release: () => release?.() };
 }
 function Example({ scenario }: { scenario: Scenario }) {
   const [open, setOpen] = useState(true), [count, setCount] = useState(0);
@@ -106,10 +113,12 @@ export const ClinicalReason: Story = { args: { scenario: "clinical" }, play: asy
   await userEvent.type(days, "5");
   const reason = screen.getByLabelText("수정 사유 (필수)");
   await expect(reason).toBeRequired();
-  await expect(screen.getByRole("button", { name: "수정 후 요청" })).toBeDisabled();
+  await expect(screen.getByRole("button", { name: "수정 후 재확정" })).toBeDisabled();
   await userEvent.type(reason, "합성 일수 수정");
-  await userEvent.click(screen.getByRole("button", { name: "수정 후 요청" }));
+  await userEvent.click(screen.getByRole("button", { name: "수정 후 재확정" }));
   await waitFor(() => expect(state.requests).toHaveLength(1));
+  await expect(state.editSessionId()).toBeTruthy();
+  await expect(state.requests[0].editSessionId).toBe(state.editSessionId());
   await expect(state.requests[0].financial).toBeUndefined();
   await expect(state.requests[0].clinical).toEqual({
     detailInputs: {
@@ -127,7 +136,7 @@ export const ManualRequestReconfirmation: Story = { args: { scenario: "manual" }
   await userEvent.clear(days);
   await userEvent.type(days, "5");
   await userEvent.type(screen.getByLabelText("수정 사유 (필수)"), "합성 일수 수정");
-  const save = screen.getByRole("button", { name: "수정 후 요청" });
+  const save = screen.getByRole("button", { name: "수정 후 재확정" });
   await expect(save).toBeDisabled();
   await userEvent.click(screen.getByRole("button", { name: "요청 조제량 확인" }));
   await expect(save).toBeEnabled();

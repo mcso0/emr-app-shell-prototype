@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 
 import { EmrStatusBadge } from "./status-badge";
 
-const statusLabels = ["요청", "대기중", "진행중", "조제중", "재요청", "완료", "취소"] as const;
+const statusLabels = ["요청", "대기중", "진행중", "조제중", "일시중지", "재요청", "완료", "취소"] as const;
 
 const meta = {
   title: "Design System/EMR/EmrStatusBadge",

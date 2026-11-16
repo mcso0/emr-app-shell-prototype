@@ -6,7 +6,7 @@ import type {
   InstructionItem,
 } from "@/features/fulfillment/instruction-contract";
 
-import type { DispensingOrderChange, TaskInstructionReview } from "@/features/fulfillment/task-instruction-review-contract";
+import type { OrderRerequestChange, TaskInstructionReview } from "@/features/fulfillment/task-instruction-review-contract";
 
 export type InstructionViewItem = {
   id: string;
@@ -65,6 +65,11 @@ export function hasPendingInstructionRerequest(document: InstructionDocument) {
   return document.items.some((item) => isPendingFulfillmentRerequest(item.status, item.attemptNo, item.assigneeId));
 }
 
+export function isAssignedInstructionRerequest(document: InstructionDocument) {
+  return !document.finalized && !document.pauseReason && Boolean(document.firstStartedAt && document.mainAssigneeId)
+    && document.items.some(item => item.attemptNo > 1 && item.status === "requested");
+}
+
 export function isWaitingInstruction(document: InstructionDocument) {
   if (document.finalized || !document.items.length) return false;
   if (document.items.every((item) => item.status === "requested")) return true;
@@ -79,6 +84,7 @@ export function isWaitingInstruction(document: InstructionDocument) {
 
 export function getInstructionStatusLabel(document: InstructionDocument) {
   if (document.finalized) return "완료";
+  if (document.pauseReason) return "일시중지";
   if (hasPendingInstructionRerequest(document)) return "재요청";
   const active = document.items.filter((item) => item.status !== "cancelled");
   if (!active.length) return "취소";
@@ -178,6 +184,7 @@ const fields = [
 
 export function createInstructionView(document: InstructionDocument) {
   const names: Record<string, string> = {};
+  const readOnly = Boolean(document.pauseReason) || isAssignedInstructionRerequest(document);
   const events: InstructionViewEvent[] = [];
   const orderedChanges = [...document.changes].sort(
     (a, b) =>
@@ -249,8 +256,8 @@ export function createInstructionView(document: InstructionDocument) {
         : item.attemptNo === 1 && item.status === "requested"
           ? "added"
           : "existing",
-      canAssign: item.canAssign,
-      canComplete: item.canComplete,
+      canAssign: !readOnly && item.canAssign,
+      canComplete: !readOnly && item.canComplete,
       previous,
     };
   });
@@ -336,9 +343,9 @@ function dispensingChangeValue(field: string, value: unknown) {
   return formatInstructionValue(displayField, formatted);
 }
 
-export function getDispensingRerequestChanges(document: InstructionDocument, reviews: TaskInstructionReview[]) {
-  const result = new Map<string, DispensingOrderChange | null>();
-  if (document.queueType !== "dispensing") return result;
+export function getOrderRerequestChanges(document: InstructionDocument, reviews: TaskInstructionReview[]) {
+  const result = new Map<string, OrderRerequestChange | null>();
+  const dispensing = document.queueType === "dispensing";
 
   for (const item of document.items) {
     if (item.attemptNo < 2) continue;
@@ -361,36 +368,38 @@ export function getDispensingRerequestChanges(document: InstructionDocument, rev
     const reason = entry.instruction.slice(reasonIndex + reasonSeparator.length);
     if (!reason.trim()) continue;
 
-    const before = displayFields(revision.before, {}, "", "dispensing");
-    const after = displayFields(revision.after, {}, "", "dispensing");
+    const before = displayFields(revision.before, {}, "", document.queueType);
+    const after = displayFields(revision.after, {}, "", document.queueType);
     const beforeInputs = record(revision.before.detailInputs);
     const afterInputs = record(revision.after.detailInputs);
     const schemaVersion = revision.after.detailSchemaVersion ?? revision.before.detailSchemaVersion;
-    const schema = getClinicalOrderFieldSchema("dispensing", typeof schemaVersion === "number" ? schemaVersion : undefined);
+    const schema = getClinicalOrderFieldSchema(document.queueType, typeof schemaVersion === "number" ? schemaVersion : undefined);
     const keys = new Set([...Object.keys(beforeInputs), ...Object.keys(afterInputs)]);
-    const fields: DispensingOrderChange["fields"] = [];
+    const fields: OrderRerequestChange["fields"] = [];
 
     const add = (key: string, label: string, before: string, after: string) => {
       if (before !== after) fields.push({ key, label, before, after });
     };
     const quantity = ({ total, totalUnit }: typeof before) =>
       total === "—" || totalUnit === "—" ? total : `${total} ${totalUnit}`;
-    add("frequency", "복용 주기", before.frequency, after.frequency);
-    add("requestQuantity", "요청 조제량", quantity(before), quantity(after));
-    keys.delete("frequency");
-    if (before.total === text(beforeInputs.totalQuantity) && after.total === text(afterInputs.totalQuantity)) keys.delete("totalQuantity");
-    if (before.totalUnit === text(formatPlanOrderTableUnit(text(beforeInputs.totalQuantityUnit))) &&
-        after.totalUnit === text(formatPlanOrderTableUnit(text(afterInputs.totalQuantityUnit)))) keys.delete("totalQuantityUnit");
+    if (dispensing) {
+      add("frequency", "복용 주기", before.frequency, after.frequency);
+      add("requestQuantity", "요청 조제량", quantity(before), quantity(after));
+      keys.delete("frequency");
+      if (before.total === text(beforeInputs.totalQuantity) && after.total === text(afterInputs.totalQuantity)) keys.delete("totalQuantity");
+      if (before.totalUnit === text(formatPlanOrderTableUnit(text(beforeInputs.totalQuantityUnit))) &&
+          after.totalUnit === text(formatPlanOrderTableUnit(text(afterInputs.totalQuantityUnit)))) keys.delete("totalQuantityUnit");
+    }
 
     for (const key of keys) {
-      const label = Object.hasOwn(dispensingChangeLabels, key)
+      const label = dispensing && Object.hasOwn(dispensingChangeLabels, key)
         ? dispensingChangeLabels[key]
         : schema?.fields.find(field => field.key === key)?.label ?? "기타 업무 항목";
       add(key, label, dispensingChangeValue(key, beforeInputs[key]), dispensingChangeValue(key, afterInputs[key]));
     }
     const mode = (plan: Record<string, unknown>) =>
       record(plan.calculationOutputs).actualDispenseSource === "manual_override" ? "수동 지정" : "자동 계산";
-    add("requestMode", "조제량 입력 방식", mode(revision.before), mode(revision.after));
+    if (dispensing) add("requestMode", "조제량 입력 방식", mode(revision.before), mode(revision.after));
 
     if (fields.length) result.set(item.taskId, { entry, orderName: item.name || document.name, reason, fields });
   }

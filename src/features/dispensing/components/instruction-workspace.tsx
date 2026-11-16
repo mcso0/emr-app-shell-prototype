@@ -3,7 +3,9 @@
 import { OralInstructionInfobar } from "./oral-instruction-infobar";
 import { TaskInstructionReview } from "@/features/fulfillment/components/task-instruction-review";
 import { EmrContentLoadingState } from "@/components/emr/empty-state";
-import { useId, useState } from "react";
+import { EmrInlineAlert } from "@/components/emr/inline-alert";
+import { EmrSidePanelStateIcon } from "@/components/emr/side-panel-state-icon";
+import { useEffect, useEffectEvent, useId, useRef, useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup, ButtonGroupDivider, ButtonGroupIconButton, ButtonGroupPrimaryButton } from "@/components/ui/button-group";
@@ -19,7 +21,7 @@ import { EmrWorkEntryAction, EmrWorkEntryTrigger } from "@/components/emr/work-e
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { ExecutionResultDialog } from "@/features/fulfillment/components/execution-result-dialog";
 import { instructionCompletionConfirmation } from "@/features/fulfillment/instruction-contract";
-import { createInstructionView, getDispensingRerequestChanges, getInstructionStatusLabel, hasPendingInstructionRerequest, isWaitingInstruction } from "../instruction-view-model";
+import { createInstructionView, getOrderRerequestChanges, getInstructionStatusLabel, hasPendingInstructionRerequest, isAssignedInstructionRerequest, isWaitingInstruction } from "../instruction-view-model";
 import type { FulfillmentInstructionController } from "../use-fulfillment-instruction";
 import { InstructionDocumentTable } from "./instruction-document-table";
 
@@ -105,7 +107,11 @@ function ReopenConfirmation({ controller, onChanged, onClose }: Props & { onClos
 }
 
 export function InstructionActions(props: Props) {
-  return <InstructionActionsContent key={`${props.workspaceId}:${props.controller.document?.rootTaskId}:${props.controller.document?.queueType}`} {...props} />;
+  const document = props.controller.document;
+  return <InstructionActionsContent
+    key={`${props.workspaceId}:${document?.rootTaskId}:${document?.queueType}:${document?.pauseReason ?? ""}`}
+    {...props}
+  />;
 }
 
 function InstructionActionsContent({ controller, onChanged, workspaceId, prework = false, inDocumentToolbar = false, onEntered, onCompletionOpenChange }: Props) {
@@ -114,13 +120,44 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
   const [confirm, setConfirm] = useState(false);
   const [reopen, setReopen] = useState(false);
   const document = controller.document;
+  const assignedRerequest = !prework && Boolean(document && isAssignedInstructionRerequest(document));
+  const autoReviewKey = assignedRerequest && document?.canStart && !controller.loading
+    ? document.items.filter(item => item.attemptNo > 1 && item.status === "requested").map(item => item.taskId).join(":")
+    : "";
+  const openedReview = useRef("");
+  const openReviewOnEntry = useEffectEvent(() => controller.openRerequestReview?.(onChanged));
+  useEffect(() => {
+    if (!autoReviewKey || openedReview.current === autoReviewKey) return;
+    openedReview.current = autoReviewKey;
+    openReviewOnEntry();
+  }, [autoReviewKey]);
+
   if (!document) return null;
   const busy = controller.busy || controller.loading;
+  const completionLabel = document.queueType === "dispensing" ? "조제 완료" : "처치 완료";
+  if (document.pauseReason) {
+    return <ButtonGroup aria-label={`${completionLabel} 보조 작업`}>
+      <ButtonGroupPrimaryButton type="button" size="sm" variant="outline" disabled>
+        <CdsActionsCheckCircleIcon data-icon="inline-start" aria-hidden="true" />
+        {completionLabel}
+      </ButtonGroupPrimaryButton>
+      <ButtonGroupDivider />
+      <ButtonGroupIconButton type="button" size="sm" aria-label="업무 상태 변경" disabled>
+        <CdsNavigationChevronDownIcon className="size-3" aria-hidden="true" />
+      </ButtonGroupIconButton>
+    </ButtonGroup>;
+  }
+  if (assignedRerequest) {
+    return document.canStart ? (
+      <Button size="sm" disabled={busy} onClick={() => controller.openRerequestReview?.(onChanged)}>
+        업무 이어가기
+      </Button>
+    ) : null;
+  }
   const continuingRerequest = Boolean(document.firstStartedAt) && hasPendingInstructionRerequest(document);
   const entryMode = document.canClaim ? "claim" : document.canTakeover ? "takeover" : document.canStart ? "start" : "blocked";
   const claimStartsWork = isWaitingInstruction(document);
   const claimIntent = { action: "claim" as const, ...(claimStartsWork ? { startWork: true as const } : {}) };
-  const completionLabel = document.queueType === "dispensing" ? "조제 완료" : "처치 완료";
   const openCompletion = () => {
     setConfirm(true);
     onCompletionOpenChange?.(true);
@@ -288,14 +325,16 @@ export function InstructionBody({
   onChanged,
   workspaceId,
 }: Props & { focusedItemId?: string }) {
-  const [confirmItem, setConfirmItem] = useState<string | null>(null);
+  const [completion, setCompletion] = useState<{ itemId: string; revision: string } | null>(null);
   const [historyItemIds, setHistoryItemIds] = useState<readonly string[] | null | undefined>(
     undefined,
   );
   const [executionHistory, setExecutionHistory] = useState(false);
-  const [editInstruction, setEditInstruction] = useState(false);
+  const [editInstruction, setEditInstruction] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const document = controller.document;
+  const readOnly = Boolean(document && (document.pauseReason || isAssignedInstructionRerequest(document)));
+  const confirmItem = completion && completion.revision === document?.revision ? completion.itemId : null;
   const view = document ? createInstructionView(document) : null;
   const historyEvents = (document?.changes ?? []).flatMap(change => {
     const event = view?.events.find(event => event.id === change.id && (
@@ -324,9 +363,22 @@ export function InstructionBody({
         </div>
       ) : null}
       {controller.loading && !document ? <EmrContentLoadingState testId="instruction-document-loading" title="조제/처치 업무를 불러오는 중입니다" /> : null}
+      {document?.pauseReason === "order_edit" && (
+        <EmrInlineAlert
+          className="mb-3 border-[var(--emr-status-hold-border)] bg-[var(--emr-status-hold-bg)] text-[var(--emr-status-hold-text)]"
+          severity="info"
+          testId="order-edit-hold"
+          title="수의사가 오더를 수정 중입니다."
+          icon={<EmrSidePanelStateIcon state="hold" aria-hidden="true" />}
+        >
+          지시서는 볼 수 있어요. 수정이 끝나면 업무를 이어갈 수 있어요.
+        </EmrInlineAlert>
+      )}
       {controller.instructionReview && <TaskInstructionReview controller={controller.instructionReview}
-        dispensingChanges={document?.queueType === "dispensing"
-          ? getDispensingRerequestChanges(document, controller.instructionReview.reviews)
+        readOnly={Boolean(document?.pauseReason)}
+        orderType={document?.queueType === "treatment" ? "처치" : "조제"}
+        orderChanges={document
+          ? getOrderRerequestChanges(document, controller.instructionReview.reviews)
           : undefined} />}
       {!controller.instructionReview && document?.oralInstruction && <OralInstructionInfobar key={document.oralInstruction.chartId} instruction={document.oralInstruction} />}
       {view ? (
@@ -334,7 +386,8 @@ export function InstructionBody({
           {...view}
           focusedItemId={focusedItemId}
           refresh={controller.refresh}
-          editSetInstruction={document?.canEditInstruction && !document.finalized ? () => setEditInstruction(true) : undefined}
+          editSetInstruction={document?.canEditInstruction && !document.finalized && !readOnly
+            ? () => setEditInstruction(document.revision) : undefined}
           openExecutionHistory={() => setExecutionHistory(true)}
           busy={controller.busy || controller.loading}
           names={{
@@ -350,10 +403,10 @@ export function InstructionBody({
           history={setHistoryItemIds}
           notify={setNotice}
           act={async (_orderId, action, extra) => {
-            if (!extra?.itemId || !document || document.finalized || controller.busy || controller.loading) return;
+            if (!extra?.itemId || !document || document.finalized || readOnly || controller.busy || controller.loading) return;
             const item = document.items.find(item => item.id === extra.itemId);
             if (action === "complete") {
-              if (item?.canComplete && item.status !== "completed") setConfirmItem(item.id);
+              if (item?.canComplete && item.status !== "completed") setCompletion({ itemId: item.id, revision: document.revision });
               return;
             }
             const assigneeId = extra.assignees?.[0];
@@ -376,8 +429,8 @@ export function InstructionBody({
         workspaceId={workspaceId}
         onChanged={onChanged}
         itemId={confirmItem ?? undefined}
-        open={confirmItem !== null}
-        onClose={() => setConfirmItem(null)}
+        open={confirmItem !== null && !readOnly}
+        onClose={() => setCompletion(null)}
       />
       <Dialog
         open={historyItemIds !== undefined}
@@ -434,9 +487,9 @@ export function InstructionBody({
         <InstructionRecords controller={controller} workspaceId={workspaceId} onChanged={onChanged}
           mode="history" onClose={() => setExecutionHistory(false)} />
       )}
-      {document && editInstruction && (
+      {document && !readOnly && editInstruction === document.revision && (
         <InstructionEdit controller={controller} workspaceId={workspaceId} onChanged={onChanged}
-          onClose={() => setEditInstruction(false)} />
+          onClose={() => setEditInstruction(null)} />
       )}
     </div>
   );
@@ -477,7 +530,7 @@ function InstructionRecords({ controller, workspaceId, onChanged, onClose, mode 
     workspaceId={workspaceId}
     workItemId={item.id}
     open
-    ownershipAllowed={!busy && (mode === "amend" ? !!document?.finalized : !document?.finalized && (item.canComplete || item.canReopen))}
+    ownershipAllowed={!busy && !document?.pauseReason && (mode === "amend" ? !!document?.finalized : !document?.finalized && (item.canComplete || item.canReopen))}
     ownershipKey={document?.revision}
     authorityStatus={item.status}
     onOpenChange={open => { if (!open) setItemId(null); }}
