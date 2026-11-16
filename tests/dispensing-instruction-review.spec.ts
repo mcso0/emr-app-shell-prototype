@@ -318,14 +318,14 @@ test("completed dispensing is read-only and reopening a single order can be retr
   await expect(row.getByRole("button", { name: "합성 품목 1 담당 선택" })).toBeDisabled();
   const filter = page.getByRole("button", { name: "필터", exact: true }).last();
   await filter.click();
-  await page.getByRole("menuitemradio", { name: "미완료", exact: true }).click();
+  await page.getByRole("menuitemradio", { name: "기존 오더", exact: true }).click();
   await expect(page.getByText("조건에 맞는 항목이 없어요.")).toBeVisible();
   await page.getByRole("button", { name: "필터 초기화", exact: true }).click();
   await expect(filter).toBeFocused();
   await expect(row).toBeVisible();
   await page.getByRole("button", { name: "정렬, 기본순", exact: true }).click();
-  await page.getByRole("menuitemradio", { name: "항목명 오름차순", exact: true }).click();
-  await expect(page.getByRole("button", { name: "정렬, 항목명 오름차순", exact: true })).toBeVisible();
+  await page.getByRole("menuitemradio", { name: "오더명 오름차순", exact: true }).click();
+  await expect(page.getByRole("button", { name: "정렬, 오더명 오름차순", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "기본 간격" }).click();
   await page.getByRole("menuitemcheckbox", { name: "넓은 간격" }).click();
   await page.keyboard.press("Escape");

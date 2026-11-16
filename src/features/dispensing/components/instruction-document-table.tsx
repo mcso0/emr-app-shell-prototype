@@ -128,8 +128,8 @@ const orderGroupChipColors: Record<OrderGroup, string> = {
 
 const sortLabels = {
   default: "기본순",
-  ascending: "항목명 오름차순",
-  descending: "항목명 내림차순",
+  ascending: "오더명 오름차순",
+  descending: "오더명 내림차순",
 };
 type InstructionSort = keyof typeof sortLabels;
 
@@ -593,7 +593,7 @@ function OrderCard({
           )}
         </div>
         <InstructionChoiceMenu
-          label="항목 정렬"
+          label="오더 정렬"
           options={sortLabels}
           value={sort}
           onChange={setSort}
