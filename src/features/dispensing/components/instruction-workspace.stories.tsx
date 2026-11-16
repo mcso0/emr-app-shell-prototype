@@ -20,6 +20,8 @@ function Example({
   single = false,
   readOnly = false,
   failed = false,
+  orderEditHold = false,
+  busy = false,
   splitRoutes = false,
   queueType = "dispensing",
   displayConditions = false,
@@ -30,6 +32,8 @@ function Example({
   single?: boolean;
   readOnly?: boolean;
   failed?: boolean;
+  orderEditHold?: boolean;
+  busy?: boolean;
   splitRoutes?: boolean;
   queueType?: typeof syntheticInstruction.queueType;
   displayConditions?: boolean;
@@ -40,6 +44,7 @@ function Example({
   const [document, setDocument] = useState(() => ({
     ...structuredClone(syntheticInstruction),
     queueType,
+    pauseReason: orderEditHold ? ("order_edit" as const) : undefined,
     oralInstruction: queueType === "dispensing" ? {
       chartId: "28110000-0000-4000-8000-000000000011", revision: 1,
       instruction: "현재 차트 경구제 전체 지시입니다.\n여러 줄이어도 지시사항을 모두 확인할 수 있어요.",
@@ -88,7 +93,7 @@ function Example({
       { userId: "synthetic-sub", displayName: "담당 B" },
     ],
     loading: false,
-    busy: false,
+    busy,
     error,
     refresh: () => setError(null),
     mutate: async (intent: InstructionIntent) => {
@@ -368,6 +373,32 @@ export const ReadOnly: Story = {
     );
   },
 };
+
+const verifyDisabledCompletion: NonNullable<Story["play"]> = async ({ canvasElement }) => {
+  const canvas = within(canvasElement);
+  const group = canvas.getByRole("group", { name: "조제 완료 보조 작업" });
+  const complete = within(group).getByRole("button", { name: "조제 완료" });
+  const arrow = within(group).getByRole("button", { name: "업무 상태 변경" });
+  await expect(complete).toBeDisabled();
+  await expect(arrow).toBeDisabled();
+  await expect(getComputedStyle(group).backgroundColor).toBe("rgb(245, 245, 245)");
+  await expect(getComputedStyle(complete).backgroundColor).toBe(getComputedStyle(arrow).backgroundColor);
+  await expect(getComputedStyle(complete).color).toBe(getComputedStyle(arrow).color);
+};
+
+export const OrderEditHold: Story = {
+  args: { orderEditHold: true },
+  play: async (context) => {
+    await verifyDisabledCompletion(context);
+    await expect(within(context.canvasElement).getByText("수의사가 오더를 수정 중입니다.")).toBeVisible();
+  },
+};
+
+export const SavingCompletion: Story = {
+  args: { busy: true },
+  play: verifyDisabledCompletion,
+};
+
 export const SaveFailure: Story = {
   args: { failed: true },
   play: async ({ canvasElement }) => {

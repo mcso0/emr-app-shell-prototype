@@ -21,6 +21,7 @@ import { EmrWorkEntryAction, EmrWorkEntryTrigger } from "@/components/emr/work-e
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { ExecutionResultDialog } from "@/features/fulfillment/components/execution-result-dialog";
 import { instructionCompletionConfirmation } from "@/features/fulfillment/instruction-contract";
+import { cn } from "@/lib/utils";
 import { createInstructionView, getOrderRerequestChanges, getInstructionStatusLabel, hasPendingInstructionRerequest, isAssignedInstructionRerequest, isWaitingInstruction } from "../instruction-view-model";
 import type { FulfillmentInstructionController } from "../use-fulfillment-instruction";
 import { InstructionDocumentTable } from "./instruction-document-table";
@@ -34,6 +35,14 @@ type Props = {
   onEntered?: () => void;
   onCompletionOpenChange?: (open: boolean) => void;
 };
+
+const disabledCompletionGroupClass = cn(
+  "rounded-lg bg-[var(--emr-surface-disabled)] outline-1 -outline-offset-1 outline-border",
+  "[&>[data-button-group-segment]:disabled]:bg-transparent",
+  "[&>[data-button-group-segment]:disabled]:text-[color:var(--emr-text-tertiary)]",
+  "[&>[data-button-group-segment]:disabled]:opacity-100",
+  "[&>[data-slot=button-group-divider]]:bg-border",
+);
 
 function CompletionConfirmation(props: Props & { itemId?: string; open: boolean; onClose: () => void }) {
   return props.open && props.controller.document
@@ -136,7 +145,7 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
   const busy = controller.busy || controller.loading;
   const completionLabel = document.queueType === "dispensing" ? "조제 완료" : "처치 완료";
   if (document.pauseReason) {
-    return <ButtonGroup aria-label={`${completionLabel} 보조 작업`}>
+    return <ButtonGroup aria-label={`${completionLabel} 보조 작업`} className={disabledCompletionGroupClass}>
       <ButtonGroupPrimaryButton type="button" size="sm" variant="outline" disabled>
         <CdsActionsCheckCircleIcon data-icon="inline-start" aria-hidden="true" />
         {completionLabel}
@@ -288,7 +297,14 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
         </Button>
       ) : null}
       {!prework && canComplete ? (splitCompletion ? (
-        <ButtonGroup aria-label={`${completionLabel} 보조 작업`} className={primaryCompletion ? "shrink-0" : "shrink-0 rounded-lg border border-border bg-card"}>
+        <ButtonGroup
+          aria-label={`${completionLabel} 보조 작업`}
+          className={cn(
+            "shrink-0",
+            !primaryCompletion && "rounded-lg border border-border bg-card",
+            busy && disabledCompletionGroupClass,
+          )}
+        >
           <ButtonGroupPrimaryButton size="sm" variant={primaryCompletion ? "default" : "outline"} className="rounded-l-lg" disabled={busy} onClick={openCompletion}>
             {completionContent}
           </ButtonGroupPrimaryButton>
