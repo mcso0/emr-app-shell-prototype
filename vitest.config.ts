@@ -18,6 +18,13 @@ export default defineConfig({
         extends: true,
         optimizeDeps: {
           include: [
+            '@ui-sdk/core',
+            '@ui-sdk/react/autocomplete',
+            '@ui-sdk/react/combobox',
+            '@ui-sdk/react/tabs',
+            '@ui-sdk/react/toggle',
+            '@ui-sdk/react/calendar',
+            '@ui-sdk/react/listbox',
             '@dnd-kit/core',
             '@dnd-kit/sortable',
             '@dnd-kit/utilities',

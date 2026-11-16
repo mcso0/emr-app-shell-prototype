@@ -549,7 +549,7 @@ test("reception route date selects requested operating date", async ({
 
   await expect(page.getByLabel("26.05.08 (금) 표시 중")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "26.05.08 (금) 선택됨" }),
+    page.getByRole("gridcell", { name: "26.05.08 (금) 선택됨" }),
   ).toBeVisible();
   await expect(
     page.getByTestId("appointment-card-appointment-coco-260501"),
@@ -574,7 +574,7 @@ test("reception route date ignores invalid route date", async ({ page }) => {
   await expect(page).toHaveURL(/date=2026-05-01/);
   await expect(page.getByLabel("26.05.01 (금) 표시 중")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "오늘 26.05.01 (금) 선택됨" }),
+    page.getByRole("gridcell", { name: "오늘 26.05.01 (금) 선택됨" }),
   ).toBeVisible();
 });
 
@@ -595,7 +595,7 @@ test("reception route date normalizes side panel date changes", async ({
       request.url().includes("date=2026-05-08"),
   );
 
-  await page.getByRole("button", { name: "26.05.08 (금) 선택" }).click();
+  await page.getByRole("gridcell", { name: "26.05.08 (금) 선택" }).click();
   await Promise.all([calendarRead, queueRead]);
 
   await expect(page).toHaveURL(
@@ -603,7 +603,7 @@ test("reception route date normalizes side panel date changes", async ({
   );
   await expect(page.getByLabel("26.05.08 (금) 표시 중")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "26.05.08 (금) 선택됨" }),
+    page.getByRole("gridcell", { name: "26.05.08 (금) 선택됨" }),
   ).toBeVisible();
   await expect(
     page.getByTestId("appointment-card-appointment-coco-260501"),
@@ -629,7 +629,7 @@ test("reception side panel shows a one-time return action after a date change", 
       request.url().includes("date=2026-05-08"),
   );
 
-  await page.getByRole("button", { name: "26.05.08 (금) 선택" }).click();
+  await page.getByRole("gridcell", { name: "26.05.08 (금) 선택" }).click();
   await Promise.all([selectedDateCalendarRead, selectedDateQueueRead]);
 
   const returnButton = page.getByRole("button", {
@@ -663,7 +663,7 @@ test("reception selected operating date resets to today from global command", as
   await page.goto("/w/clair-demo/reception?modulePanel=open&date=2026-05-08");
   await expect(page.getByLabel("26.05.08 (금) 표시 중")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "26.05.08 (금) 선택됨" }),
+    page.getByRole("gridcell", { name: "26.05.08 (금) 선택됨" }),
   ).toBeVisible();
 
   await page.getByRole("button", { name: "전역 통합 검색 열기" }).click();
@@ -684,7 +684,7 @@ test("reception selected operating date resets to today from global command", as
   await expect(page).toHaveURL(/date=2026-05-01/);
   await expect(page.getByLabel("26.05.01 (금) 표시 중")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "오늘 26.05.01 (금) 선택됨" }),
+    page.getByRole("gridcell", { name: "오늘 26.05.01 (금) 선택됨" }),
   ).toBeVisible();
 });
 
@@ -754,11 +754,11 @@ test("reception topbar refresh refetches the selected operating date", async ({
       request.url().includes("/reception/queue") &&
       request.url().includes("date=2026-05-08"),
   );
-  await page.getByRole("button", { name: "26.05.08 (금) 선택" }).click();
+  await page.getByRole("gridcell", { name: "26.05.08 (금) 선택" }).click();
   await Promise.all([pickedDayCalendarRead, pickedDayQueueRead]);
   await expect(page.getByLabel("26.05.08 (금) 표시 중")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "26.05.08 (금) 선택됨" }),
+    page.getByRole("gridcell", { name: "26.05.08 (금) 선택됨" }),
   ).toBeVisible();
   await expect(
     scheduleToolbar.getByRole("button", { name: "오늘 일자로 이동" }),
@@ -2711,12 +2711,29 @@ test("patient guardian registration links an existing guardian to a new patient"
   await page.getByLabel("품종").fill("말티");
   await page.getByRole("option", { name: "말티즈" }).click();
   await page.getByText("믹스", { exact: true }).click();
-  await page.getByLabel("추가 품종").fill("푸");
+  await page.getByLabel("추가 품종").fill("푸들");
   await page.getByRole("option", { name: "푸들" }).click();
-  await page.getByLabel("추가 품종").fill("치");
-  await page.getByRole("option", { name: "치와와" }).click();
+  await page.getByLabel("추가 품종").fill("치와와");
+  await page.getByLabel("추가 품종").press("ArrowDown");
+  await page.getByLabel("추가 품종").press("Enter");
   await expect(page.getByText("푸들")).toBeVisible();
   await expect(page.getByText("치와와")).toBeVisible();
+  const extraBreed = page.getByLabel("추가 품종");
+  await extraBreed.fill("푸들"); await extraBreed.press("Enter");
+  await expect(page.getByRole("button", { name: "푸들 제거" })).toHaveCount(1);
+  await expect(extraBreed).toHaveValue("");
+  await expect(page.getByRole("listbox", { name: "품종 추천 목록" })).toHaveCount(0);
+  await extraBreed.fill("합성 직접 품종");
+  await extraBreed.press("Enter");
+  await expect(page.getByRole("button", { name: "합성 직접 품종 제거" })).toBeVisible();
+  await expect(extraBreed).toHaveValue("");
+  await expect(page.getByRole("listbox", { name: "품종 추천 목록" })).toHaveCount(0);
+  await page.getByRole("button", { name: "합성 직접 품종 제거" }).click();
+  await extraBreed.fill("비숑");
+  await page.getByRole("option", { name: "비숑 프리제" }).click();
+  await expect(page.getByRole("button", { name: "비숑 프리제 제거" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "비숑 제거", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "비숑 프리제 제거" }).click();
   await expect(page.getByRole("checkbox", { name: "믹스" })).toBeChecked();
   await page.getByLabel("나이 개월").fill("8");
   await expect(page.getByLabel("생년월일")).toHaveValue("2025-09-01");
@@ -9840,4 +9857,25 @@ test("reception toolbar follows the browser annotation spacing and date icon rem
   await expect(dateControl.locator('[aria-label$="표시 중"]')).toHaveText(
     "26년 5월 1일(금)",
   );
+});
+
+
+test("UI SDK mini calendar keeps operating-date reads and keyboard selection", async ({ page }) => {
+  await page.goto("/w/clair-demo/reception?modulePanel=open&date=2026-05-01");
+  const calendar = page.getByTestId("side-panel-mini-calendar");
+  const initial = calendar.getByTestId("side-panel-mini-calendar-day-2026-05-01");
+  await expect(initial).toHaveAttribute("aria-selected", "true");
+  await expect(calendar.getByRole("gridcell")).toHaveCount(42);
+  expect((await initial.boundingBox())?.height).toBeCloseTo(27, 0);
+  expect((await calendar.boundingBox())?.height).toBeCloseTo(227, 0);
+  const reads = ["/reception/calendar/day", "/reception/queue"].map(path => page.waitForRequest(request => request.url().includes(path) && request.url().includes("date=2026-05-08")));
+  await calendar.getByTestId("side-panel-mini-calendar-day-2026-05-08").click();
+  await Promise.all(reads);
+  await expect(calendar.getByTestId("side-panel-mini-calendar-day-2026-05-08")).toHaveAttribute("aria-selected", "true");
+  await expect(page).toHaveURL(/date=2026-05-08/);
+  await calendar.getByRole("button", { name: "이전에 보던 날짜로 돌아가기" }).click();
+  await expect(initial).toHaveAttribute("aria-selected", "true");
+  await initial.focus(); await page.keyboard.press("ArrowRight"); await page.keyboard.press("Enter");
+  await expect(calendar.getByTestId("side-panel-mini-calendar-day-2026-05-02")).toHaveAttribute("aria-selected", "true");
+  await expect(page).toHaveURL(/date=2026-05-02/);
 });

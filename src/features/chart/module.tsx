@@ -253,6 +253,7 @@ import {
   type AssessmentClassificationSelection,
 } from "@/features/chart/components/assessment-classification-search-dialog";
 import {
+  ClassificationExplorerChoiceList,
   ClassificationExplorerColumn,
   ClassificationExplorerHeading,
   ClassificationExplorerList,
@@ -11346,7 +11347,7 @@ function ChartOrderCatalogDialog({
   >([]);
   const [deselectedInitialSourceKeys, setDeselectedInitialSourceKeys] =
     useState<Set<string>>(() => new Set());
-  const categoryTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const firstCategoryRef = useRef<HTMLButtonElement>(null);
   const candidateScrollRef = useRef<HTMLDivElement>(null);
   const initializedSelectionRef = useRef(false);
   const searchButtonRef = useRef<HTMLButtonElement>(null);
@@ -11489,26 +11490,6 @@ function ChartOrderCatalogDialog({
     setSearchOpen(false);
     candidateVirtualizer.scrollToOffset(0);
   };
-  const handleCategoryKeyDown = (
-    event: KeyboardEvent<HTMLButtonElement>,
-    index: number,
-  ) => {
-    let nextIndex = index;
-    if (event.key === "ArrowDown")
-      nextIndex = (index + 1) % chartOrderCatalogCategories.length;
-    else if (event.key === "ArrowUp")
-      nextIndex =
-        (index - 1 + chartOrderCatalogCategories.length) %
-        chartOrderCatalogCategories.length;
-    else if (event.key === "Home") nextIndex = 0;
-    else if (event.key === "End")
-      nextIndex = chartOrderCatalogCategories.length - 1;
-    else return;
-
-    event.preventDefault();
-    selectCategory(chartOrderCatalogCategories[nextIndex].value);
-    requestAnimationFrame(() => categoryTabRefs.current[nextIndex]?.focus());
-  };
   const toggleSelectedRow = (row: ChartOrderCatalogSearchRow) => {
     const sourceKey = getChartCatalogSourceKey(row);
     if (lockedCatalogSourceKeys.has(sourceKey)) return;
@@ -11601,7 +11582,7 @@ function ChartOrderCatalogDialog({
         bodyClassName={orderCatalogDialogStyles.body}
         headerClassName={orderCatalogDialogStyles.header}
         footerClassName={orderCatalogDialogStyles.footer}
-        initialFocus={() => initialQuery ? searchInputRef.current : categoryTabRefs.current[0]}
+        initialFocus={() => initialQuery ? searchInputRef.current : firstCategoryRef.current}
         finalFocus={onReturnFocus}
         footerMeta={
           <strong aria-live="polite">
@@ -11631,29 +11612,15 @@ function ChartOrderCatalogDialog({
           label="오더 분류"
           header={<ClassificationExplorerHeading label="오더 분류" />}
         >
-          <ClassificationExplorerList ariaLabel="오더 카테고리">
-            {chartOrderCatalogCategories.map((item, index) => {
-              const selected = category === item.value;
-              return (
-                <ClassificationExplorerOption
-                  aria-controls="chart-order-catalog-results"
-                  count={categoryCounts.get(item.value) ?? 0}
-                  countLoading={status === "loading" || status === "idle"}
-                  disabled={status === "loading" || status === "idle"}
-                  key={item.value}
-                  label={item.label}
-                  onClick={() => selectCategory(item.value)}
-                  onKeyDown={(event) => handleCategoryKeyDown(event, index)}
-                  ref={(node) => {
-                    categoryTabRefs.current[index] = node;
-                  }}
-                  selected={selected}
-                  variant="facet"
-                  tabIndex={selected ? 0 : -1}
-                />
-              );
-            })}
-          </ClassificationExplorerList>
+          <ClassificationExplorerChoiceList
+            ariaLabel="오더 카테고리"
+            value={category}
+            onValueChange={selectCategory}
+            firstItemRef={firstCategoryRef}
+            controls="chart-order-catalog-results"
+            disabled={status === "loading" || status === "idle"}
+            options={chartOrderCatalogCategories.map((item) => ({ ...item, count: categoryCounts.get(item.value) ?? 0, countLoading: status === "loading" || status === "idle" }))}
+          />
         </ClassificationExplorerColumn>
 
         <ClassificationExplorerColumn

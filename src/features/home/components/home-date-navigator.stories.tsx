@@ -42,7 +42,7 @@ async function moveAndPick(canvasElement: HTMLElement) {
   await expect(canvas.getByText("오늘", { exact: true })).toBeVisible();
   await userEvent.click(canvas.getByRole("button", { name: /날짜 선택$/ }));
   const body = within(canvasElement.ownerDocument.body);
-  await userEvent.click(await body.findByRole("button", { name: /26\.09\.26 \(토\) 선택$/ }));
+  await userEvent.click(await body.findByRole("gridcell", { name: /26\.09\.26 \(토\) 선택$/ }));
   await waitFor(() => expect(canvas.getByLabelText("합성 선택 날짜")).toHaveTextContent("2026-09-26"));
   await userEvent.click(canvas.getByRole("button", { name: /날짜 선택$/ }));
   await userEvent.click(await body.findByRole("button", { name: "오늘로 이동" }));

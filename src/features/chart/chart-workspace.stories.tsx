@@ -460,3 +460,27 @@ export const SelectedBillingRetry: Story = { args: { scenario: "selected-billing
   await expect(fixture.rows[1].billingCandidateStatus).toBe("candidate_created");
   await expect(fixture.unhandled).toEqual([]);
 } };
+
+/** Actual chart catalog with empty synthetic rows; no order is applied. */
+export const CatalogFacetKeyboard: Story = { args: { scenario: "dispense-edit" }, play: async ({ canvas, canvasElement }) => {
+  await canvas.findByRole("textbox", { name: "합성 조제 약품 실 조제량" });
+  const heading = canvas.getByRole("heading", { name: "Plan/Order" });
+  await userEvent.click(within(heading.parentElement!).getByRole("button", { name: "Order 추가" }));
+  const body = within(canvasElement.ownerDocument.body);
+  const dialog = within(await body.findByRole("dialog", { name: "오더 추가" }));
+  const categories = within(dialog.getByRole("listbox", { name: "오더 카테고리" }));
+  const all = categories.getByRole("option", { name: /^전체/ });
+  await waitFor(() => expect(all).toBeEnabled());
+  all.focus(); await userEvent.keyboard("{ArrowDown}");
+  await waitFor(() => expect(dialog.getByText("진료 오더", { exact: true })).toBeVisible());
+  await userEvent.keyboard("{Home}");
+  await expect(all).toHaveAttribute("aria-selected", "true");
+  await userEvent.click(dialog.getByRole("button", { name: "전체 오더 검색 열기" }));
+  await userEvent.type(dialog.getByRole("combobox", { name: "전체 오더 검색" }), "합성");
+  await userEvent.click(all);
+  await waitFor(() => expect(dialog.queryByRole("combobox", { name: "전체 오더 검색" })).not.toBeInTheDocument());
+  await expect(dialog.getByRole("button", { name: "전체 오더 검색 열기" })).toBeVisible();
+  await userEvent.click(dialog.getByRole("button", { name: "취소" }));
+  await waitFor(() => expect(body.queryByRole("dialog", { name: "오더 추가" })).not.toBeInTheDocument());
+  await expect(fixture.requests.filter(request => request.method !== "GET")).toHaveLength(0);
+} };

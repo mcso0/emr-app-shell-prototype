@@ -36,6 +36,7 @@ import type {
 } from "@/features/chart/diagnosis-catalog-client";
 import type { DiagnosisType } from "@/types/emr-domain";
 import {
+  ClassificationExplorerChoiceList,
   ClassificationExplorerColumn,
   ClassificationExplorerHeading,
   ClassificationExplorerList,
@@ -397,33 +398,13 @@ export function AssessmentClassificationSearchDialog({
           status={catalogStatus}
           statusMessage={catalogErrorMessage}
         >
-          <ClassificationExplorerList ariaLabel="진단 계통 목록">
-            <ClassificationExplorerOption
-              count={totalCount}
-              label="전체"
-              selected={selectedSystemId === "all"}
-              variant="facet"
-              disabled={!catalogReady}
-              onClick={() => {
-                setSelectedSystemId("all");
-                setSelectedDiseaseGroupId("all");
-              }}
-            />
-            {systems.map((system) => (
-              <ClassificationExplorerOption
-                key={system.id}
-                count={system.count}
-                label={system.name}
-                selected={selectedSystemId === system.id}
-                variant="facet"
-                disabled={!catalogReady}
-                onClick={() => {
-                  setSelectedSystemId(system.id);
-                  setSelectedDiseaseGroupId("all");
-                }}
-              />
-            ))}
-          </ClassificationExplorerList>
+          <ClassificationExplorerChoiceList
+            ariaLabel="진단 계통 목록"
+            value={selectedSystemId}
+            disabled={!catalogReady}
+            options={[{ value: "all", label: "전체", count: totalCount }, ...systems.map((system) => ({ value: system.id, label: system.name, count: system.count }))]}
+            onValueChange={(value) => { setSelectedSystemId(value); setSelectedDiseaseGroupId("all"); }}
+          />
         </ClassificationExplorerColumn>
 
         <ClassificationExplorerColumn
@@ -437,32 +418,13 @@ export function AssessmentClassificationSearchDialog({
           status={catalogStatus}
           statusMessage={catalogErrorMessage}
         >
-          <ClassificationExplorerList ariaLabel="질환 구분 목록">
-            <ClassificationExplorerOption
-              count={
-                selectedSystemId === "all"
-                  ? totalCount
-                  : (systems.find((item) => item.id === selectedSystemId)
-                      ?.count ?? 0)
-              }
-              label="전체"
-              selected={selectedDiseaseGroupId === "all"}
-              variant="facet"
-              disabled={!catalogReady}
-              onClick={() => setSelectedDiseaseGroupId("all")}
-            />
-            {visibleDiseaseGroups.map((diseaseGroup) => (
-              <ClassificationExplorerOption
-                key={diseaseGroup.id}
-                count={diseaseGroup.count}
-                label={diseaseGroup.name}
-                selected={selectedDiseaseGroupId === diseaseGroup.id}
-                variant="facet"
-                disabled={!catalogReady}
-                onClick={() => setSelectedDiseaseGroupId(diseaseGroup.id)}
-              />
-            ))}
-          </ClassificationExplorerList>
+          <ClassificationExplorerChoiceList
+            ariaLabel="질환 구분 목록"
+            value={selectedDiseaseGroupId}
+            disabled={!catalogReady}
+            options={[{ value: "all", label: "전체", count: selectedSystemId === "all" ? totalCount : (systems.find((item) => item.id === selectedSystemId)?.count ?? 0) }, ...visibleDiseaseGroups.map((group) => ({ value: group.id, label: group.name, count: group.count }))]}
+            onValueChange={setSelectedDiseaseGroupId}
+          />
         </ClassificationExplorerColumn>
 
         <ClassificationExplorerColumn

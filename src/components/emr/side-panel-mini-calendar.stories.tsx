@@ -59,7 +59,7 @@ const meta = {
       story: { inline: false, height: "340px" },
       description: {
         component:
-          "Use EmrSidePanelMiniCalendar under the reception side-panel title when the queue list needs a compact calendar synchronized with the main schedule date. 사용할 때: side panel date scanning and schedule synchronization. 쓰지 말아야 할 때: full date picking, range picking, or standalone scheduling pages.",
+          "UI SDK Calendar owns date-grid keyboard focus and ISO date/month navigation; the reception caller owns the selected operating date. Use EmrSidePanelMiniCalendar under the reception side-panel title when the queue list needs a compact calendar synchronized with the main schedule date. 사용할 때: side panel date scanning and schedule synchronization. 쓰지 말아야 할 때: full date picking, range picking, or standalone scheduling pages.",
       },
     },
   },
@@ -106,11 +106,16 @@ const meta = {
     await waitFor(() => expect(header.textContent).toBe(initialMonth));
     const day = canvas.getByTestId(`side-panel-mini-calendar-day-${next}`);
     day.focus(); await userEvent.keyboard("{Enter}");
-    await waitFor(() => expect(day).toHaveAttribute("aria-pressed", "true"));
+    await waitFor(() => expect(day).toHaveAttribute("aria-selected", "true"));
     await expect(canvas.getByLabelText("선택 날짜")).toHaveTextContent(next);
     await userEvent.click(canvas.getByRole("button", { name: "이전에 보던 날짜로 돌아가기" }));
     await waitFor(() => expect(canvas.getByLabelText("선택 날짜")).toHaveTextContent(initial));
     await expect(canvas.queryByRole("button", { name: "이전에 보던 날짜로 돌아가기" })).not.toBeInTheDocument();
+    const selectedDay = canvas.getByTestId(`side-panel-mini-calendar-day-${initial}`);
+    selectedDay.focus();
+    await userEvent.keyboard("{ArrowRight}{Enter}");
+    await waitFor(() => expect(canvas.getByLabelText("선택 날짜")).not.toHaveTextContent(initial));
+    await expect(canvas.getAllByRole("gridcell")).toHaveLength(42);
   },
 } satisfies Meta<SidePanelMiniCalendarStoryArgs>;
 

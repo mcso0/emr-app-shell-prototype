@@ -8,6 +8,8 @@ import {
   type ReactNode,
   type Ref,
 } from "react";
+import { isComposing } from "@ui-sdk/core";
+import { Listbox, ListboxItem } from "@ui-sdk/react/listbox";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { UniqueIdentifier } from "@dnd-kit/core";
@@ -233,7 +235,7 @@ export function ClassificationExplorerSearchHeader({
   );
 }
 
-type ClassificationExplorerOptionProps = Omit<
+type ClassificationExplorerOptionProps = { "data-slot"?: string } & Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
   "children"
 > & {
@@ -253,6 +255,7 @@ export const ClassificationExplorerOption = forwardRef<
 >(function ClassificationExplorerOption(
   {
     className,
+    "data-slot": slot = "classification-explorer-option",
     count,
     countLoading = false,
     description,
@@ -284,7 +287,7 @@ export const ClassificationExplorerOption = forwardRef<
         className,
       )}
       data-list-variant={variant}
-      data-slot="classification-explorer-option"
+      data-slot={slot}
     >
       <span className={styles.optionCopy}>
         <span>{label}</span>
@@ -323,6 +326,32 @@ export const ClassificationExplorerOption = forwardRef<
     </button>
   );
 });
+
+/** UI SDK owns selection, typeahead and roving focus for single-choice facets. */
+export function ClassificationExplorerChoiceList<T extends string>({
+  ariaLabel, value, onValueChange, options, disabled = false, firstItemRef, controls,
+}: {
+  ariaLabel: string;
+  value: T;
+  onValueChange: (value: T) => void;
+  options: Array<{ value: T; label: string; count?: number; countLoading?: boolean }>;
+  disabled?: boolean;
+  firstItemRef?: Ref<HTMLButtonElement>;
+  controls?: string;
+}) {
+  return <Listbox<T> aria-label={ariaLabel} className={styles.list} value={value} disabled={disabled} onValueChange={(next) => { if (next !== null) onValueChange(next); }}>
+    {options.map((option, index) => <ListboxItem key={option.value} value={option.value} label={option.label} disabled={disabled}
+      // Reselecting a facet is an action too: callers reset dependent filters/search.
+      onClick={() => { if (!disabled && option.value === value) onValueChange(option.value); }}
+      onKeyDown={(event) => {
+        if (!disabled && option.value === value && !isComposing(event) && (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          onValueChange(option.value);
+        }
+      }}
+      render={<ClassificationExplorerOption ref={index === 0 ? firstItemRef : undefined} aria-controls={controls} count={option.count} countLoading={option.countLoading} disabled={disabled} label={option.label} selected={option.value === value} variant="facet" />} />)}
+  </Listbox>;
+}
 
 export function ClassificationExplorerList({
   ariaLabel,
