@@ -1,5 +1,6 @@
 "use client";
 
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
 import { EmrMeasuredLoading } from "@/components/emr/measured-loading";
 
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
@@ -81,6 +82,7 @@ export function WorkspaceSpaceManagementScreen({
     snapshot,
     status,
   } = useWorkspaceSpaceManagement({ actorHeaders, workspaceId });
+  usePageReadiness(status === "loading", workspaceId);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [categorySettingsOpen, setCategorySettingsOpen] = useState(false);
   const [categoryDraft, setCategoryDraft] = useState<CategoryDraft>(null);

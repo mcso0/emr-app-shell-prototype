@@ -84,6 +84,7 @@ export function createChartWorkspaceFixture(scenario: ChartWorkspaceScenario) {
       const encounter = target === activeEncounter.id ? activeEncounter : historicalEncounter;
       if (!url.pathname.startsWith(root)) throw new Error("Unexpected synthetic chart workspace");
       if (editContext && url.pathname === `${root}/chart/confirmed-order-edit`) {
+        if (method === "PATCH") return Response.json({ ok: true, context: editContext, editSessionId: null });
         if (method === "POST") {
           const command = confirmedOrderEditSchema.parse(body);
           if (command.orderId !== editContext.orderId || command.chartId !== chart.id || command.expectedVersion !== editContext.version) throw new Error("Confirmed edit fixture scope/version mismatch");

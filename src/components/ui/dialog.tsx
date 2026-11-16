@@ -1,5 +1,7 @@
 "use client"
 
+import { usePagePortalVisibility } from "@/components/emr/page-loading-boundary"
+
 import * as React from "react"
 import { useModuleSidePanel, useModuleSidePanelPopupActions } from "@/components/emr/module-side-panel-context"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
@@ -10,9 +12,20 @@ import { CloseIcon } from "@/components/icons"
 
 type DialogMotion = "default" | "none"
 
-function Dialog({ actionsRef, ...props }: DialogPrimitive.Root.Props) {
+function Dialog({ actionsRef, onOpenChange, ...props }: DialogPrimitive.Root.Props) {
   const panelActions = useModuleSidePanelPopupActions<DialogPrimitive.Root.Actions>(actionsRef);
-  return <DialogPrimitive.Root actionsRef={panelActions} data-slot="dialog" {...props} />
+  const handleOpenChange: NonNullable<DialogPrimitive.Root.Props["onOpenChange"]> = (open, details) => {
+    const target = details.event.target;
+    if (!open && details.reason === "escape-key" && target instanceof Element && target.matches('[data-ui-sdk-search-input][aria-expanded="true"]')) {
+      // SDK suggestions are outside Base's popup tree. Let their own Escape
+      // listener run before a later Escape can dismiss the enclosing dialog.
+      details.cancel();
+      details.allowPropagation();
+      return;
+    }
+    onOpenChange?.(open, details);
+  };
+  return <DialogPrimitive.Root actionsRef={panelActions} onOpenChange={handleOpenChange} data-slot="dialog" {...props} />
 }
 
 function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
@@ -20,7 +33,8 @@ function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
 }
 
 function DialogPortal({ ...props }: DialogPrimitive.Portal.Props) {
-  return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />
+  const visibility = usePagePortalVisibility();
+  return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} {...visibility} />
 }
 
 function DialogClose({ ...props }: DialogPrimitive.Close.Props) {

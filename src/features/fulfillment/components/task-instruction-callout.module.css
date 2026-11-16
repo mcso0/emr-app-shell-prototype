@@ -30,3 +30,26 @@
 .card .expand:hover { text-decoration: underline; background: transparent; }
 
 .measure::before { content: attr(data-measure-text); }
+
+
+.card.orderChange {
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  border: 1px solid var(--emr-status-warning-border);
+  background: var(--emr-status-warning-bg);
+  box-shadow: none;
+}
+.orderChange .symbol {
+  width: 22px;
+  height: 22px;
+  color: var(--emr-status-warning-text);
+  background: transparent;
+}
+.orderChange .title { font-weight: 700; }
+.orderChange .actions { align-self: center; align-items: center; gap: 4px; }
+.changeSummary { display: flex; flex-wrap: wrap; gap: 3px 14px; align-items: baseline; min-width: 0; font-size: 14px; }
+.orderName { font-weight: 650; overflow-wrap: anywhere; }
+.summaryField { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.summaryField strong { color: var(--emr-status-warning-text); }
+@container(max-width:680px) { .card.orderChange { grid-template-columns: 22px minmax(0, 1fr); } }

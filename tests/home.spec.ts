@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { getCurrentOperatingDate } from "../src/lib/emr-domain/demo-date";
+import { formatKoreanOperatingDateLabel, getCurrentOperatingDate } from "../src/lib/emr-domain/demo-date";
 
 const workspaceId = "workspace-clair-cheongdam";
 const today = getCurrentOperatingDate();
@@ -136,12 +136,13 @@ test("home data loading uses the centered shared empty state", async ({ page }) 
 
   await page.goto(`/w/${workspaceId}/home`);
 
-  const loadingState = page.getByTestId("home-loading-state");
+  const loadingState = page.getByTestId("page-loading-state");
   await expect(loadingState).toBeVisible();
-  await expect(loadingState).toContainText("업무를 불러오는 중입니다");
+  await expect(page.getByTestId("home-workspace")).not.toBeVisible();
+  await expect(loadingState).toContainText("화면을 불러오는 중입니다");
   const alignment = await loadingState.evaluate((element) => {
     const viewport = document.querySelector<HTMLElement>(
-      '[data-testid="home-workspace-scroll"]',
+      '[data-testid="page-loading-surface"]',
     );
     if (!viewport) throw new Error("Home workspace viewport is missing");
 
@@ -156,7 +157,7 @@ test("home data loading uses the centered shared empty state", async ({ page }) 
   expect(alignment.y).toBeLessThanOrEqual(1);
 
   release?.();
-  await expect(page.getByTestId("home-loading-state")).toHaveCount(0);
+  await expect(page.getByTestId("page-loading-state")).toHaveCount(0);
 });
 
 test("hospital limits board and list to the selected day while personal work retains carry-over", async ({ page }) => {
@@ -768,4 +769,25 @@ test("Home tabs support grab scrolling without selecting and reveal keyboard foc
   await requested.press("Enter");
   await expect(requested).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("row", { name: "보리 내가 요청한 약", exact: true })).toBeVisible();
+});
+
+test("UI SDK shared Home calendar preserves date requests and keyboard selection", async ({ page }) => {
+  await openHome(page);
+  const nextDay = new Date(`${today}T12:00:00Z`);
+  nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+  const next = nextDay.toISOString().slice(0, 10);
+  await page.getByRole("button", { name: /날짜 선택$/ }).click();
+  const grid = page.getByRole("grid");
+  await expect(grid).toBeVisible();
+  const selected = grid.getByRole("gridcell", { selected: true });
+  await selected.focus();
+  await page.keyboard.press("ArrowRight");
+  const read = page.waitForRequest(request => request.url().includes("/operations/work-items") && request.url().includes(next));
+  await page.keyboard.press("Enter");
+  await read;
+  await expect(grid).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /날짜 선택$/ }).getByText("오늘", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: /날짜 선택$/ }).click();
+  await expect(page.getByRole("gridcell", { selected: true })).toHaveAttribute("aria-label", `${formatKoreanOperatingDateLabel(next)} 선택됨`);
+  await page.keyboard.press("Escape");
 });

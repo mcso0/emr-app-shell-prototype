@@ -33,7 +33,8 @@ test("copied treatment link reopens the exact instruction when an encounter has 
   await page.goto(`/w/${workspaceId}/dispensing?date=${date}&encounterId=${encounterId}&queueItemId=live-fulfillment-${treatmentId}&modulePanel=closed&aside=closed`);
   await expect(page.getByRole("heading", { name: "처치 지시서" })).toBeVisible();
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(page.url()).origin });
-  await page.getByRole("button", { name: "처치 지시서 링크 복사" }).click();
+  await page.getByRole("button", { name: "문서 추가 작업" }).press("Enter");
+  await page.getByRole("menuitem", { name: "지시서 링크 복사" }).click();
   const copiedLink = await page.evaluate(() => navigator.clipboard.readText());
   const copiedUrl = new URL(copiedLink);
   expect(copiedUrl.searchParams.get("queueItemId")).toBe(`live-fulfillment-${treatmentId}`);
@@ -44,6 +45,77 @@ test("copied treatment link reopens the exact instruction when an encounter has 
   await expect(page.getByRole("heading", { name: "처치 지시서" })).toBeVisible();
   expect(requestedDates).toContain(date);
 });
+
+for (const queueType of ["dispensing", "treatment"] as const) {
+  test(`${queueType} opens the source chart of an encounter outside the live queue`, async ({ page }) => {
+    await grantCheongdamWorkspaceAccess(page);
+    await page.setViewportSize({ width: 1062, height: 866 });
+    const workspaceId = PREPARED_EMPTY_CLINIC_WORKSPACE_ID;
+    const workItemId = "97090000-0000-4000-8000-000000000041";
+    const encounterId = "97090000-0000-4000-8000-000000000042";
+    const originChartId = "97090000-0000-4000-8000-000000000043";
+    const newerChartId = "97090000-0000-4000-8000-000000000044";
+    const date = "2026-09-07";
+    const recordedAt = `${date}T01:30:00.000Z`;
+    const sourceChart = { id: originChartId, encounterId, status: "signed", createdAt: recordedAt, updatedAt: recordedAt };
+    let sourceChartAvailable = true;
+
+    await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items?*`, async (route) => {
+      const query = new URL(route.request().url()).searchParams;
+      await route.fulfill({ json: { ok: true, workItems: query.get("queueType") === queueType ? [{
+        id: workItemId, workspaceId, encounterId, originChartId, orderId: syntheticInstruction.items[0].orderId,
+        queueType, requestCycle: 1, rowRevision: 1, status: "in_progress", startedAt: recordedAt,
+        createdAt: recordedAt, updatedAt: recordedAt, sourceSnapshot: { patientName: "합성 환자", orderDisplayName: "합성 오더" },
+      }] : [] } });
+    });
+    await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}/instruction`, (route) =>
+      route.fulfill({ json: { ok: true, document: { ...syntheticInstruction, queueType, firstStartedAt: recordedAt } } }));
+    await page.route(`**/api/workspaces/${workspaceId}/chart/live-queue?*`, (route) =>
+      route.fulfill({ json: { ok: true, queue: [] } }));
+    await page.route(`**/api/workspaces/${workspaceId}/chart/preconsultation-context?*`, (route) => {
+      expect(new URL(route.request().url()).searchParams.get("encounterId")).toBe(encounterId);
+      return route.fulfill({ json: { ok: true, context: {
+        encounter: { id: encounterId, encounterNo: "합성 진료", status: "completed", receptionType: "walk_in", checkedInAt: recordedAt },
+        patient: { id: "synthetic-patient", patientNo: "합성-01", name: "합성 환자", species: "dog", sex: "unknown" },
+        queue: { id: "synthetic-queue", status: "done" }, priorEncounterCount: 0, vitals: [], history: [],
+      } } });
+    });
+    await page.route(`**/api/workspaces/${workspaceId}/chart/encounter-charts?*`, (route) =>
+      route.fulfill({ json: { ok: true, charts: [
+        { ...sourceChart, id: newerChartId, createdAt: `${date}T02:30:00.000Z` },
+        ...(sourceChartAvailable ? [sourceChart] : []),
+      ] } }));
+    await page.route(`**/api/workspaces/${workspaceId}/chart/soap-notes?*`, (route) => {
+      expect(new URL(route.request().url()).searchParams.get("chartId")).toBe(originChartId);
+      return route.fulfill({ json: { ok: true, soapNote: sourceChart } });
+    });
+
+    await page.goto(`/w/${workspaceId}/dispensing?date=${date}&queueItemId=live-fulfillment-${workItemId}&modulePanel=closed&aside=closed`);
+    const toolbar = page.locator('[data-slot="emr-page-header"]').filter({
+      has: page.getByRole("heading", { name: queueType === "dispensing" ? "조제 지시서" : "처치 지시서" }),
+    });
+    const more = toolbar.getByRole("button", { name: "문서 추가 작업" });
+    await expect(toolbar.getByRole("button", { name: /링크 복사/ })).toHaveCount(0);
+    await expect(more.locator("..").getByRole("separator")).toHaveCount(0);
+    await more.press("Enter");
+    const menu = page.getByRole("menu");
+    await expect(menu.getByRole("menuitem")).toHaveText(["오더 차트로 이동", "지시서 링크 복사"]);
+
+    const soapRead = page.waitForRequest((request) => new URL(request.url()).pathname.endsWith("/chart/soap-notes"));
+    await menu.getByRole("menuitem", { name: "오더 차트로 이동" }).click();
+    const soapQuery = new URL((await soapRead).url()).searchParams;
+    expect(soapQuery.get("encounterId")).toBe(encounterId);
+    expect(soapQuery.get("chartId")).toBe(originChartId);
+    await expect(page).toHaveURL(new RegExp(`/treatment\\?.*chartId=${originChartId}`));
+
+    if (queueType === "treatment") {
+      sourceChartAvailable = false;
+      await page.reload();
+      await expect(page.getByText("오더 차트를 열지 못했어요", { exact: true })).toBeVisible();
+      await expect(page).toHaveURL(new RegExp(`/treatment\\?.*chartId=${originChartId}`));
+    }
+  });
+}
 
 test("patient history combines dispensing and treatment orders and filters by category", async ({ page }) => {
   await page.goto(
@@ -104,14 +176,19 @@ test("combined patient history search, dates and staff filters keep category nav
   await expect(aside.getByRole("button", { name: "필터", exact: true }).locator('[data-slot="history-filter-indicator"]')).toHaveCount(0);
 });
 
-test("actual execution UI starts empty, records completion, reloads history and appends an explicit correction", async ({ page }) => {
+test("existing dispensing execution history preserves the confirmed plan and appends an explicit correction", async ({ page }) => {
   await grantCheongdamWorkspaceAccess(page);
   const workspaceId = PREPARED_EMPTY_CLINIC_WORKSPACE_ID;
   const id = "97080000-0000-4000-8000-000000000001";
   let context: ExecutionContext = { workspaceId, workItemId: id, taskId: id, orderId: id, encounterId: id,
-    attemptNo: 1, workItemRevision: 2, clinicalOrderType: "dispensing", status: "in_progress", isCurrentAttempt: true,
+    attemptNo: 1, workItemRevision: 2, clinicalOrderType: "dispensing", status: "completed", isCurrentAttempt: true,
     planSnapshot: { detailInputs: { dose: 0.5, doseUnit: "tablet", totalQuantity: 8 }, calculationOutputs: { plannedPracticalTotalQuantity: 8, dispenseUnit: "tablet" } },
-    planSha256: "a".repeat(64), resultRequired: true, canRecord: true, results: [] };
+    planSha256: "a".repeat(64), resultRequired: true, canRecord: true, results: [{
+      id: "97080000-0000-4000-8000-000000000002", version: 1, previousResultId: null, schemaVersion: 1,
+      payload: { preparedQuantity: 7.5, preparedUnit: "tablet" }, performedAt: "2026-09-06T00:00:00.000Z",
+      performedByUserId: id, recordedByUserId: id, recordedAt: "2026-09-06T00:00:00.000Z",
+      varianceReason: "합성 계량 차이", amendmentReason: null, planSha256: "a".repeat(64),
+    }] };
   const bodies: Array<Record<string, unknown>> = [];
   await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items?*`, async route => {
     const queueType = new URL(route.request().url()).searchParams.get("queueType");
@@ -151,21 +228,8 @@ test("actual execution UI starts empty, records completion, reloads history and 
   });
   await expect(page.getByText("합성 수행 환자").first()).toBeVisible();
   await expect(page.getByText("합성 수의사").first()).toBeVisible();
-  await openInstructionCompletion(page);
-  const dialog = page.getByRole("dialog", { name: "실제 수행기록" });
-  await expect(dialog.getByLabel("실제 준비수량", { exact: false })).toHaveValue("");
-  await expect(dialog.getByLabel("실제 수행 시각", { exact: false })).toHaveValue("");
-  await expect(dialog.getByRole("button", { name: "수행기록 저장 및 완료" })).toBeDisabled();
-  await dialog.getByRole("button", { name: "현재 시각" }).click();
-  await dialog.getByLabel("실제 준비수량", { exact: false }).fill("7.5");
-  await dialog.getByLabel("실제 준비 단위", { exact: false }).fill("tablet");
-  await dialog.getByLabel("계획과의 차이 사유").fill("합성 계량 차이");
-  await dialog.getByRole("button", { name: "수행기록 저장 및 완료" }).click();
-  await expect.poll(() => bodies.length).toBe(1);
-  expect(bodies[0].payload).toEqual({ preparedQuantity: 7.5, preparedUnit: "tablet" });
-  expect(context.planSnapshot).toMatchObject({ calculationOutputs: { plannedPracticalTotalQuantity: 8 } });
-  await expect(dialog).not.toBeVisible();
   await openInstructionExecutionHistory(page);
+  const dialog = page.getByRole("dialog", { name: "실제 수행기록" });
   await expect(dialog.getByText("버전 1", { exact: false })).toBeVisible();
   await dialog.getByRole("button", { name: "기록 정정", exact: true }).click();
   await expect(dialog.getByLabel("실제 준비수량", { exact: false })).toHaveValue("7.5");
@@ -173,22 +237,29 @@ test("actual execution UI starts empty, records completion, reloads history and 
   await expect(dialog.getByRole("button", { name: "정정 저장" })).toBeDisabled();
   await dialog.getByLabel("정정 사유", { exact: false }).fill("합성 수량 재확인");
   await dialog.getByRole("button", { name: "정정 저장" }).click();
-  await expect.poll(() => bodies.length).toBe(2);
-  expect(bodies[1]).toMatchObject({ expectedResultVersion: 1, amendmentReason: "합성 수량 재확인", payload: { preparedQuantity: 8 } });
+  await expect.poll(() => bodies.length).toBe(1);
+  expect(bodies[0]).toMatchObject({ expectedResultVersion: 1, amendmentReason: "합성 수량 재확인", payload: { preparedQuantity: 8 } });
   await expect(dialog.getByText("버전 2", { exact: false })).toBeVisible();
   expect(context.results[0].payload.preparedQuantity).toBe(7.5);
+  expect(context.planSnapshot).toMatchObject({ calculationOutputs: { plannedPracticalTotalQuantity: 8 } });
 });
 
-test("treatment V2 actual UI requires explicit count, measurement and device identity while keeping planned values separate", async ({ page }) => {
+test("existing treatment V2 execution history displays recorded measurements separately from the plan", async ({ page }) => {
   await grantCheongdamWorkspaceAccess(page);
   const workspaceId = PREPARED_EMPTY_CLINIC_WORKSPACE_ID;
   const id = "97040000-0000-4000-8000-000000000001";
-  let context: ExecutionContext = { workspaceId, workItemId: id, taskId: id, orderId: id, encounterId: id,
-    attemptNo: 1, workItemRevision: 2, clinicalOrderType: "treatment", status: "in_progress", isCurrentAttempt: true,
+  const context: ExecutionContext = { workspaceId, workItemId: id, taskId: id, orderId: id, encounterId: id,
+    attemptNo: 1, workItemRevision: 2, clinicalOrderType: "treatment", status: "completed", isCurrentAttempt: true,
     planSnapshot: { detailSchemaVersion: 2, detailInputs: { procedureKind: "measurement", method: "합성 안압 측정",
       plannedProcedureCount: 1, procedureCountUnit: "session", measurementUnit: "mmHg", deviceProtocol: "TONOVET Plus 합성 수기 프로필" } },
-    planSha256: "b".repeat(64), resultRequired: true, canRecord: true, results: [] };
-  let posted: Record<string, unknown> | null = null;
+    planSha256: "b".repeat(64), resultRequired: true, canRecord: true, results: [{
+      id: "97040000-0000-4000-8000-000000000002", version: 1, previousResultId: null, schemaVersion: 1,
+      payload: { performedProcedure: "합성 안압 측정", outcome: "합성 측정값 기록", performedCount: 1,
+        performedCountUnit: "session", measurementValue: 12, measurementUnit: "mmHg",
+        deviceIdentity: "합성 TONOVET Plus 장비", deviceSettingsPolicy: "not_adjustable" },
+      performedAt: "2026-09-06T00:00:00.000Z", recordedAt: "2026-09-06T00:00:00.000Z", performedByUserId: id,
+      recordedByUserId: id, varianceReason: null, amendmentReason: null, planSha256: "b".repeat(64),
+    }] };
   await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items?*`, async route => {
     const queueType = new URL(route.request().url()).searchParams.get("queueType");
     await route.fulfill({ json: { ok: true, workItems: queueType === "treatment" ? [{ workspaceId, id, orderId: id, encounterId: id,
@@ -199,41 +270,16 @@ test("treatment V2 actual UI requires explicit count, measurement and device ide
     }] : [] } });
   });
   await installExecutionInstruction(page, workspaceId, id, () => context);
-  await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/${id}/execution`, async route => {
-    if (route.request().method() === "POST") {
-      const body = route.request().postDataJSON(); posted = body;
-      context = { ...context, status: "completed", workItemRevision: 3, results: [{ id: "97040000-0000-4000-8000-000000000002",
-        version: 1, previousResultId: null, schemaVersion: 1, payload: body.payload, performedAt: body.performedAt,
-        performedByUserId: id, recordedByUserId: id, recordedAt: new Date().toISOString(),
-        varianceReason: body.varianceReason, amendmentReason: null, planSha256: context.planSha256 }] };
-    }
-    await route.fulfill({ json: { ok: true, context } });
-  });
+  await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/${id}/execution`, route =>
+    route.fulfill({ json: { ok: true, context } }));
   await page.goto(`/w/${workspaceId}/dispensing?modulePanel=open`);
   await page.getByTestId(`order-queue-item-live-fulfillment-${id}`).click();
-  await openInstructionCompletion(page);
-  const dialog = page.getByRole("dialog", { name: "실제 수행기록" });
-  await expect(dialog.getByLabel("실제 시행 횟수", { exact: false })).toHaveValue("");
-  await expect(dialog.getByLabel("실제 측정값", { exact: false })).toHaveValue("");
-  await dialog.getByRole("button", { name: "현재 시각", exact: true }).click();
-  await dialog.getByLabel("실제 시행한 처치", { exact: false }).fill("합성 안압 측정");
-  await dialog.getByLabel("시행 결과", { exact: false }).fill("합성 측정값 기록");
-  await dialog.getByLabel("실제 시행 횟수", { exact: false }).fill("1");
-  await dialog.getByLabel("실제 횟수 단위", { exact: false }).fill("session");
-  await dialog.getByLabel("실제 측정값", { exact: false }).fill("12");
-  await dialog.getByLabel("실제 측정 단위", { exact: false }).fill("mmHg");
-  await expect(dialog.getByRole("button", { name: "수행기록 저장 및 완료" })).toBeDisabled();
-  await dialog.getByLabel("실제 사용 장비·모델", { exact: false }).fill("합성 TONOVET Plus 장비");
-  await dialog.getByLabel("장비 설정 기록 방식", { exact: false }).click();
-  await page.getByRole("option", { name: "조절 설정 없음 · 해당 없음" }).click();
-  await dialog.getByRole("button", { name: "수행기록 저장 및 완료" }).click();
-  await expect.poll(() => posted).not.toBeNull();
-  expect(posted).toMatchObject({ payload: { performedCount: 1, performedCountUnit: "session", measurementValue: 12,
-    measurementUnit: "mmHg", deviceSettingsPolicy: "not_adjustable" } });
-  await expect(dialog).not.toBeVisible();
   await openInstructionExecutionHistory(page);
+  const dialog = page.getByRole("dialog", { name: "실제 수행기록" });
   await expect(dialog.getByText("버전 1", { exact: false })).toBeVisible();
-  expect(context.planSnapshot.detailInputs).not.toHaveProperty("measurementValue");
+  await expect(dialog.getByText("12", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("합성 TONOVET Plus 장비", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("TONOVET Plus 합성 수기 프로필", { exact: true })).toBeVisible();
 });
 
 async function grantCheongdamWorkspaceAccess(page: Page) {
@@ -1083,6 +1129,19 @@ test("dispensing queue reconciles server totals with visible type-filter counts"
     },
   );
 
+  await page.route(`**/api/workspaces/${targetWorkspaceId}/fulfillment/work-items/*/instruction`, route => {
+    const id = new URL(route.request().url()).pathname.split("/").at(-2);
+    const workItem = [...queueItems.dispensing, ...queueItems.treatment].find(item => item.id === id);
+    if (!workItem) return route.fulfill({ status: 404, json: { ok: false } });
+    return route.fulfill({ json: { ok: true, document: { ...structuredClone(syntheticInstruction),
+      rootOrderId: workItem.orderId, rootTaskId: workItem.id, isSet: false, queueType: workItem.queueType,
+      name: workItem.sourceSnapshot.orderDisplayName,
+      items: [{ ...syntheticInstruction.items[0], id: workItem.id, orderId: workItem.orderId,
+        taskId: workItem.id, name: workItem.sourceSnapshot.orderDisplayName, status: workItem.status }],
+    } } });
+  });
+  await page.route(`**/api/workspaces/${targetWorkspaceId}/fulfillment/work-items/*/assignees`, route => route.fulfill({ json: { ok: true, assignees: [] } }));
+
   await page.goto(`/w/${targetWorkspaceId}/dispensing?modulePanel=open`);
 
   const typeFilter = page.getByRole("group", { name: "오더 유형 필터" });
@@ -1106,10 +1165,8 @@ test("dispensing queue reconciles server totals with visible type-filter counts"
     .getByTestId("order-queue-item-live-fulfillment-reconcile-dispensing-1")
     .click();
   await expect(
-    page.getByTestId(
-      "order-row-section-0-live-order-row-reconcile-dispensing-1",
-    ),
-  ).toContainText("정합성 조제 1");
+    page.getByTestId("fulfillment-prework").getByRole("rowheader", { name: "정합성 조제 1", exact: true }),
+  ).toBeVisible();
 
   await typeFilter.getByRole("button", { name: /처치\s*2/ }).click();
   await expect(queueRows).toHaveCount(2);
@@ -1499,59 +1556,131 @@ test("dispensing context opens the selected live profile and vital editor", asyn
 });
 
 for (const queueType of ["dispensing", "treatment"] as const) {
-  test(`${queueType} keeps request time after claim and cancellation`, async ({ page }) => {
+  test(`${queueType} returns the selected order to waiting after unassign and opens it on reclaim`, async ({ page }, testInfo) => {
     await grantCheongdamWorkspaceAccess(page);
     const workspaceId = PREPARED_EMPTY_CLINIC_WORKSPACE_ID;
     const id = "97090000-0000-4000-8000-000000000991";
+    const siblingId = "97090000-0000-4000-8000-000000000993";
     const encounterId = "97090000-0000-4000-8000-000000000992";
+    const patientId = "97090000-0000-4000-8000-000000000994";
+    const orderName = "합성 담당 취소 검증";
     let assignedToUserId: string | null = null;
+    let status: InstructionDocument["items"][number]["status"] = "requested";
     let rowRevision = 1;
-    let updatedAt = "2026-09-07T02:45:00.000Z";
-    const workItem = () => ({ id, workspaceId, encounterId, orderId: id, queueType,
-      status: assignedToUserId ? "in_progress" : "paused", requestCycle: 1, rowRevision, assignedToUserId,
+    const commands: Array<{ action: string; startWork?: boolean; commandId: string }> = [];
+    let rejectUnassign = queueType === "dispensing";
+    await page.route("**/fulfillment/instruction-review?*", route => {
+      const taskIds = new URL(route.request().url()).searchParams.get("taskIds")?.split(",") ?? [];
+      return route.fulfill({ json: { ok: true, reviews: taskIds.map(taskId => ({
+        taskId, requiresAcknowledgement: false, previous: null, snapshots: [], current: null,
+      })) } });
+    });
+    await page.route(`**/api/workspaces/${workspaceId}/customer/patient/${patientId}/profile-overview`, route =>
+      route.fulfill({ json: { ok: true, overview: {
+        subjectId: patientId, subjectType: "patient",
+        profile: { id: patientId, name: "합성 환자", breed: "말티즈", species: "dog", sex: "female", neutered: true },
+        relationships: { guardians: [] }, access: { information: { allowed: true, requiredPermission: "patient:view" } },
+      } } }));
+    await page.route(`**/api/workspaces/${workspaceId}/vital-settings`, route => route.fulfill({ json: createDefaultWorkspaceVitalSettingsSnapshot(false) }));
+    await page.route(`**/api/workspaces/${workspaceId}/patient-vitals/history?*`, route => route.fulfill({ json: { ok: true, measurements: [] } }));
+    const workItem = () => ({ id, workspaceId, encounterId, patientId, orderId: id, queueType, status,
+      requesterName: "합성 요청자",
+      requestCycle: 1, rowRevision, assignedToUserId,
       assignedToDisplayName: assignedToUserId ? "합성 담당" : null, canManage: true,
-      createdAt: "2026-09-07T01:30:00.000Z", updatedAt,
-      sourceSnapshot: { orderDisplayName: "합성 요청 시각 검증", patientName: "합성 환자" },
+      createdAt: "2026-09-07T01:30:00.000Z", updatedAt: rowRevision > 1 ? "2026-09-07T03:45:00.000Z" : "2026-09-07T02:45:00.000Z",
+      sourceSnapshot: { orderDisplayName: orderName, patientName: "합성 환자" },
     });
     await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items?*`, route => {
       const type = new URL(route.request().url()).searchParams.get("queueType");
-      return route.fulfill({ json: { ok: true, workItems: type === queueType ? [workItem()] : [] } });
-    });
-    await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/${id}`, route => {
-      const command = route.request().postDataJSON();
-      assignedToUserId = command.action === "unassign" ? null : "playwright-default-session";
-      rowRevision += 1; updatedAt = "2026-09-07T03:45:00.000Z";
-      return route.fulfill({ json: { ok: true, workItems: [workItem()] } });
+      return route.fulfill({ json: { ok: true, workItems: type === queueType ? [workItem(), {
+        ...workItem(), id: siblingId, orderId: siblingId, status: "paused", assignedToUserId: "another-assignee",
+        assignedToDisplayName: "다른 담당자", sourceSnapshot: { orderDisplayName: "같은 환자의 다른 오더", patientName: "합성 환자" },
+      }] : [] } });
     });
     await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/${id}/assignees`, route => route.fulfill({ json: { ok: true, assignees: [] } }));
     await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/${id}/instruction`, route => {
       if (route.request().method() === "PATCH") {
-        assignedToUserId = route.request().postDataJSON().action === "unassign" ? null : "playwright-default-session";
-        rowRevision++; updatedAt = "2026-09-07T03:45:00.000Z";
+        const { action, startWork, commandId } = route.request().postDataJSON();
+        commands.push({ action, startWork, commandId });
+        if (action === "unassign") {
+          if (rejectUnassign) {
+            rejectUnassign = false;
+            return route.fulfill({ status: 503, json: { ok: false } });
+          }
+          assignedToUserId = null;
+          status = "paused";
+        } else if (action === "claim" && startWork === true) {
+          assignedToUserId = "playwright-default-session";
+          status = "in_progress";
+        } else {
+          return route.fulfill({ status: 409, json: { ok: false, error: "invalid_transition" } });
+        }
+        rowRevision++;
       }
-      return route.fulfill({ json: { ok: true, document: { ...structuredClone(syntheticInstruction), isSet: false, queueType,
+      return route.fulfill({ json: { ok: true, document: { ...structuredClone(syntheticInstruction), rootTaskId: id, rootOrderId: id,
+        name: orderName, encounterNo: "SYNTHETIC-001", isSet: false, queueType,
         mainAssigneeId: assignedToUserId, mainAssigneeName: assignedToUserId ? "합성 담당" : null,
         canClaim: !assignedToUserId, canStart: false, canUnassign: !!assignedToUserId, canCompleteAll: false, canEditInstruction: false,
-        revision: String(rowRevision), items: [{ ...syntheticInstruction.items[0], id, orderId: id, taskId: id, name: "합성 요청 시각 검증", status: assignedToUserId ? "in_progress" : "paused", canComplete: false, canReopen: false }] } } });
+        revision: String(rowRevision), items: [{ ...syntheticInstruction.items[0], id, orderId: id, taskId: id, name: orderName, status,
+          assigneeId: assignedToUserId, assigneeName: assignedToUserId ? "합성 담당" : null, canComplete: false, canReopen: false }] } } });
     });
     await page.goto(`/w/${workspaceId}/dispensing?date=2026-09-07&encounterId=${encounterId}&workItemId=${id}&queueItemId=live-fulfillment-${id}&modulePanel=open&aside=closed`);
-    const card = page.getByTestId(`order-queue-item-live-fulfillment-${id}`);
-    await expect(card).toContainText("10:30");
-    await page.getByRole("button", { name: "담당하기", exact: true }).click();
+    const cardId = `order-queue-item-live-fulfillment-${id}`;
+    const waiting = page.getByTestId("order-queue-status-waiting");
+    const inProgress = page.getByTestId("order-queue-status-inProgress");
+    const prework = page.getByTestId("fulfillment-prework");
     const label = queueType === "treatment" ? "처치" : "조제";
-    await expect(page.getByRole("button", { name: `${label} 시작`, exact: true })).toHaveCount(0);
-    await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
-    await expect(card).toContainText("10:30");
-    await page.getByRole("button", { name: "담당 취소", exact: true }).click();
-    await expect(page.getByRole("button", { name: "담당하기", exact: true })).toBeEnabled();
-    await expect(card).toContainText("10:30");
-    await expect(card).not.toContainText("12:45");
-  });
-}
+    const heading = page.getByRole("heading", { name: `${label} 지시서`, exact: true });
+    const claim = async () => {
+      await prework.getByRole("button", { name: "담당하기", exact: true }).click();
+      await page.getByRole("dialog", { name: "이 업무를 담당할까요?" }).getByRole("button", { name: "담당하기", exact: true }).click();
+      await expect(heading).toBeVisible();
+      await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
+      await expect(inProgress.getByTestId(cardId)).toBeVisible();
+    };
 
-async function openInstructionCompletion(page: Page) {
-  await page.getByRole("button", { name: "합성 작업 완료", exact: true }).click();
-  await page.getByRole("button", { name: "합성 작업 수행값 입력", exact: true }).click();
+    await page.getByRole("button", { name: "오더별 보기", exact: true }).click();
+    await expect(waiting.getByTestId(cardId)).toContainText("10:30");
+    await claim();
+    const unassign = async () => {
+      await page.getByRole("button", { name: "업무 상태 변경" }).click();
+      await page.getByRole("menuitem", { name: "담당 취소", exact: true }).click();
+    };
+    await unassign();
+    if (queueType === "dispensing") {
+      await expect(page.getByRole("alert").filter({ hasText: "변경을 저장하지 못했어요." })).toBeVisible();
+      await expect(heading).toBeVisible();
+      await expect(inProgress.getByTestId(cardId)).toBeVisible();
+      await unassign();
+    }
+    for (const reload of [false, true]) {
+      if (reload) await page.reload();
+      await expect(prework).toBeVisible();
+      await expect(prework.getByText(orderName, { exact: true }).first()).toBeVisible();
+      await expect(heading).toHaveCount(0);
+      await expect(waiting.getByTestId(cardId)).toContainText("10:30");
+      await expect(waiting.getByTestId(cardId)).not.toContainText("12:45");
+      await expect(waiting.getByTestId(cardId)).toHaveAttribute("data-selected", "true");
+      await expect(inProgress.getByTestId(cardId)).toHaveCount(0);
+      await expect(inProgress.getByTestId(`order-queue-item-live-fulfillment-${siblingId}`)).toBeVisible();
+      await expect(page).toHaveURL(new RegExp(`[?&]workItemId=${id}(&|$)`));
+    }
+    await expect(prework.locator("header")).toContainText("합성 환자");
+    await page.screenshot({ path: testInfo.outputPath("waiting-after-unassign.png") });
+    await page.getByRole("button", { name: "환자별 보기", exact: true }).click();
+    await expect(page.getByTestId(cardId).getByText("대기중", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "오더별 보기", exact: true }).click();
+    await claim();
+    await expect(page.getByRole("button", { name: "재개", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    if (queueType === "dispensing") expect(commands[1].commandId).toBe(commands[2].commandId);
+    expect(commands.map(({ action, startWork }) => ({ action, startWork }))).toEqual([
+      { action: "claim", startWork: true },
+      { action: "unassign", startWork: undefined },
+      ...(queueType === "dispensing" ? [{ action: "unassign", startWork: undefined }] : []),
+      { action: "claim", startWork: true },
+    ]);
+  });
 }
 
 async function openInstructionExecutionHistory(page: Page) {
@@ -1569,7 +1698,7 @@ async function installExecutionInstruction(page: Page, workspaceId: string, id: 
       revision: String(context.workItemRevision), finalized: context.status === "completed", canEditInstruction: false,
       canCompleteAll: context.status !== "completed", instruction: "합성 테스트", changes: [], items: [{ ...structuredClone(syntheticInstruction.items[0]),
         id, orderId: id, taskId: id, name: "합성 작업", status: context.status === "completed" ? "completed" : "in_progress",
-        plan: context.planSnapshot, sourceSnapshot: {}, resultRequired: context.results.length === 0, hasResult: context.results.length > 0,
+        plan: context.planSnapshot, sourceSnapshot: {}, resultRequired: false, hasResult: context.results.length > 0,
         canComplete: context.status !== "completed", canReopen: context.status === "completed" }] };
     return route.fulfill({ json: { ok: true, document } });
   });

@@ -70,7 +70,7 @@ test("pre-confirmation product-unit totals use the required dispense quantity", 
   })).toBe(1000);
 });
 
-function row(id: string, status = "confirmed", taskStatus?: "complete" | "returned" | "pending" | "paused"): ChartOrderPresentationRow {
+function row(id: string, status = "confirmed", taskStatus?: "complete" | "returned" | "pending" | "paused" | "in_progress"): ChartOrderPresentationRow {
   return {
     order: { id, status },
     runtimeRow: { orderConfirmationStatus: status },
@@ -101,7 +101,10 @@ test("no-task confirmation stays empty; return, repeat request, pause and imagin
   const repeated = row("again", "confirmed", "pending");
   repeated.executionTask!.requestCycle = 2;
   expect(getChartOrderWorkPresentation(repeated)).toMatchObject({ label: "재요청", icon: "rework" });
-  expect(getChartOrderWorkPresentation(row("paused", "confirmed", "paused"))).toMatchObject({ label: "일시중지", icon: "stop" });
+  expect(getChartOrderWorkPresentation(row("paused", "confirmed", "paused"))).toMatchObject({ label: "일시중지", icon: "hold" });
+  const held = row("held", "confirmed", "in_progress");
+  held.executionTask!.pauseReason = "order_edit";
+  expect(getChartOrderWorkPresentation(held)).toMatchObject({ label: "일시중지", icon: "hold" });
   const imaging = row("image", "confirmed", "complete");
   imaging.executionTask!.clinicalOrderType = "imaging";
   expect(getChartOrderWorkPresentation(imaging)).toMatchObject({ label: "판독완", icon: "done" });

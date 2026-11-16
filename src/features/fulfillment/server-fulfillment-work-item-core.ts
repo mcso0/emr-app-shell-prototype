@@ -1,3 +1,4 @@
+import type { OrderWorkPauseReason } from "./instruction-contract";
 import {
   createMockWorkspacePermissionAdapter,
   resolveWorkspacePermission,
@@ -174,6 +175,8 @@ export type FulfillmentWorkItem = {
   startedAt?: string | null;
   startedByUserId?: string | null;
   pausedFromPhase?: string | null;
+  pauseReason?: OrderWorkPauseReason | null;
+  pauseUntil?: string | null;
   taskAttemptNo?: number | null;
   taskId?: string | null;
   taskStatus?: UniversalOrderTaskStatus | null;
@@ -2779,6 +2782,7 @@ function mapGatewayError(
   message: string | undefined,
   fallback: "db_read_failed" | "db_write_failed",
 ): FulfillmentGatewayResult {
+  if (message?.includes("order_work_on_hold")) return { ok: false, status: 409, denialReason: "invalid_transition" };
   if (message?.includes("current_assignee_required") || message?.includes("already_assigned")) return { ok: false, status: 409, denialReason: "invalid_transition" };
   if (message?.includes("treatment_medication_link_required"))
     return { ok: false, status: 409, denialReason: "treatment_medication_link_required" };
@@ -3189,6 +3193,10 @@ function mapWorkItemRow(value: unknown): FulfillmentWorkItem | null {
 
   return {
     ...row,
+    ...(row.pauseReason === "order_edit" ? {
+      pauseReason: row.pauseReason,
+      pauseUntil: typeof row.pauseUntil === "string" && Number.isFinite(Date.parse(row.pauseUntil)) ? row.pauseUntil : null,
+    } : {}),
     originChartId: typeof row.originChartId === "string" && row.originChartId.trim() ? row.originChartId : null,
     originChartCreatedAt: typeof row.originChartCreatedAt === "string" && Number.isFinite(Date.parse(row.originChartCreatedAt)) ? row.originChartCreatedAt : null,
     sourceSnapshot: {

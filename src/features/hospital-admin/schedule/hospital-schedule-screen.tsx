@@ -1,5 +1,7 @@
 "use client";
 
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -797,6 +799,9 @@ export function HospitalScheduleV1Screen({ workspaceId }: { workspaceId: string 
   const pendingRequests = requests.filter((request) => request.status === "pending");
   const requestedWeekStart = searchParams.get("weekStart") ?? undefined;
   const requestedStaffId = searchParams.get("staffId");
+  const pageScope = `${workspaceId}:${requestedWeekStart}:${session?.id}`;
+  const [completedReadScope, setCompletedReadScope] = useState<string | null>(null);
+  usePageReadiness(!hydrated || (session?.role === "supabase" && completedReadScope !== pageScope), pageScope);
 
   useEffect(() => {
     hydrate();
@@ -842,13 +847,14 @@ export function HospitalScheduleV1Screen({ workspaceId }: { workspaceId: string 
         setDataState("error");
         toast.error(error instanceof Error ? error.message : "근무표를 불러오지 못했습니다.");
       }
-    });
+    }).finally(() => { if (!cancelled) setCompletedReadScope(pageScope); });
 
     return () => {
       cancelled = true;
       setHospitalSchedulePersistenceAdapter(null);
     };
   }, [
+    pageScope,
     hydrateRemoteSchedule,
     hydrated,
     currentQuery,
@@ -1018,6 +1024,9 @@ export function HospitalScheduleV1Screen({ workspaceId }: { workspaceId: string 
 export function HospitalScheduleScreen({ workspaceId }: { workspaceId: string }) {
   const { hydrated, hydrate, session } = useAuthClient();
   const [modelVersion, setModelVersion] = useState<"v1" | "v2">("v1");
+  const modelScope = `${workspaceId}:${session?.id}`;
+  const [resolvedModelScope, setResolvedModelScope] = useState<string | null>(null);
+  usePageReadiness(!hydrated || (session?.role === "supabase" && resolvedModelScope !== modelScope), modelScope);
 
   useEffect(() => {
     hydrate();
@@ -1033,11 +1042,11 @@ export function HospitalScheduleScreen({ workspaceId }: { workspaceId: string })
       })
       .catch(() => {
         if (!cancelled) setModelVersion("v1");
-      });
+      }).finally(() => { if (!cancelled) setResolvedModelScope(modelScope); });
     return () => {
       cancelled = true;
     };
-  }, [hydrated, session?.role, workspaceId]);
+  }, [hydrated, session?.role, workspaceId, modelScope]);
 
   if (modelVersion === "v2") return <HospitalScheduleV2Screen workspaceId={workspaceId} />;
   return <HospitalScheduleV1Screen workspaceId={workspaceId} />;

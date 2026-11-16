@@ -15,6 +15,7 @@ export function useBillingAssignment(workspaceId: string | undefined, requestedI
   const key = workspaceId && invoiceId && actorScope ? getBillingAssignmentScope(workspaceId, invoiceId, session, actorScope) : "";
   const subscription = useRef<ReturnType<typeof subscribeBillingAssignment> & { key: string } | null>(null);
   const [state, setState] = useState<{ key: string; data: BillingAssignment | null }>({ key: "", data: null });
+  const [finishedKey, setFinishedKey] = useState<string | null>(null);
   const refresh = useCallback(async () => {
     if (subscription.current?.key === key) await subscription.current.resource.refresh();
   }, [key]);
@@ -22,6 +23,7 @@ export function useBillingAssignment(workspaceId: string | undefined, requestedI
     if (!workspaceId || !invoiceId || !actorScope) return;
     const active = { ...subscribeBillingAssignment({ workspaceId, invoiceId, session, actorScope, listener: data => setState({ key, data }) }), key };
     subscription.current = active;
+    void active.resource.refresh().then(() => { if (subscription.current === active) setFinishedKey(key); });
     return () => {
       if (subscription.current === active) subscription.current = null;
       active.unsubscribe();
@@ -54,5 +56,5 @@ export function useBillingAssignment(workspaceId: string | undefined, requestedI
       return false;
     }
   };
-  return { data, canExecute: Boolean(data?.canManage && data.assignedToUserId), transition, refresh };
+  return { data, loading: Boolean(key && finishedKey !== key), canExecute: Boolean(data?.canManage && data.assignedToUserId), transition, refresh };
 }

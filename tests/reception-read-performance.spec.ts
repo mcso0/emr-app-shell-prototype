@@ -118,8 +118,7 @@ test("reception live refresh uses one snapshot request and a visibility-aware fa
 
   expect(moduleSource).toContain("loadReceptionSnapshot");
   expect(moduleSource).toContain("receptionReadInFlightRef");
-  expect(moduleSource).toContain('document.visibilityState !== "visible"');
-  expect(moduleSource).toContain("window.setInterval(refresh, 60_000)");
+  expect(/subscribeVisibleRefresh\(\{\s*intervalMs: 60_000,\s*onRefresh: \(\) => \{ void refreshReceptionReads\(\); \}/.test(moduleSource)).toBe(true);
   expect(moduleSource).not.toContain("window.setInterval(refresh, 9000)");
 });
 

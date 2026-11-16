@@ -300,3 +300,17 @@ restored after reload and return visits. Existing switching remains unchanged.
   browser acceptance remains unverified because login credentials were unavailable;
   승욱 will review the deployed result. Prepare the exact release candidate and
   required checks without including other WIP.
+
+## Patient queue display follow-up — 2026-11-09
+
+승욱 approved removing the 재요청 count from patient group headings and the
+new-work banner from the combined dispensing/treatment, lab, and imaging queues.
+Show 재요청 on affected task cards. Keep the group task count, urgent count,
+status filters, sort rules, and hidden-selection recovery action.
+
+Local verification on origin/main base `17c6e177` used synthetic data. All 18
+focused Playwright checks passed. In Storybook, the new task appeared above the
+current reading position without a banner, selection stayed on the same card,
+and its position relative to the viewport moved by less than 3 CSS pixels.
+Both patient queue stories passed. The order queue panel's Default and Counted
+List Header story failures reproduced on the base with the same errors.

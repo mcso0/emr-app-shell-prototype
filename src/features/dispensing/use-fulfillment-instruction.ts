@@ -1,13 +1,14 @@
 "use client";
 
 import { useTaskInstructionReview, type TaskInstructionReviewController } from "@/features/fulfillment/use-task-instruction-review";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   instructionDocumentSchema,
   instructionErrorMessages,
   type InstructionCommand,
   type InstructionDocument,
 } from "@/features/fulfillment/instruction-contract";
+import { isAssignedInstructionRerequest } from "./instruction-view-model";
 import type { FulfillmentEligibleAssignee } from "@/features/fulfillment/server-fulfillment-assignee";
 
 export type InstructionIntent = InstructionCommand extends infer Command
@@ -40,6 +41,7 @@ export function useFulfillmentInstruction(
   const [mutationFailure, setMutationFailure] = useState<{ endpoint: string | null; message: string } | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const generation = useRef(0);
+  const selection = useRef(0);
   const pending = useRef(false);
   const retry = useRef<{
     fingerprint: string;
@@ -52,6 +54,11 @@ export function useFulfillmentInstruction(
   const error = failure?.key === readKey ? failure.message : mutationFailure?.endpoint === endpoint ? mutationFailure.message : null;
   const setError = (message: string | null) =>
     setMutationFailure(message ? { endpoint, message } : null);
+
+  useLayoutEffect(() => {
+    selection.current += 1;
+    return () => { selection.current += 1; };
+  }, [endpoint]);
 
   useEffect(() => {
     const current = ++generation.current;
@@ -75,33 +82,35 @@ export function useFulfillmentInstruction(
           );
           // Preserve same-item content on transient failure; authorization/removal
           // failures must immediately withdraw previously loaded information.
-          if ([401, 403, 404].includes(response.status)) setLoaded(null);
+          if ([401, 403, 404].includes(response.status)) {
+            selection.current += 1;
+            setLoaded(null);
+          }
           return;
         }
         setFailure(null);
         setAssignees([]);
         setLoaded({ endpoint, document: parsed.data });
-        const candidatesResponse = await fetch(
-          endpoint.replace(/instruction$/, "assignees"),
-          { cache: "no-store", signal: abort.signal },
-        );
-        const candidates = await candidatesResponse.json();
-        if (generation.current === current && (!candidatesResponse.ok || !candidates.ok)) {
-          reportError("담당자 정보를 불러오지 못했어요. 다시 조회해 주세요.");
-        }
-        if (
-          generation.current === current &&
-          candidatesResponse.ok &&
-          candidates.ok &&
-          Array.isArray(candidates.assignees)
-        ) {
+        try {
+          const candidatesResponse = await fetch(
+            endpoint.replace(/instruction$/, "assignees"),
+            { cache: "no-store", signal: abort.signal },
+          );
+          const candidates = await candidatesResponse.json();
+          if (generation.current !== current) return;
+          if (!candidatesResponse.ok || !candidates.ok || !Array.isArray(candidates.assignees)) {
+            throw new Error("assignee_read_failed");
+          }
           setAssignees(
             candidates.assignees.filter(
               (item: FulfillmentEligibleAssignee) =>
-                typeof item.userId === "string" &&
-                typeof item.displayName === "string",
+                typeof item.userId === "string" && typeof item.displayName === "string",
             ),
           );
+        } catch {
+          if (!abort.signal.aborted && generation.current === current) {
+            reportError("담당자 정보를 불러오지 못했어요. 다시 조회해 주세요.");
+          }
         }
       } catch {
         if (!abort.signal.aborted && generation.current === current)
@@ -118,21 +127,35 @@ export function useFulfillmentInstruction(
 
   const document = loaded?.endpoint === endpoint ? loaded.document : null;
   const instructionReview = useTaskInstructionReview(workspaceId, document?.items.map(item => item.taskId) ?? [], document?.revision);
-  const mutate = async (intent: InstructionIntent) => {
-    if (!endpoint || !document || loading || (failure?.key === readKey && failure.read) || pending.current) return false;
+  const mutate = async (
+    intent: InstructionIntent,
+    onReviewRequired?: () => void,
+    continueAfterReview?: { label: string; onSuccess: () => void },
+  ): Promise<boolean> => {
+    if (!endpoint || !document || document.pauseReason || loading || (failure?.key === readKey && failure.read) || pending.current) return false;
     pending.current = true;
     setBusy(true);
     try {
     const current = generation.current;
+    const selected = selection.current;
+    const continuation = continueAfterReview && {
+      label: continueAfterReview.label,
+      run: async () => {
+        if (selection.current !== selected) return;
+        if (await mutate(intent, onReviewRequired, continueAfterReview)) continueAfterReview.onSuccess();
+      },
+    };
     const fingerprint = JSON.stringify({
       endpoint,
       intent,
       revision: document.revision,
     });
-    if (retry.current?.fingerprint !== fingerprint && ["start", "resume", "start_item", "reopen", "complete", "complete_all"].includes(intent.action)) {
+    const startsOnAssignment = "startWork" in intent && intent.startWork === true;
+    if (retry.current?.fingerprint !== fingerprint && (startsOnAssignment || ["start", "resume", "start_item", "reopen", "complete", "complete_all"].includes(intent.action))) {
       const targets = document.items.filter(item => ("itemId" in intent ? item.id === intent.itemId : true) && (intent.action === "reopen" || !["completed", "cancelled", "returned"].includes(item.status))).map(item => item.taskId);
-      if (!await instructionReview.check(targets)) return false;
-      if (generation.current !== current) return false;
+      const ready = await instructionReview.check(targets, continuation);
+      if (selection.current !== selected) return false;
+      if (!ready) { onReviewRequired?.(); return false; }
     }
     if (retry.current?.fingerprint !== fingerprint) {
       retry.current = {
@@ -152,11 +175,16 @@ export function useFulfillmentInstruction(
         body: JSON.stringify(retry.current.command),
       });
       const body = await response.json();
-      if (generation.current !== current) return false;
+      if (selection.current !== selected) return false;
       const parsed = instructionDocumentSchema.safeParse(body.document);
       if (!response.ok || body.ok !== true || !parsed.success) {
-        if (body.error === "instruction_ack_required") { instructionReview.requireReview(); retry.current = null; return false; }
-        if (body.error === "revision_conflict") { retry.current = null; refresh(); }
+        if (body.error === "instruction_ack_required") {
+          instructionReview.requireReview(continuation);
+          retry.current = null;
+          onReviewRequired?.();
+          return false;
+        }
+        if (body.error === "revision_conflict" || body.error === "order_work_on_hold") { retry.current = null; refresh(); }
         setError(
           instructionErrorMessages[body.error] ??
             "변경을 저장하지 못했어요. 다시 시도해 주세요.",
@@ -164,10 +192,17 @@ export function useFulfillmentInstruction(
         return false;
       }
       retry.current = null;
+      // A queue refresh may start another read while this write is in flight.
+      // Its old snapshot cannot replace the successful command's document.
+      if (generation.current !== current) {
+        generation.current += 1;
+        refresh();
+      }
+      setFailure(null);
       setLoaded({ endpoint, document: parsed.data });
       return true;
     } catch {
-      if (generation.current === current)
+      if (selection.current === selected)
         setError(
           "변경 결과를 확인하지 못했어요. 다시 시도하면 같은 요청의 결과를 확인해요.",
         );
@@ -178,7 +213,21 @@ export function useFulfillmentInstruction(
       setBusy(false);
     }
   };
-  return { document, assignees, loading, busy: busy || Boolean(failure?.key === readKey && failure.read), error, refresh, mutate, instructionReview };
+  const openRerequestReview = (onSuccess: () => void) => {
+    if (!document?.canStart || !isAssignedInstructionRerequest(document) || loading || pending.current) return;
+    const selected = selection.current;
+    instructionReview.requireReview({
+      label: "업무 시작하기",
+      restartOrder: document.queueType === "dispensing" ? "조제" : "처치",
+      run: async () => {
+        if (selection.current === selected && await mutate({ action: "start" })) onSuccess();
+      },
+    });
+  };
+  return { document, assignees, loading, openRerequestReview, busy: busy || Boolean(failure?.key === readKey && failure.read), error, refresh, mutate, instructionReview };
 }
 
-export type FulfillmentInstructionController = Omit<ReturnType<typeof useFulfillmentInstruction>, "instructionReview"> & { instructionReview?: TaskInstructionReviewController };
+export type FulfillmentInstructionController = Omit<ReturnType<typeof useFulfillmentInstruction>, "instructionReview" | "openRerequestReview"> & {
+  instructionReview?: TaskInstructionReviewController;
+  openRerequestReview?: ReturnType<typeof useFulfillmentInstruction>["openRerequestReview"];
+};

@@ -1,5 +1,7 @@
 "use client";
 
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+
 import {
   getCoreRowModel,
   getSortedRowModel,
@@ -304,6 +306,7 @@ export function OrderSetsPanel({
 
   const hasFilters = Boolean(query.trim()) || statusFilter !== "all" || amountFilter !== "all" || speciesFilter !== "all" || activeFilterCount > 0;
 
+  usePageReadiness(readStatus === "loading", workspaceId);
   return (
     <>
       <EmrPinnedTableWorkspace className="flex h-full min-h-0 flex-col bg-[#fcfcfc]" data-testid="order-set-management" identityTextInset={48} selectionColumnWidth={selectionColumnWidth}>

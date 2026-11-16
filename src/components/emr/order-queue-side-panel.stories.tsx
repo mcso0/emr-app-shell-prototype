@@ -205,7 +205,7 @@ function CountedListHeaderExample({ total = 10 }: { total?: number }) {
         items={items}
         statuses={queueStatuses}
         typeFilterPlacement="list-header"
-        patientGrouping={{ workspaceId: "synthetic-counted-queue", readable: true, ready: true }}
+        patientGrouping={{ workspaceId: "synthetic-counted-queue", readable: true }}
       />
     </div>
   );

@@ -30,7 +30,7 @@ const config: StorybookConfig = {
     // Resolve that exact asset in both dev and static Storybook builds.
     resolve: { alias: { "./woff2/PretendardVariable.woff2": fileURLToPath(new URL("../node_modules/pretendard/dist/web/variable/woff2/PretendardVariable.woff2", import.meta.url)) } },
     // New catalog entries must not trigger a mid-play dependency reload.
-    optimizeDeps: { include: ["@dnd-kit/core", "@dnd-kit/sortable", "@dnd-kit/utilities", "next/dynamic", "@tanstack/react-virtual", "cmdk", "react-resizable-panels", "sonner", "lucide-react", "react-dom"] },
+    optimizeDeps: { include: ["@ui-sdk/core", "@ui-sdk/react/autocomplete", "@ui-sdk/react/combobox", "@ui-sdk/react/tabs", "@ui-sdk/react/toggle", "@ui-sdk/react/calendar", "@ui-sdk/react/listbox", "@dnd-kit/core", "@dnd-kit/sortable", "@dnd-kit/utilities", "next/dynamic", "@tanstack/react-virtual", "cmdk", "react-resizable-panels", "sonner", "lucide-react", "react-dom"] },
     plugins: [{
       name: "clair-storybook-next-navigation",
       enforce: "post",

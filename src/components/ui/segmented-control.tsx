@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { Toggle, ToggleGroup } from "@ui-sdk/react/toggle";
 import { cn } from "@/lib/utils";
 
 /**
@@ -112,8 +113,13 @@ export function SegmentedControl<TValue extends string>({
       : "rounded-[var(--emr-radius-control)]";
 
   return (
-    <div
-      role="group"
+    <ToggleGroup
+      value={[value]}
+      deselectable={false}
+      disabled={disabled}
+      onValueChange={(next) => {
+        if (next[0] !== undefined) onValueChange(next[0]);
+      }}
       aria-label={ariaLabel}
       className={cn(
         "inline-flex w-fit items-center",
@@ -132,12 +138,15 @@ export function SegmentedControl<TValue extends string>({
         const itemDisabled = disabled || item.disabled === true;
 
         return (
-          <button
+          <Toggle
             key={item.value}
-            type="button"
+            value={item.value}
             aria-label={item.ariaLabel}
-            aria-pressed={active}
             disabled={itemDisabled}
+            focusableWhenDisabled={false}
+            render={<button disabled={itemDisabled} />}
+            // A same-value press still activates the caller's current group.
+            onClick={() => { if (active && !itemDisabled) onValueChange(item.value); }}
             title={item.title}
             className={cn(
               "inline-flex shrink-0 items-center justify-center border transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
@@ -165,18 +174,14 @@ export function SegmentedControl<TValue extends string>({
               itemDisabled && "cursor-not-allowed opacity-45 hover:bg-transparent",
               itemClassName
             )}
-            onClick={() => {
-              if (itemDisabled) return;
-              onValueChange(item.value);
-            }}
           >
             {item.label}
             {typeof item.count === "number" ? (
               <span className="ml-0.5 tabular-nums">{item.count}</span>
             ) : null}
-          </button>
+          </Toggle>
         );
       })}
-    </div>
+    </ToggleGroup>
   );
 }

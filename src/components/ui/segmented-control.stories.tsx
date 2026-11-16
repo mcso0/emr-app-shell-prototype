@@ -58,7 +58,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Use SegmentedControl for compact filters, display modes, and small mutually exclusive choices. Do not use it for page navigation, long taxonomies, or actions that require confirmation.",
+          "Use SegmentedControl for compact filters, display modes, and small mutually exclusive choices. UI SDK ToggleGroup owns keyboard navigation and single selection while preserving group/button aria-pressed semantics. Do not use it for page navigation, long taxonomies, or actions that require confirmation.",
       },
     },
   },
@@ -117,6 +117,12 @@ export const Default: Story = {
     await userEvent.click(created); await waitFor(() => { expect(created).toHaveAttribute("aria-pressed", "true"); expect(canvas.getByLabelText("합성 차트 이력 표시 기준")).toHaveTextContent("작성일"); });
     const visit = group.getByRole("button", { name: "진료일 기준" }); visit.focus(); await userEvent.keyboard(" ");
     await waitFor(() => expect(visit).toHaveAttribute("aria-pressed", "true")); await expect(created).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(visit);
+    await expect(visit).toHaveAttribute("aria-pressed", "true");
+    await userEvent.keyboard("{ArrowRight}");
+    await waitFor(() => expect(created).toHaveFocus());
+    await userEvent.keyboard(" ");
+    await expect(created).toHaveAttribute("aria-pressed", "true");
   },
 };
 
@@ -258,3 +264,22 @@ export const ShortLabelsNeedAriaLabels: Story = {
     },
   },
 };
+
+
+function ReselectGroupCaller() {
+  const [value, setValue] = useState("waiting");
+  const [open, setOpen] = useState(false);
+  const [calls, setCalls] = useState(0);
+  return <div className="grid gap-2"><SegmentedControl aria-label="합성 재선택 그룹" value={value} items={[{ value: "all", label: "전체" }, { value: "waiting", label: "대기" }]} onValueChange={(next) => { setValue(next); setOpen(true); setCalls((count) => count + 1); }} />
+    <button onClick={() => setOpen(false)}>합성 그룹 접기</button><output aria-label="합성 그룹 상태">{open ? "열림" : "접힘"} {calls}</output></div>;
+}
+export const ReselectReopensGroup: Story = { render: () => <ReselectGroupCaller />, play: async ({ canvas }) => {
+  const selected = canvas.getByRole("button", { name: "대기" });
+  await userEvent.click(selected); await expect(canvas.getByLabelText("합성 그룹 상태")).toHaveTextContent("열림 1");
+  await userEvent.click(canvas.getByRole("button", { name: "합성 그룹 접기" })); selected.focus(); await userEvent.keyboard("{Enter}");
+  await expect(canvas.getByLabelText("합성 그룹 상태")).toHaveTextContent("열림 2");
+  await userEvent.click(canvas.getByRole("button", { name: "합성 그룹 접기" })); selected.focus(); await userEvent.keyboard(" ");
+  await expect(canvas.getByLabelText("합성 그룹 상태")).toHaveTextContent("열림 3");
+  await userEvent.click(canvas.getByRole("button", { name: "전체" }));
+  await expect(canvas.getByLabelText("합성 그룹 상태")).toHaveTextContent("열림 4");
+} };

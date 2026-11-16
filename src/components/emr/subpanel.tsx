@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ComponentProps, type KeyboardEvent, type ReactNode } from "react";
+import { Calendar, CalendarGrid, CalendarWeekday, CalendarWeekdays, CalendarWeeks } from "@ui-sdk/react/calendar";
 import { useModuleSidePanel } from "@/components/emr/module-side-panel-context";
 import {
   CdsActionsPinIcon,
@@ -16,7 +17,7 @@ import {
 } from "@/components/cds-icons/navigation";
 import { ChevronDownIcon } from "@/components/icons";
 import { SidebarGnbIcon } from "@/components/gnb-icons";
-import { EmrDatePickerDayButton } from "@/components/emr/date-picker-day-button";
+import { EmrDatePickerCalendarDay } from "@/components/emr/date-picker-day-button";
 import { EmrEmptyState, type EmrEmptyStateKind } from "@/components/emr/empty-state";
 import { EmrIconButton } from "@/components/emr/icon-button";
 import { EmrMotionIcon } from "@/components/emr/motion-icon";
@@ -135,35 +136,6 @@ const emrDateNavigatorTodayBadgeClassName =
 const emrSubpanelHeaderIconButtonClassName =
   "inline-flex size-6 shrink-0 items-center justify-center rounded-[var(--clair-radius-sm)] bg-transparent p-0 text-[var(--clair-color-atomic-neutral-400)] outline-none transition-[background-color,box-shadow,color] duration-[var(--clair-motion-duration-fast)] ease-[var(--clair-motion-easing-standard)] hover:bg-[var(--emr-state-hover)] hover:text-[var(--clair-color-atomic-neutral-400)] focus-visible:ring-3 focus-visible:ring-ring/50 aria-pressed:bg-[var(--emr-state-active)] aria-pressed:text-[var(--clair-color-atomic-neutral-400)] aria-pressed:hover:bg-[var(--emr-state-active)] disabled:cursor-not-allowed disabled:bg-transparent disabled:text-[var(--emr-text-disabled)] disabled:opacity-100 disabled:hover:bg-transparent disabled:hover:text-[var(--emr-text-disabled)] [&_svg]:size-4 [&_svg]:shrink-0";
 
-function getIsoDateFromUtcDate(date: Date) {
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
-}
-
-function getEmrMonthDatePickerCells(
-  visibleMonthDate: string,
-  selectedDate: string,
-  todayDate?: string,
-) {
-  const parts = parseIsoDateParts(visibleMonthDate);
-  const monthStart = new Date(Date.UTC(parts.year, parts.month - 1, 1));
-  const firstCellDate = new Date(monthStart);
-  firstCellDate.setUTCDate(1 - monthStart.getUTCDay());
-
-  return Array.from({ length: 35 }, (_, index) => {
-    const cellDate = new Date(firstCellDate);
-    cellDate.setUTCDate(firstCellDate.getUTCDate() + index);
-    const key = getIsoDateFromUtcDate(cellDate);
-
-    return {
-      key,
-      day: String(cellDate.getUTCDate()),
-      inMonth: cellDate.getUTCMonth() === parts.month - 1,
-      selected: key === selectedDate,
-      today: key === todayDate,
-    };
-  });
-}
-
 export function EmrSubpanel({ children, className }: EmrSubpanelProps) {
   return (
     <div
@@ -255,13 +227,6 @@ export function EmrDateNavigator({
   const [pickerMonthDate, setPickerMonthDate] = useState(selectedDate ?? "");
   const datePickerEnabled = Boolean(selectedDate && onDateChange);
   const pickerMonthDateParts = parseIsoDateParts(pickerMonthDate || selectedDate || "");
-  const datePickerCells = selectedDate
-    ? getEmrMonthDatePickerCells(
-        pickerMonthDate || selectedDate,
-        selectedDate,
-        todayDate,
-      )
-    : [];
   const renderedDateLabel = selectedDate
     ? formatSelectedDateLabel?.(selectedDate) ?? formatCompactKoreanOperatingDateLabel(selectedDate)
     : dateLabel;
@@ -332,73 +297,71 @@ export function EmrDateNavigator({
             className="w-[244px] gap-3 p-3"
             initialFocus={false}
           >
-            <div className="flex items-center justify-between">
-              <div className="emr-text-dense font-semibold leading-5 text-foreground">
-                {pickerMonthDateParts.year}년 {pickerMonthDateParts.month}월
+            <Calendar
+              className="flex flex-col gap-3"
+              value={selectedDate}
+              month={(pickerMonthDate || selectedDate || "").slice(0, 7)}
+              today={todayDate}
+              locale="ko-KR"
+              weekStartsOn={0}
+              onMonthChange={(month) => setPickerMonthDate(`${month}-01`)}
+              onValueChange={(date) => { if (typeof date === "string") selectDate(date); }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="emr-text-dense font-semibold leading-5 text-foreground">
+                  {pickerMonthDateParts.year}년 {pickerMonthDateParts.month}월
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label="이전 달"
+                    onClick={() =>
+                      setPickerMonthDate((current) =>
+                        addMonthsToIsoDate(current || selectedDate || "", -1),
+                      )
+                    }
+                  >
+                    <CdsNavigationChevronLeftIcon />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label="다음 달"
+                    onClick={() =>
+                      setPickerMonthDate((current) =>
+                        addMonthsToIsoDate(current || selectedDate || "", 1),
+                      )
+                    }
+                  >
+                    <CdsNavigationChevronRightIcon />
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center gap-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label="이전 달"
-                  onClick={() =>
-                    setPickerMonthDate((current) =>
-                      addMonthsToIsoDate(current || selectedDate || "", -1),
-                    )
-                  }
-                >
-                  <CdsNavigationChevronLeftIcon />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label="다음 달"
-                  onClick={() =>
-                    setPickerMonthDate((current) =>
-                      addMonthsToIsoDate(current || selectedDate || "", 1),
-                    )
-                  }
-                >
-                  <CdsNavigationChevronRightIcon />
-                </Button>
-              </div>
-            </div>
-            <div className="grid grid-cols-7 gap-1 text-center">
-              {emrDatePickerWeekdays.map((weekday) => (
-                <span
-                  key={weekday}
-                  className="h-6 emr-text-micro font-medium leading-6 text-muted-foreground"
-                >
-                  {weekday}
-                </span>
-              ))}
-              {datePickerCells.map((cell) => (
-                <EmrDatePickerDayButton
-                  key={cell.key}
-                  date={cell.key}
-                  day={cell.day}
-                  inMonth={cell.inMonth}
-                  selected={cell.selected}
-                  today={cell.today}
-                  onClick={() => selectDate(cell.key)}
-                />
-              ))}
-            </div>
-            {todayDate ? (
-              <div className="flex justify-end border-t border-[var(--emr-border-default)] pt-[var(--clair-spacing-8)]">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="xs"
-                  disabled={selectedDate === todayDate}
-                  onClick={() => selectDate(todayDate)}
-                >
-                  오늘로 이동
-                </Button>
-              </div>
-            ) : null}
+              <CalendarGrid className="-m-0.5 w-[calc(100%+4px)] table-fixed border-separate border-spacing-0 text-center">
+                <CalendarWeekdays>
+                  {(index) => <CalendarWeekday index={index} className="h-6 p-0.5 emr-text-micro font-medium leading-6 text-muted-foreground">{emrDatePickerWeekdays[index]}</CalendarWeekday>}
+                </CalendarWeekdays>
+                <CalendarWeeks>
+                  {(cell) => <EmrDatePickerCalendarDay date={cell.date} day={Number(cell.date.slice(-2))} inMonth={!cell.outside} selected={cell.date === selectedDate} today={cell.date === todayDate} onReselect={() => selectDate(cell.date)} />}
+                </CalendarWeeks>
+              </CalendarGrid>
+              {todayDate ? (
+                <div className="flex justify-end border-t border-[var(--emr-border-default)] pt-[var(--clair-spacing-8)]">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    disabled={selectedDate === todayDate}
+                    onClick={() => selectDate(todayDate)}
+                  >
+                    오늘로 이동
+                  </Button>
+                </div>
+              ) : null}
+            </Calendar>
           </PopoverContent>
         </Popover>
       ) : (

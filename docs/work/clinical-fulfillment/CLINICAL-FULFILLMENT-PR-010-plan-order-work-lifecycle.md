@@ -15,10 +15,57 @@ source_docs:
 dependencies:
   - "CLINICAL-FULFILLMENT-PR-009"
   - "CLINICAL-MASTER-PR-023"
-updated: "2026-11-03"
+updated: "2026-11-09"
 ---
 
 # Plan/Order Work Lifecycle And RPC Boundary
+
+## Single-entry response ordering — 2026-11-09
+
+Local fix from `origin/main` `34379835ae7ac449988f749da8b2dc8e0ff381a7`.
+Integrated the subsequent `main` updates through `75deb88f`, including released
+work returning to waiting, without changes to their assignment semantics.
+The instruction hook used its read generation to validate mutation responses.
+A background queue revision changed that generation during a claim, takeover
+or start, so the successful response and entry callback were discarded. A late
+requested-state read could then keep the user on prework, requiring another click.
+
+Track selected-document lifetime separately from read generations. Accept a
+successful command for the same selection, invalidate overlapping stale reads,
+and refresh its document. A different selection, A–B–A navigation, unmount, or
+a 401/403/404 read still rejects the pending write response. Existing atomic
+assignment/start, takeover reason, review, duplicate-command, server permission
+and medication-link contracts remain unchanged. No DB migration is required.
+
+Four synthetic component reproductions (claim/start in both queues) fail on the
+unmodified base and pass with the fix. The component scenarios also cover
+takeover during a refresh, withdrawn read permission, retry and late responses.
+The 23 focused Storybook cases, 42 app/API-contract cases and two integrated
+release-to-waiting/reclaim browser cases passed. Full lint,
+TypeScript, docs, secret and UX copy checks, the production build, the static
+Storybook build and Storybook startup smoke passed locally.
+Local app and API-contract verification uses synthetic HTTP fixtures; it does
+not establish authenticated hosted acceptance. No remote data changes or
+Production release is part of this local follow-up.
+
+### PR #1065 production authorization and verification scope
+
+승욱 subsequently approved merging PR #1065, deploying it and verifying the
+deployed dispensing/treatment flow on 2026-11-09. Integrate current main, refresh
+the focused and required checks, obtain one exact-candidate Ready Preview, and
+merge with expected-head protection. This bounded approval covers the resulting
+candidate after those gates pass; no schema migration or automation/settings
+change belongs to this release.
+
+Verify login and anonymous guards, then claim/start and direct instruction entry
+in both queues using synthetic data only. Any hosted fixtures must be newly
+created, non-billable, tagged for PR1065 and confined to the source-allowlisted
+synthetic verification workspace or an owned disposable synthetic workspace.
+Do not read or modify unrelated clinical rows. Preserve audit history; remove
+disposable fixtures or archive their owned workspace and disable its test access.
+Record actual browser/API coverage separately from intercepted responses and
+rollback-only SQL verification. Capture current Production and its source for
+rollback, and stop for failed checks, missing Ready Preview or uncertain scope.
 
 ## Current accepted closeout — instruction review, 2026-11-01
 
@@ -101,6 +148,12 @@ for its original scope.
 | UI-05 | Add chart entry and separate storage/readback for current-chart oral instructions; display them in the top Figma infobar | Implemented locally with separate chart storage; verification recorded below |
 | UI-06 | Display parent-set common instructions together with the child's own instruction in each child order's expanded instruction row | Implemented locally; verification recorded below |
 | UI-07 | Align the expanded instruction-row information icon's vertical center with the first text line; keep it beside that line as text wraps, preserving icon size, horizontal gap and callout padding | Implemented locally; verification recorded below |
+
+The current instruction table supersedes the UI-02 wrapping rule. Item names
+stay on one line and reveal the full text on hover or keyboard focus when
+clipped. Each order card sizes the dose and total unit columns independently
+to the widest visible label or value. At narrow widths, the table scrolls
+horizontally and keeps unit values intact.
 
 UI-01 evidence is local presentation proof: the two changed source files are
 `src/features/dispensing/components/instruction-document-table.tsx` and
@@ -2047,3 +2100,354 @@ Release integration checkpoint:
   comparison main SHA. Strict protection and the required PR check remain enabled.
   Remote function compatibility, exact-head Preview/CI and hosted smoke evidence
   will be recorded with the final candidate before protected merge.
+
+### Start waiting dispensing and treatment work on assignment — 2026-11-07
+
+승욱 approved local implementation from origin/main `81e4146c`. For a waiting
+조제 or 처치 document, confirming 담당하기 assigns or takes over the work and starts
+it in one transaction. Open the instruction document with 진행중 and no second
+start button. Preserve the takeover reason, requester notification, current
+workspace and queue authority, instruction acknowledgement, and medication-link
+guard. Keep existing execution and assignment commands available for their
+other states and callers.
+
+Verify the four assignment cases in the browser using synthetic HTTP responses,
+and run the real instruction RPC in the disposable PostgreSQL fixture to check
+owner, status, start metadata, audit, notifications, rollback and concurrency.
+Scope covers local source, the forward migration and synthetic verification.
+
+Local verification passed. Playwright passed 37 browser and API contract cases,
+including both queues, reload, retry, duplicate confirmation, and a fresh
+instruction acknowledgement that preserves the takeover reason. Storybook
+passed 13 prework and transport cases. The disposable PostgreSQL suite passed
+with the forward migration, including persisted start metadata, mixed-queue
+scope, duplicate and concurrent requests, requester notification, and rollback
+when acknowledgement or a medication link is required. Browser requests used
+synthetic API responses. Production application and acceptance remain pending.
+
+### Dispensing and treatment assignment confirmation — 2026-11-07
+
+Local UI follow-up from `origin/main` `392de7dc`. The confirmation shows the
+assignee transition to the current user and the order names in the selected
+document. Takeover requires a reason. The designated assignee uses
+`업무 시작하기` once, with instruction acknowledgement when required.
+
+Verified all three assignee states in each queue in the local app with synthetic
+HTTP responses. The 39 focused browser cases covered dispensing, treatment and
+the other shared entry callers. The 21 dispensing/treatment cases passed again
+after the fixture began returning the start time. Nine Storybook cases passed.
+
+### Approved dispensing and treatment prework layout — 2026-11-07
+
+Implemented the [prework presentation contract](../../engineering/data-model/order-fulfillment-handoff-contract.md#dispensing-and-treatment-prework-layout--2026-11-07) in the isolated worktree at origin/main base 81e4146c. Both categories use the approved header, order table, request instructions, and dated history. Completion uses the existing permission and required-record checks.
+
+Local synthetic verification covered 30 Playwright cases across dispensing, treatment, chart, and shared order entry. The two presentation cases were rechecked with a required instruction acknowledgement. Both covered the 32px actions, row-level disclosure, scope labels, the history timeline, and a 390px viewport. All 18 affected Storybook cases, focused ESLint, and TypeScript passed. This evidence covers the local app with synthetic responses.
+
+### Veterinarian-only dispensing and treatment order cancellation — 2026-11-09
+
+Local implementation on `origin/main` `b875da72`. Use the chart order execution
+read to gate the cancellation action and the shared chart mutation writer to
+enforce the [cancellation authority](../../engineering/data-model/order-fulfillment-handoff-contract.md#dispensing-and-treatment-order-cancellation-authority--2026-11-09).
+
+Synthetic PostgreSQL verification uses `tests/sql/fulfillment-vet-only-cancel.sql`
+in an isolated migrated database. It covers technician completion after actual
+result entry, denied direct technician and administrator cancellations, and
+successful veterinarian cancellations for both queues, a set with a treatment
+child, and the legacy chartless path. The fixtures roll back. Playwright
+verifies cancellation menu visibility for both roles.
+
+승욱 approved the single veterinarian-only cancellation migration and the
+application release on 2026-11-09. The release gate requires a current PR
+Release Check, Ready exact-candidate Preview, captured prior writer definition
+and ACLs, and rollback-only verification in the documented synthetic demo
+workspace. Apply the forward migration before merging the UI, then verify the
+Ready Production source and repeat the role checks. Real data and provider
+operations are outside this release scope.
+
+### Confirmed dispensing order form and instruction quantities — 2026-11-09
+
+Local UI follow-up from `origin/main` `9f83ac93`. Hide taper and species
+exception inputs in confirmed dispensing edits and retain their saved values.
+Use the [course quantity display contract](../../engineering/data-model/order-fulfillment-handoff-contract.md#local-course-dispense-request-candidate-2026-10-31)
+for the read-only total, manual request confirmation, and instruction values.
+Show the reason after a change and distinguish required clinical reasons from
+optional financial reasons. Explain disabled save when values match.
+
+Synthetic verification covered 14 Storybook cases, 19 Playwright cases, and
+three API adapter cases. It included reverting a prescription with stored
+occurrence counts, reconfirming a manual quantity, reading prior instruction
+quantities, and inspecting the unchanged dialog at 390px.
+
+The follow-up layout groups the dispensing quantities and pairs the memo fields.
+Keep tax class and billing reflection above the optional adjustment input.
+The footer shows cancel and save only. Save stays disabled when values match.
+Synthetic browser checks covered the adjustment modes and the 390px layout.
+Keep the visible tax and billing reflection rows in place when the adjustment fields and
+change summary shrink. The browser regression checks viewport coordinates and
+body scroll while reopening the menu and returning to no adjustment.
+
+### Return released dispensing and treatment work to waiting — 2026-11-09
+
+승욱 approved local implementation from origin/main `34379835` in a separate
+worktree. Scope covers the prework and queue presentation, the forward
+instruction command migration, and disposable synthetic browser and SQL
+verification. See the [handoff contract](../../engineering/data-model/order-fulfillment-handoff-contract.md#return-released-dispensing-and-treatment-work-to-waiting--2026-11-09).
+
+Local Chromium confirmed both queue types return to prework and move to 대기중
+with the exact selection and request time retained. Reload, the patient view,
+cancellation failure/retry, and direct instruction entry on reclaim passed.
+Nine focused browser cases passed, including adjacent assignment flows. The
+isolated PostgreSQL fixture passed for both queues, including acknowledgement,
+original start timestamps, and rejection while a separate set executor is
+still active. The database change remains local.
+
+승욱 approved applying this migration, merging the PR into main and verifying
+both queues on Production. Verify with temporary non-billable synthetic orders
+in the approved demo workspace. Confirm that 담당 취소 keeps the selected order
+and returns it to 대기중, then confirm 담당하기 opens the instruction directly.
+Remove the smoke fixtures and verify zero residual rows. Preserve the previous
+Ready deployment and the database function definition and grants for rollback.
+
+### Dispensing and treatment re-request continuity — 2026-11-09
+
+Local implementation from `origin/main` `34379835`. The patient card and
+order queue group label pending replacement attempts as 재요청. An existing
+instruction stays available with the modified rows and original start time.
+The performer reviews the latest instructions before using 업무 계속하기.
+See the [handoff contract](../../engineering/data-model/order-fulfillment-handoff-contract.md#dispensing-and-treatment-re-request-continuity--2026-11-09).
+
+Migration `20261109043222` adds start history to the authorized instruction
+read. The local scope covers that read, the two queue presentations and
+synthetic verification. Production delivery requires the read migration
+before the UI release.
+
+Playwright exercised both categories with synthetic replacement responses and
+verified reload, card and group labels, changed values, the original start time,
+and acknowledgement before continuation. The disposable PostgreSQL fixture
+verified the start history after replacement, queue and workspace scope, and
+the existing replay and permission checks.
+
+#### Re-request continuity production authorization
+
+On 2026-11-09, 승욱 authorized the commit, PR, migration `20261109043222`,
+protected main merge, and Production verification for this change. Apply only
+the approved instruction-read migration after the exact candidate gates pass.
+Capture the previous instruction reader and grants before applying it.
+
+Verify dispensing and treatment in a scoped synthetic workspace. Confirm the
+pending re-request, modified row, retained instruction and original start,
+then acknowledge the change and continue. Use non-billable fixtures and
+remove any temporary records and accounts after verification. Record the exact
+candidate, Preview, Release Check, DB readback, prior Ready deployment, and
+Production results in the PR. Stop on candidate drift or a failed gate.
+
+#### Released replacement attempts
+
+An existing replacement attempt can already have started and then been released.
+Its stored status is paused and it has no assignee. As of the 2026-11-16 local
+follow-up, the selected order returns to the 담당하기 screen and keeps its
+재요청 badge in the entry summary and queue. Reclaim uses the existing
+revision-checked claim-and-start command and instruction review. Acknowledging
+from 변경 내용 보기 records the review alone. The original start time remains
+available when the instruction opens again. The change uses the existing API
+and schema.
+
+Local browser fixtures verified dispensing and treatment after unassign,
+reload, change review and reclaim, including a failed claim and retry.
+
+### Confirmed order editing hold and assigned re-request — 2026-11-16
+
+승욱 approved the interactive dispensing/treatment flow and shared paused state.
+The local candidate is based on `origin/main` `185f9013`. Migration
+`20261116073600_order_work_hold.sql` adds a private instruction-scoped hold and
+a shared paused queue projection. Begin, renew, cancel, and reconfirm are
+serialized with execution. The assigned replacement stays in the instruction
+workspace. Its change review starts the existing replacement only after
+acknowledgement. See the
+[work hold contract](../../engineering/data-model/order-fulfillment-handoff-contract.md#order-work-holds).
+
+Synthetic checks cover both queues, rejection of completion and unassignment
+during a hold, retention of the assignee and original start, cancel, rejected
+saves, acknowledgement, and restart. The migration was exercised in a
+disposable local PostgreSQL instance. Hosted migration and app delivery are
+outside this local implementation.
+
+### Chart navigation to a dispensing or treatment instruction — 2026-11-09
+
+Local implementation from `origin/main` `ea2f1ed5`. The user approved the
+Plan/Order name-cell hover action. Each activation opens a confirmation naming
+the order and destination. The [handoff contract](../../engineering/data-model/order-fulfillment-handoff-contract.md#chart-navigation-to-a-dispensing-or-treatment-instruction--2026-11-09)
+describes exact-item routing and recovery. The implementation uses the existing
+permission-checked read and workspace navigation.
+
+Focused Playwright coverage uses synthetic API responses. It covers long
+and duplicate names, hover and keyboard focus, unavailable actions,
+`취소` during a pending read, denied reads, due-date selection, and landing
+on the latest attempt in the instruction document or prework table. A stale
+item shows an explicit empty state.
+
+### Complete dispensing and treatment as ordered — 2026-11-09
+
+Local implementation from `origin/main` `ad3dec9f`. Item and set completion
+record the existing lifecycle events without collecting a separate result.
+Existing results remain visible in 수행기록. See the
+[handoff contract](../../engineering/data-model/order-fulfillment-handoff-contract.md#complete-dispensing-and-treatment-as-ordered--2026-11-09).
+
+Synthetic Chromium checks cover single-order completion and retry, item and
+set completion, both prework entries, and existing dispensing and treatment
+results. Isolated PostgreSQL checks exercise the instruction command and
+trigger, including denied unscoped completion and current instruction
+acknowledgement. A fresh Supabase replay stopped at the pre-existing service
+review migration `20260826160000`, which requires seeded workspace and catalog
+release rows. The UI and DB migration are local.
+
+### Clinical change labels in instruction review — 2026-11-09
+
+The review uses the order field schema to label changes in the current
+instructions, previous acknowledgement, and request or completion history.
+The read keeps the stored values, reason, and acknowledgement version. An
+unrecognized historical field uses 기타 업무 항목.
+
+Migration `20261109055635` is a local candidate. The isolated confirmed-order
+SQL suite reproduced the raw dispensing label on the baseline and passed with
+the migration. It covers previous and historical documents, treatment schema
+versions 1–3, and the existing acknowledgement and permission checks.
+
+승욱 authorized commit, push, PR, application of migration `20261109055635`,
+protected `main` merge, and Production verification for these labels. Capture
+the previous read function and grants before applying the migration. Verify the
+reported order in the existing instruction review using read-only interaction.
+Record the exact candidate, Release Check, Preview, migration readback, Ready
+Production deployment, and rollback evidence in the PR.
+
+승욱 approved release of this scope on 2026-11-09, including the PR, main
+merge, migration `20261109053938`, and Production verification. Use one
+non-billable synthetic dispensing order and one non-billable synthetic
+treatment order. Verify completion without an execution result and verify
+cleanup of the smoke fixtures. Capture the previous Ready deployment and
+both replaced database functions and grants before applying the migration.
+
+### Treatment instruction review and continuation in Production — 2026-11-09
+
+승욱 authorized verification with isolated, non-billable synthetic treatment
+orders and cleanup of the test data and accounts.
+
+- On Ready Production `6b2ac2df`, the treatment re-request and review passed
+  in a rollback-only transaction. The signed-in browser opened a removable
+  fixture with the same pending V3 change. `지시사항 확인` showed
+  `단계별 예정 지시` changing from `합성 준비 확인` to
+  `합성 준비 및 마무리 확인`, and `시행 예정 횟수` changing from `1` to `2`.
+  The fixture and its account were removed after the check.
+- On Ready Production `899f0203`, the signed-in browser confirmed the changes
+  and used `업무 계속하기` on a separate synthetic order. The server recorded
+  one acknowledgement and one start event. The same `처치 지시서`, original
+  start time, and `진행중` card and group persisted after reload. The workspace
+  was archived and the synthetic account was disabled after verification.
+- With 승욱's subsequent approval, cleanup removed only that archived fixture,
+  its account, and its one start audit event. Readback found zero workspace
+  records, application and Auth users, identities, sessions, and refresh
+  tokens for the fixture. The order task audit guard was enabled after commit.
+
+### Completed dispensing and treatment instruction actions — 2026-11-09
+
+승욱 approved local implementation from `origin/main` `899f0203` in an isolated
+worktree. The [instruction reopening contract](../../engineering/data-model/order-fulfillment-handoff-contract.md#reopening-a-completed-dispensing-or-treatment-instruction)
+defines the read-only body, one-item reopen confirmation, and separate header
+actions for assignment release and authorized corrections. The implementation
+uses the existing instruction API and command permissions.
+
+Local Playwright verification uses synthetic HTTP responses. It covers the
+read-only tools and empty history, single-item reopen retry, separation of
+record viewing and correction, and a completed treatment set reopened for one
+selected child. Releasing and reclaiming that child preserves the completed
+sibling and the selected queue item across reload. The isolated PostgreSQL
+fixture confirms that a finalized set cannot be released directly and that
+reopen followed by release preserves the completed sibling and prior results.
+The instruction workspace stories pass. The existing common-header integration
+story reports the same Next.js router error on the baseline. Production
+verification remains outside this local implementation.
+
+The owner authorized signed-in Production verification of the completed-set
+reopen and assignment release flow on 2026-11-09. The smoke used a dedicated
+synthetic workspace, a disposable test identity, and one non-billable two-item
+set per queue.
+
+Signed-in Chromium verified both sets on Ready Production commit `339a8055`
+from [PR #1074](https://github.com/mcso0/emr-app-shell-prototype/pull/1074).
+In each set, both rows started completed and disabled. The header confirmation
+reopened only the second item. Its queue card moved to 진행중 while the first
+item stayed in 완료. 담당 취소 moved only the second card to 대기중 and kept
+it selected after reload. The Production instruction API confirmed the
+completed sibling's unchanged item data and the selected item's paused status
+with no assignee.
+
+Database readback found one reopen receipt and one item-level release audit
+entry for each selected item. The unselected items had neither. The fixture
+created zero billing candidates or invoices. After the smoke, the workspace was
+archived and test sign-in was disabled. No active Auth sessions remained.
+
+The owner then authorized permanent cleanup of only this smoke fixture:
+the archived synthetic workspace, both two-item order sets, their dependent
+records and history, and the disabled test identity.
+
+Production cleanup completed. The fixture inventory matched the local manifest,
+and a rolled-back trial verified the deletion order. The cleanup removed one
+workspace, two sets with four item orders, the linked synthetic records and
+workspace realtime messages. The Auth Admin API permanently deleted the
+synthetic account. A follow-up lookup returned 404. A post-commit scan
+of 148 workspace tables and 12 Auth reference tables found no fixture rows.
+No linked users, memberships, orders, work items, storage objects, realtime
+messages, identities, sessions, refresh tokens, or matching Auth audit entries
+remained. The task audit, set revision, and workspace admin guards were enabled
+after commit.
+
+### Dispensing re-request change review — 2026-11-09
+
+Local implementation from `origin/main` `63b6107a` follows the
+[dispensing re-request display contract](../../engineering/data-model/order-fulfillment-handoff-contract.md#dispensing-and-treatment-re-request-continuity--2026-11-09).
+The dispensing instruction uses the existing authorized reads for saved values
+and the reason. PR #1080 retained the original two-step continuation flow.
+
+Local verification passed four focused Playwright cases and 33 Storybook
+browser stories. Coverage includes a saved quantity change, same-time edits
+to two set items, successive revisions, ambiguous history, empty and meaningful
+snapshots, partial work, keyboard focus return, failed acknowledgement and retry,
+and unchanged treatment continuation. The synthetic banner and review fit at
+360 px without horizontal overflow.
+
+### Continue a re-request after confirmation — 2026-11-09
+
+The [handoff contract](../../engineering/data-model/order-fulfillment-handoff-contract.md#dispensing-and-treatment-re-request-continuity--2026-11-09)
+distinguishes the two review entry paths. 업무 계속하기 carries the start or
+claim-and-start action through successful acknowledgement. 변경 내용 보기
+and 변경이력 보기 record acknowledgement only. The existing server command
+checks the current version and work permissions before changing the status.
+
+Local synthetic browser tests covered both queues, a closed review followed
+by history review, duplicate confirmation clicks, a changed instruction
+version, and a failed claim retried with the same command. This change is
+at the local verification stage.
+
+Playwright passed 49 cases. Two prework summary text assertions also failed
+on the unmodified baseline. Storybook passed 13 cases. The late history
+loading status assertion also failed on the unmodified baseline.
+
+The requested release covers this PR and Production verification of both
+entry paths in dispensing and treatment. Use synthetic browser responses for
+the Preview. For persisted Production verification, scope a dedicated
+temporary workspace, test identity, and four non-billable synthetic orders
+to the two paths in both queues. Verify acknowledgement and the resulting
+work status, then clean up the temporary fixtures under separate explicit
+authorization.
+
+### Dispensing instruction item column — 2026-11-09
+
+The `항목` header divider resizes the item column across all groups in the
+dispensing instruction. The width follows the pointer while dragging. Arrow
+keys adjust it, and Home or a double click restores the responsive default.
+When the table needs more room, it scrolls within the instruction.
+
+The inline frequency change badge uses 6px side padding, a 69px minimum width,
+and the existing 22px height. Local Chromium with synthetic responses verified
+live resize, keyboard adjustment and reset, table overflow, the narrower badge,
+and the existing clipped-name tooltip.

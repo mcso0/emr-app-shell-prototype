@@ -1,8 +1,12 @@
 import { getClinicalOrderFieldSchema } from "@/features/chart/order-execution-domain";
+import { formatPlanOrderTableUnit } from "@/features/chart/chart-order-table-presentation";
+import { getDispenseRequestCourseQuantity, getDispenseRequestUnit } from "@/features/chart/dispense-request-quantity";
 import type {
   InstructionDocument,
   InstructionItem,
 } from "@/features/fulfillment/instruction-contract";
+
+import type { OrderRerequestChange, TaskInstructionReview } from "@/features/fulfillment/task-instruction-review-contract";
 
 export type InstructionViewItem = {
   id: string;
@@ -17,6 +21,7 @@ export type InstructionViewItem = {
   medicationGuide: string;
   storage: string;
   note: string;
+  planSummary?: string;
   setInstruction?: string;
   hasExecution?: boolean;
   hasResult?: boolean;
@@ -25,7 +30,6 @@ export type InstructionViewItem = {
   change: "added" | "modified" | "existing";
   canAssign: boolean;
   canComplete: boolean;
-  canReopen: boolean;
   previous?: Partial<InstructionViewItem>;
 };
 export type InstructionViewOrder = {
@@ -44,13 +48,44 @@ export type InstructionViewEvent = {
   changes: { itemId: string; field: string; before: string; after: string }[];
 };
 export type InstructionViewAction = {
-  type: "assign" | "toggle_complete";
+  type: "assign" | "complete";
   itemId?: string;
   assignees?: string[];
 };
 
+export function isPendingFulfillmentRerequest(
+  status: InstructionItem["status"],
+  attemptNo: number,
+  assigneeId?: string | null,
+) {
+  return attemptNo > 1 && (status === "requested" || (status === "paused" && !assigneeId));
+}
+
+export function hasPendingInstructionRerequest(document: InstructionDocument) {
+  return document.items.some((item) => isPendingFulfillmentRerequest(item.status, item.attemptNo, item.assigneeId));
+}
+
+export function isAssignedInstructionRerequest(document: InstructionDocument) {
+  return !document.finalized && !document.pauseReason && Boolean(document.firstStartedAt && document.mainAssigneeId)
+    && document.items.some(item => item.attemptNo > 1 && item.status === "requested");
+}
+
+export function isWaitingInstruction(document: InstructionDocument) {
+  if (document.finalized || !document.items.length) return false;
+  if (document.items.every((item) => item.status === "requested")) return true;
+  if (document.mainAssigneeId) return false;
+
+  const unfinished = document.items.filter(
+    (item) => !["completed", "cancelled", "returned"].includes(item.status),
+  );
+  return unfinished.some((item) => item.status === "paused") &&
+    unfinished.every((item) => !item.assigneeId && (item.status === "requested" || item.status === "paused"));
+}
+
 export function getInstructionStatusLabel(document: InstructionDocument) {
   if (document.finalized) return "완료";
+  if (document.pauseReason) return "일시중지";
+  if (hasPendingInstructionRerequest(document)) return "재요청";
   const active = document.items.filter((item) => item.status !== "cancelled");
   if (!active.length) return "취소";
   if (active.every((item) => item.status === "returned")) return "반려";
@@ -75,7 +110,7 @@ function text(...values: unknown[]) {
   return "—";
 }
 
-/** Display persisted values verbatim. Never infer a clinical dose or total. */
+/** Display saved instructions and the canonical course request. */
 function displayFields(
   plan: Record<string, unknown>,
   source: Record<string, unknown>,
@@ -86,6 +121,8 @@ function displayFields(
   const calculation = record(
     plan.calculationOutputs ?? source.calculationOutputs,
   );
+  const requestQuantity = queueType === "dispensing" ? getDispenseRequestCourseQuantity(calculation) : null;
+  const requestUnit = requestQuantity === null ? null : getDispenseRequestUnit(calculation);
   // Explicit instructions, memos and treatment quantities belong here. Internal
   // calculation selectors and identifiers stay in the persisted plan.
   const instructionKeys = new Set(queueType === "dispensing"
@@ -119,14 +156,16 @@ function displayFields(
     frequency: text(inputs.frequency),
     days: text(inputs.durationDays),
     total: text(
+      requestQuantity,
       inputs.totalQuantity,
       calculation.plannedPracticalTotalQuantity,
       calculation.totalRequiredDispenseQuantity,
     ),
-    totalUnit: text(inputs.totalQuantityUnit, calculation.dispenseUnit),
+    totalUnit: text(formatPlanOrderTableUnit(requestUnit), inputs.totalQuantityUnit, calculation.dispenseUnit),
     route: text(inputs.route, inputs.administrationRoute),
     medicationGuide: text(inputs.medicationInstruction),
     storage: text(inputs.storageMethod),
+    planSummary: detailLines[0],
     note: [note.trim() ? `오더별 지시: ${note}` : "", ...detailLines].filter(Boolean).join("\n"),
   };
 }
@@ -145,6 +184,7 @@ const fields = [
 
 export function createInstructionView(document: InstructionDocument) {
   const names: Record<string, string> = {};
+  const readOnly = Boolean(document.pauseReason) || isAssignedInstructionRerequest(document);
   const events: InstructionViewEvent[] = [];
   const orderedChanges = [...document.changes].sort(
     (a, b) =>
@@ -216,9 +256,8 @@ export function createInstructionView(document: InstructionDocument) {
         : item.attemptNo === 1 && item.status === "requested"
           ? "added"
           : "existing",
-      canAssign: item.canAssign,
-      canComplete: item.canComplete,
-      canReopen: item.canReopen,
+      canAssign: !readOnly && item.canAssign,
+      canComplete: !readOnly && item.canComplete,
       previous,
     };
   });
@@ -285,3 +324,84 @@ export const formatInstructionValue = (k: string, v: unknown) =>
         : k === "storage"
           ? storageLabels[String(v)] || String(v)
           : String(v ?? "없음");
+
+const dispensingChangeLabels: Record<string, string> = {
+  dose: "1회 용량",
+  doseUnit: "용량 단위",
+  instruction: "지시",
+  memo: "메모",
+  administrationTiming: "복용 시점",
+  totalOccurrences: "총 시행 횟수",
+  maximumAuthorizedCount: "최대 허용 횟수",
+};
+
+function dispensingChangeValue(field: string, value: unknown) {
+  if (typeof value === "boolean") return value ? "예" : "아니요";
+  const formatted = text(value);
+  if (formatted === "—" && value && typeof value === "object") return JSON.stringify(value);
+  const displayField = field === "medicationInstruction" ? "medicationGuide" : field === "storageMethod" ? "storage" : field;
+  return formatInstructionValue(displayField, formatted);
+}
+
+export function getOrderRerequestChanges(document: InstructionDocument, reviews: TaskInstructionReview[]) {
+  const result = new Map<string, OrderRerequestChange | null>();
+  const dispensing = document.queueType === "dispensing";
+
+  for (const item of document.items) {
+    if (item.attemptNo < 2) continue;
+    const review = reviews.find(review => review.taskId === item.taskId);
+    const entry = review?.current?.entries.find(entry => entry.kind === "clinical_edit" && entry.orderId === item.orderId);
+    if (!entry || entry.deleted) continue;
+    result.set(item.taskId, null);
+    if (!entry.createdAt) continue;
+
+    // The two records of a confirmed edit share the transaction timestamp.
+    // Keep the original review when the latest re-request cannot be matched uniquely.
+    const revisions = document.changes.filter(change => change.orderId === item.orderId && change.changeType === "re_request");
+    const revision = revisions.at(-1);
+    if (revision?.createdAt !== entry.createdAt ||
+        revisions.filter(change => change.createdAt === entry.createdAt).length !== 1) continue;
+
+    const reasonSeparator = "\n사유: ";
+    const reasonIndex = entry.instruction.indexOf(reasonSeparator);
+    if (reasonIndex < 0 || reasonIndex !== entry.instruction.lastIndexOf(reasonSeparator)) continue;
+    const reason = entry.instruction.slice(reasonIndex + reasonSeparator.length);
+    if (!reason.trim()) continue;
+
+    const before = displayFields(revision.before, {}, "", document.queueType);
+    const after = displayFields(revision.after, {}, "", document.queueType);
+    const beforeInputs = record(revision.before.detailInputs);
+    const afterInputs = record(revision.after.detailInputs);
+    const schemaVersion = revision.after.detailSchemaVersion ?? revision.before.detailSchemaVersion;
+    const schema = getClinicalOrderFieldSchema(document.queueType, typeof schemaVersion === "number" ? schemaVersion : undefined);
+    const keys = new Set([...Object.keys(beforeInputs), ...Object.keys(afterInputs)]);
+    const fields: OrderRerequestChange["fields"] = [];
+
+    const add = (key: string, label: string, before: string, after: string) => {
+      if (before !== after) fields.push({ key, label, before, after });
+    };
+    const quantity = ({ total, totalUnit }: typeof before) =>
+      total === "—" || totalUnit === "—" ? total : `${total} ${totalUnit}`;
+    if (dispensing) {
+      add("frequency", "복용 주기", before.frequency, after.frequency);
+      add("requestQuantity", "요청 조제량", quantity(before), quantity(after));
+      keys.delete("frequency");
+      if (before.total === text(beforeInputs.totalQuantity) && after.total === text(afterInputs.totalQuantity)) keys.delete("totalQuantity");
+      if (before.totalUnit === text(formatPlanOrderTableUnit(text(beforeInputs.totalQuantityUnit))) &&
+          after.totalUnit === text(formatPlanOrderTableUnit(text(afterInputs.totalQuantityUnit)))) keys.delete("totalQuantityUnit");
+    }
+
+    for (const key of keys) {
+      const label = dispensing && Object.hasOwn(dispensingChangeLabels, key)
+        ? dispensingChangeLabels[key]
+        : schema?.fields.find(field => field.key === key)?.label ?? "기타 업무 항목";
+      add(key, label, dispensingChangeValue(key, beforeInputs[key]), dispensingChangeValue(key, afterInputs[key]));
+    }
+    const mode = (plan: Record<string, unknown>) =>
+      record(plan.calculationOutputs).actualDispenseSource === "manual_override" ? "수동 지정" : "자동 계산";
+    if (dispensing) add("requestMode", "조제량 입력 방식", mode(revision.before), mode(revision.after));
+
+    if (fields.length) result.set(item.taskId, { entry, orderName: item.name || document.name, reason, fields });
+  }
+  return result;
+}

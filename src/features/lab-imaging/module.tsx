@@ -1,5 +1,7 @@
 "use client";
 
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+
 import { useOrderPrework } from "@/features/fulfillment/use-order-prework";
 import { ExamOrderPrework } from "@/features/fulfillment/components/exam-order-prework";
 
@@ -1828,7 +1830,7 @@ export function LabSidePanel({
         {fulfillmentQueue.status === "error" ? <EmrQueueEmptyState
           kind="read-error" placement="panel-center" title="업무 대기열을 불러오지 못했습니다"
           primaryAction={<Button variant="outline" size="sm" onClick={() => { void fulfillmentQueue.refresh(); }}>재시도</Button>}
-        /> : <PatientQueueContent key={`${workspaceId}:${selectedDate}`} active={patientView} allRows={patientRows} rows={visiblePatientRows} selectedId={effectiveSelectedLabResultId} groupSort={patientSort} orderSort={patientOrderSort} onSelect={handleSelectLabResult} onClearConditions={() => { setPatientFilter("all"); closeSearch(); }} readable={fulfillmentQueue.status !== "permission_denied"} ready={fulfillmentQueue.status === "ready"}>
+        /> : <PatientQueueContent key={`${workspaceId}:${selectedDate}`} active={patientView} allRows={patientRows} rows={visiblePatientRows} selectedId={effectiveSelectedLabResultId} groupSort={patientSort} orderSort={patientOrderSort} onSelect={handleSelectLabResult} onClearConditions={() => { setPatientFilter("all"); closeSearch(); }} readable={fulfillmentQueue.status !== "permission_denied"}>
 
         {showLabQueueLoadingState ? (
           <EmrQueueLoadingState
@@ -2082,7 +2084,7 @@ export function ImagingSidePanel({
         {fulfillmentQueue.status === "error" ? <EmrQueueEmptyState
           kind="read-error" placement="panel-center" title="업무 대기열을 불러오지 못했습니다"
           primaryAction={<Button variant="outline" size="sm" onClick={() => { void fulfillmentQueue.refresh(); }}>재시도</Button>}
-        /> : <PatientQueueContent key={`${workspaceId}:${selectedDate}`} active={patientView} allRows={patientRows} rows={visiblePatientRows} selectedId={effectiveSelectedImagingStudyId} groupSort={patientSort} orderSort={patientOrderSort} onSelect={handleSelectImagingStudy} onClearConditions={() => { setPatientFilter("all"); closeSearch(); }} readable={fulfillmentQueue.status !== "permission_denied"} ready={fulfillmentQueue.status === "ready"}>
+        /> : <PatientQueueContent key={`${workspaceId}:${selectedDate}`} active={patientView} allRows={patientRows} rows={visiblePatientRows} selectedId={effectiveSelectedImagingStudyId} groupSort={patientSort} orderSort={patientOrderSort} onSelect={handleSelectImagingStudy} onClearConditions={() => { setPatientFilter("all"); closeSearch(); }} readable={fulfillmentQueue.status !== "permission_denied"}>
 
         {showImagingQueueLoadingState ? (
           <EmrQueueLoadingState
@@ -3434,6 +3436,7 @@ export function LabContent({
     };
   }, [allowDemoContent, catalogRowsState.rows, detail, persistedResult.result]);
   const phase2 = useLabResultPhase2(workspaceId, effectiveDetail?.result.id, !allowDemoContent && Boolean(persistedResult.result), fulfillmentWorkItem?.rowRevision);
+  usePageReadiness(fulfillmentQueue.status === "loading" || (!allowDemoContent && Boolean(fulfillmentWorkItem) && (persistedResult.status === "loading" || phase2.status === "loading")), `${workspaceId}:${selectedDate}:${queryLabResultId ?? selectedLabResultId}:${entry.show ? "entry" : "instruction"}`);
   const refreshPhase2 = phase2.refresh;
   const [savedEntryRevision, setSavedEntryRevision] = useState<{
     workspaceId: string;
@@ -4351,6 +4354,7 @@ export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentPro
     ownsWork: Boolean(fulfillmentWorkItem?.canManage && fulfillmentWorkItem.assignedToUserId),
     pending: !allowDemoContent && fulfillmentQueue.status === "loading" && !fulfillmentWorkItem,
   });
+  usePageReadiness(fulfillmentQueue.status === "loading", `${workspaceId}:${selectedDate}:${queryImagingStudyId ?? selectedImagingStudyId}:${entry.show ? "entry" : "instruction"}`);
   const initialAssignment = {
     assigneeName: detail?.radiologistName ?? "미지정",
     status: getInitialImagingReadingStatus(detail?.study.status),

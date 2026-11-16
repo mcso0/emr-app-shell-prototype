@@ -6,9 +6,9 @@ select ('52000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'workspace-a','2
  'requested',case when n=3 then 'clinical_lab' else 'dispensing' end,case when n=3 then 'lab' else 'dispensing' end,'confirmed','single',
  '00000000-0000-4000-8000-000000000003',n,jsonb_build_object('route',case when n=1 then 'PO' else 'TOP' end)
 from generate_series(1,3) n;
-insert into order_tasks(id,workspace_id,encounter_id,order_id,task_role,clinical_order_type,destination_module,status,priority,attempt_no,effective_snapshot)
+insert into order_tasks(id,workspace_id,encounter_id,order_id,task_role,clinical_order_type,destination_module,status,priority,attempt_no,effective_snapshot,execution_result_schema_version)
 select ('53000000-0000-4000-8000-'||right(id::text,12))::uuid,workspace_id,encounter_id,id,'execution',clinical_order_type,destination_module,'pending','normal',1,
- jsonb_build_object('detailInputs',detail_inputs) from orders where id::text like '52000000%';
+ jsonb_build_object('detailInputs',detail_inputs),1 from orders where id::text like '52000000%';
 insert into order_fulfillment_work_items(id,workspace_id,order_id,encounter_id,task_id,task_attempt_no,status,queue_type,clinical_order_type,destination_module,source_snapshot,requested_by_user_id,assigned_to_user_id)
 select ('54000000-0000-4000-8000-'||right(order_id::text,12))::uuid,workspace_id,order_id,encounter_id,id,1,'requested',destination_module,clinical_order_type,destination_module,'{}',
  '00000000-0000-4000-8000-000000000003','00000000-0000-4000-8000-000000000001'
@@ -61,6 +61,10 @@ begin
  begin
   perform public.clair_transition_fulfillment_work_item('workspace-a',auth.uid(),wi,'start',(select row_revision from order_fulfillment_work_items where id=wi),gen_random_uuid(),null,null,null);
   raise exception 'generic start bypassed acknowledgement';
+ exception when raise_exception then if sqlerrm<>'instruction_ack_required' then raise; end if; end;
+ begin
+  perform public.clair_mutate_fulfillment_instruction('workspace-a',wi,jsonb_build_object('action','complete_all','commandId',gen_random_uuid(),'expectedRevision',d->>'revision'));
+  raise exception 'direct completion bypassed acknowledgement';
  exception when raise_exception then if sqlerrm<>'instruction_ack_required' then raise; end if; end;
  if (select status from order_tasks where id=po)<>'pending' then raise exception 'failed transition wrote state'; end if;
  perform public.clair_acknowledge_task_instructions('workspace-a',po,old_key);

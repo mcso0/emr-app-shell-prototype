@@ -1,5 +1,7 @@
 "use client"
 
+import { usePagePortalVisibility } from "@/components/emr/page-loading-boundary"
+
 import * as React from "react"
 import { Select as SelectPrimitive } from "@base-ui/react/select"
 
@@ -70,8 +72,9 @@ function SelectContent({
     SelectPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset" | "alignItemWithTrigger"
   >) {
+  const visibility = usePagePortalVisibility();
   return (
-    <SelectPrimitive.Portal>
+    <SelectPrimitive.Portal {...visibility}>
       <SelectPrimitive.Positioner
         side={side}
         sideOffset={sideOffset}

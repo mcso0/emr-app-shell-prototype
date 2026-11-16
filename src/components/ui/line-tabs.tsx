@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { Toggle, ToggleGroup } from "@ui-sdk/react/toggle";
 import { cn } from "@/lib/utils";
 
 export type LineTabItem<TValue extends string> = {
@@ -30,8 +31,12 @@ export function LineTabs<TValue extends string>({
   size = "lg",
 }: LineTabsProps<TValue>) {
   return (
-    <div
-      role="group"
+    <ToggleGroup
+      value={items.some((item) => item.value === value && !item.disabled) ? [value] : []}
+      deselectable={false}
+      onValueChange={(next) => {
+        if (next[0] !== undefined) onValueChange(next[0]);
+      }}
       aria-label={ariaLabel}
       className={cn("inline-flex w-fit items-center gap-[6px]", className)}
     >
@@ -40,11 +45,14 @@ export function LineTabs<TValue extends string>({
         const active = !disabled && item.value === value;
 
         return (
-          <button
+          <Toggle
             key={item.value}
-            type="button"
-            aria-pressed={active}
+            value={item.value}
             disabled={disabled}
+            focusableWhenDisabled={false}
+            render={<button disabled={disabled} />}
+            // Existing callers use reactivation to reopen collapsed groups.
+            onClick={() => { if (active) onValueChange(item.value); }}
             className={cn(
               "inline-flex shrink-0 flex-col items-center justify-center font-medium tracking-[var(--clair-typography-body-1-normal-letter-spacing)] transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
               size === "lg" &&
@@ -60,7 +68,6 @@ export function LineTabs<TValue extends string>({
                 "text-[var(--emr-text-tertiary)] hover:text-[var(--emr-text-primary)]",
               itemClassName
             )}
-            onClick={() => onValueChange(item.value)}
           >
             <span className="inline-flex items-center gap-[var(--clair-border-width-atomic-4)]">
               <span>{item.label}</span>
@@ -73,9 +80,9 @@ export function LineTabs<TValue extends string>({
                 active ? "opacity-100" : "opacity-0"
               )}
             />
-          </button>
+          </Toggle>
         );
       })}
-    </div>
+    </ToggleGroup>
   );
 }

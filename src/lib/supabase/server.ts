@@ -4,6 +4,7 @@ import { getSupabasePublicConfig } from "@/lib/supabase/config";
 
 type SupabaseServerClientOptions = {
   requestId?: string | null;
+  fetch?: typeof fetch;
 };
 
 const safeRequestIdPattern = /^[A-Za-z0-9._:-]{1,128}$/;
@@ -24,10 +25,11 @@ export async function createClient(options: SupabaseServerClientOptions = {}) {
   const requestId = normalizeSupabaseRequestId(options.requestId);
 
   return createServerClient(config.url, config.publishableKey, {
-    ...(requestId
+    ...(requestId || options.fetch
       ? {
           global: {
-            headers: { "x-request-id": requestId },
+            ...(requestId ? { headers: { "x-request-id": requestId } } : {}),
+            fetch: options.fetch,
           },
         }
       : {}),

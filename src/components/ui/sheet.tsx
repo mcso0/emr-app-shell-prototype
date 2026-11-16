@@ -1,5 +1,7 @@
 "use client"
 
+import { usePagePortalVisibility } from "@/components/emr/page-loading-boundary"
+
 import * as React from "react"
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog"
 
@@ -20,7 +22,8 @@ function SheetClose({ ...props }: SheetPrimitive.Close.Props) {
 }
 
 function SheetPortal({ ...props }: SheetPrimitive.Portal.Props) {
-  return <SheetPrimitive.Portal data-slot="sheet-portal" {...props} />
+  const visibility = usePagePortalVisibility();
+  return <SheetPrimitive.Portal data-slot="sheet-portal" {...props} {...visibility} />
 }
 
 function SheetOverlay({ className, ...props }: SheetPrimitive.Backdrop.Props) {

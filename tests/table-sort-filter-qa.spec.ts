@@ -70,7 +70,7 @@ test.describe("DEN-275 adopted table sort/filter QA", () => {
     await page.goto(kongScenarioUrl);
     await restoreKongOrderDraftDefaults(page);
     const orderArea = page.locator("section").filter({
-      has: page.getByRole("tablist", { name: "처방/오더 분류" }),
+      has: page.getByRole("group", { name: "처방/오더 분류" }),
     }).last();
     await expectWorkspaceScreen(page, orderArea);
     await orderArea.getByRole("button", { name: /청구금액 오름차순 정렬/ }).click();

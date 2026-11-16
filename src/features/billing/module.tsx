@@ -1,5 +1,7 @@
 "use client";
 
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+
 import { OrderBillingChangeReview } from "./order-billing-change-review";
 import { getAuthRuntimeMode } from "@/lib/supabase/config";
 import { useOrderPrework, useOrderPreworkPresentation } from "@/features/fulfillment/use-order-prework";
@@ -1269,6 +1271,9 @@ function useBillingWorkspaceData() {
   const baseInvoiceWorkspaceId = queryInvoiceId
     ? workspaceId
     : baseDetail?.invoice.workspaceId;
+  const summaryReadScope = `${protectedOwnerKey}:${queryEncounterId ?? baseEncounterId ?? ""}`;
+  const invoiceReadScope = `${protectedOwnerKey}:${baseInvoiceWorkspaceId}:${baseInvoiceId}`;
+  const [completedReads, setCompletedReads] = useState({ summary: "", invoice: "", payment: "" });
   useEffect(() => {
     const encounterId = queryEncounterId ?? baseEncounterId;
     const candidateWorkspaceId = queryEncounterId
@@ -1316,12 +1321,13 @@ function useBillingWorkspaceData() {
       );
     }
 
-    void loadPersistedCandidates();
+    void loadPersistedCandidates().finally(() => { if (!cancelled) setCompletedReads(previous => ({ ...previous, summary: summaryReadScope })); });
 
     return () => {
       cancelled = true;
     };
   }, [
+    summaryReadScope,
     actorHeaders,
     baseEncounterId,
     baseEncounterWorkspaceId,
@@ -1366,12 +1372,13 @@ function useBillingWorkspaceData() {
       );
     }
 
-    void loadPersistedInvoiceLines();
+    void loadPersistedInvoiceLines().finally(() => { if (!cancelled) setCompletedReads(previous => ({ ...previous, invoice: invoiceReadScope })); });
 
     return () => {
       cancelled = true;
     };
   }, [
+    invoiceReadScope,
     actorHeaders,
     baseInvoiceId,
     baseInvoiceWorkspaceId,
@@ -1415,12 +1422,13 @@ function useBillingWorkspaceData() {
       setPaymentStatusState(billingApiReadyState);
     }
 
-    void loadPersistedPaymentStatus();
+    void loadPersistedPaymentStatus().finally(() => { if (!cancelled) setCompletedReads(previous => ({ ...previous, payment: invoiceReadScope })); });
 
     return () => {
       cancelled = true;
     };
   }, [
+    invoiceReadScope,
     actorHeaders,
     baseInvoiceId,
     baseInvoiceWorkspaceId,
@@ -1447,6 +1455,8 @@ function useBillingWorkspaceData() {
       : null;
 
   return {
+    pagePending: Boolean((queryEncounterId ?? baseEncounterId) && completedReads.summary !== summaryReadScope)
+      || Boolean(baseInvoiceId && baseInvoiceWorkspaceId && (completedReads.invoice !== invoiceReadScope || completedReads.payment !== invoiceReadScope)),
     applyInvoiceSnapshot: applyWorkspaceInvoiceSnapshot,
     applyPaymentStatusSnapshot: applyWorkspacePaymentSnapshot,
     apiState: {
@@ -3285,6 +3295,10 @@ function BillingPreworkHistory({ detail }: { detail: BillingDetail }) {
   const workspaceId = detail.invoice.workspaceId;
   const key = `${workspaceId}:${guardianId}:${JSON.stringify(actorHeaders)}:${retry}`;
   const result = loaded?.key === key ? loaded.data : null;
+  usePageReadiness(
+    Boolean(guardianId && !result),
+    `${workspaceId}:${guardianId ?? ""}:${JSON.stringify(actorHeaders)}`,
+  );
   useEffect(() => {
     if (!guardianId) return;
     let active = true;
@@ -3307,6 +3321,7 @@ export function BillingContent({
 }: ShellComponentProps) {
   const documentLayout = useWorkspaceDocumentLayout();
   const {
+    pagePending,
     apiState,
     applyInvoiceSnapshot,
     applyPaymentStatusSnapshot,
@@ -3431,6 +3446,8 @@ export function BillingContent({
     checkoutGroups[0]?.invoice.workspaceId ??
     effectiveDetail?.invoice.workspaceId;
   const checkoutSourceKey = JSON.stringify([checkoutWorkspaceId, checkoutInvoiceIdsKey, checkoutAmountsKey, effectiveDetail?.invoice.updatedAt, orderReview?.signature]);
+  const checkoutReadKey = `${checkoutSourceKey}:${entry.show}:${editOwnership.canExecute}:${checkoutReloadKey}`;
+  const [finishedCheckoutKey, setFinishedCheckoutKey] = useState<string | null>(null);
   const effectiveCheckoutState = !editOwnership.canExecute
     ? billingApiIdleState
     : !checkoutWorkspaceId || checkoutInvoiceIds.length === 0
@@ -3453,6 +3470,7 @@ export function BillingContent({
       });
 
       if (cancelled) return;
+      setFinishedCheckoutKey(checkoutReadKey);
       if (!result.ok) {
         setCheckoutSession(undefined);
         setCheckoutState(getBillingApiFailureState(result));
@@ -3471,6 +3489,7 @@ export function BillingContent({
   }, [
     actorHeaders,
     checkoutInvoiceIds,
+    checkoutReadKey,
     checkoutAmountsKey,
     checkoutReloadKey,
     checkoutSourceKey,
@@ -3493,6 +3512,11 @@ export function BillingContent({
   const detailReads = queryInvoiceId
     ? [apiState.invoiceLines, apiState.paymentStatus, apiState.orderSummary]
     : [];
+  usePageReadiness(
+    pagePending || billingQueue.status === "loading" || detailReads.some(read => read.status === "loading") || editOwnership.loading
+      || Boolean(!entry.show && !orderReviewBlocked && editOwnership.canExecute && checkoutWorkspaceId && checkoutInvoiceIds.length && finishedCheckoutKey !== checkoutReadKey),
+    `${workspaceId}:${billingQueue.selectedDate}:${queryInvoiceId ?? selectedInvoiceId}:${entry.show ? "entry" : orderReviewBlocked ? "review" : "checkout"}`,
+  );
   if (!effectiveDetail && (billingQueue.status === "loading" || detailReads.some(read => read.status === "loading"))) {
     return <EmrContentLoadingState testId="billing-content-loading-state" title="수납 업무를 불러오는 중입니다" />;
   }

@@ -2,6 +2,13 @@ type ServerTimingMetric = "permission" | "rpc" | "session";
 
 type ServerTimingDurations = Record<ServerTimingMetric | "total", number>;
 
+type ServerTimingUpstream = {
+  requestId: string;
+  supabaseRequestId?: string | null;
+  submittedSet?: boolean;
+  durations: Record<string, number>;
+};
+
 type ServerTimingLogger = (
   message: string,
   details: {
@@ -9,6 +16,7 @@ type ServerTimingLogger = (
     method: string;
     route: string;
     status: number;
+    upstream?: ServerTimingUpstream;
   },
 ) => void;
 
@@ -51,7 +59,7 @@ export function createServerTimingRecorder({
         durations[metric] += now() - metricStartedAt;
       }
     },
-    respond(response: Response) {
+    respond(response: Response, upstream?: ServerTimingUpstream) {
       const completedDurations: ServerTimingDurations = {
         session: roundDuration(durations.session),
         permission: roundDuration(durations.permission),
@@ -61,15 +69,19 @@ export function createServerTimingRecorder({
 
       response.headers.set(
         "Server-Timing",
-        responseMetrics
-          .map((metric) => `${metric};dur=${completedDurations[metric].toFixed(1)}`)
-          .join(", "),
+        [
+          ...responseMetrics.map((metric) => `${metric};dur=${completedDurations[metric].toFixed(1)}`),
+          ...Object.entries(upstream?.durations ?? {}).map(
+            ([metric, duration]) => `${metric};dur=${roundDuration(duration).toFixed(1)}`,
+          ),
+        ].join(", "),
       );
       logger("clair_request_timing", {
         durations: completedDurations,
         method,
         route,
         status: response.status,
+        ...(upstream ? { upstream } : {}),
       });
       return response;
     },

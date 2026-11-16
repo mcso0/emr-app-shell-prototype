@@ -197,6 +197,42 @@ test("treatment instructions share the width and history contract", async ({ pag
   await expect(page.getByRole("button", { name: "우측 패널 펼치기" })).toHaveCount(0);
 });
 
+test("instruction status follows the start time without clipping in narrow view", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await openInstruction(page);
+  await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "narrow");
+  const info = page.locator('[data-slot="instruction-info-card"]');
+  const request = info.getByText("요청 일시", { exact: true }).locator("..");
+  const cases = [
+    [0, "조제 시작", "10:34", "재요청"],
+    [1, "처치 시작", "10:45", "진행중"],
+    [2, "조제 시작", "미시작", "대기중"],
+    [4, "처치 시작", "11:08", "완료"],
+    [5, "조제 시작", "11:16", "취소"],
+  ] as const;
+
+  for (const [index, label, time, status] of cases) {
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.getByTestId(`order-queue-item-dispensing-queue-${index}`).click();
+    const start = info.getByText(label, { exact: true }).locator("..");
+    const startValue = start.locator('[data-slot="instruction-info-card-value"]');
+    const badge = startValue.getByTestId("instruction-status-label");
+    const timeValue = startValue.getByText(time, { exact: true });
+    await expect(info.getByTestId("instruction-status-label")).toHaveCount(1);
+    await expect(request.locator('[data-slot="instruction-info-card-value"]')).toHaveText(/^\d{4}\.\d{2}\.\d{2} \d{2}:\d{2}$/);
+    await expect(badge).toHaveText(status);
+
+    for (const width of [1920, 768]) {
+      await page.setViewportSize({ width, height: 1080 });
+      await expect(timeValue).toBeInViewport({ ratio: 0.99 });
+      await expect(badge).toBeInViewport({ ratio: 0.99 });
+      const [timeBox, badgeBox] = await Promise.all([timeValue.boundingBox(), badge.boundingBox()]);
+      expect(badgeBox!.x - (timeBox!.x + timeBox!.width)).toBeGreaterThan(0);
+      expect(badgeBox!.x - (timeBox!.x + timeBox!.width)).toBeLessThanOrEqual(8);
+    }
+  }
+});
+
 for (const type of ["dispensing", "treatment"] as const) {
   test(`${type} keeps identity fixed and reveals the scrollbar on hover`, async ({ page }) => {
     await openInstruction(page, type);

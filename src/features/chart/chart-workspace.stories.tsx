@@ -60,14 +60,14 @@ export const HistoricalTableAndDensity: Story = { play: async ({ canvas, canvasE
   await expect(fixture.requests.filter(request => request.method !== "GET")).toHaveLength(0);
 } };
 export const OrderFilters: Story = { play: async ({ canvas }) => {
-  await ready(canvas); const filters = within(canvas.getByRole("tablist", { name: "처방/오더 분류" }));
-  await userEvent.click(filters.getByRole("tab", { name: "임상 1" }));
+  await ready(canvas); const filters = within(canvas.getByRole("group", { name: "처방/오더 분류" }));
+  await userEvent.click(filters.getByRole("button", { name: "임상 1" }));
   await waitFor(() => expect(canvas.queryByTestId(`chart-order-row-${fixture.rows[1].orderId}`)).not.toBeInTheDocument());
   await expect(canvas.getByTestId(`chart-order-row-${fixture.rows[0].orderId}`)).toBeVisible();
-  const treatment = filters.getByRole("tab", { name: "처치 1" }); treatment.focus(); await userEvent.keyboard("{Enter}");
+  const treatment = filters.getByRole("button", { name: "처치 1" }); treatment.focus(); await userEvent.keyboard("{Enter}");
   await waitFor(() => expect(canvas.queryByTestId(`chart-order-row-${fixture.rows[0].orderId}`)).not.toBeInTheDocument());
   await expect(canvas.getByTestId(`chart-order-row-${fixture.rows[1].orderId}`)).toBeVisible();
-  await userEvent.click(filters.getByRole("tab", { name: "전체오더 2" })); await ready(canvas);
+  await userEvent.click(filters.getByRole("button", { name: "전체오더 2" })); await ready(canvas);
 } };
 export const OrderDetailProfileReadOnly: Story = { play: async ({ canvas, canvasElement }) => {
   await ready(canvas);
@@ -151,7 +151,7 @@ export const EditDispenseQuantity: Story = {
     await expect(writes.map(request => request.body?.mode)).toEqual(["manual"]);
     for (const request of writes) await expect(request.body).not.toHaveProperty("reason");
   },
-  parameters: { docs: { description: { story: "실 조제량 컬럼의 기본·최소 너비는 120px입니다. 오더명과 업무 상태 너비는 기존 구현을 유지합니다. 실 조제량은 텍스트로 입력하고 Enter 또는 포커스 이동으로 저장합니다. 잘못된 입력은 유지하며 오류 테두리와 포커스·호버 툴팁을 표시합니다. 셀 옆 저장·재확인·되돌리기 버튼은 없습니다. 저장은 합성 미리보기 메모리에만 반영되며 새로고침하면 초기화됩니다." } } },
+  parameters: { docs: { description: { story: "실 조제량 컬럼의 기본·최소 너비는 120px입니다. 실 조제량은 텍스트로 입력하고 Enter 또는 포커스 이동으로 저장합니다. 잘못된 입력은 유지하며 오류 테두리와 포커스·호버 툴팁을 표시합니다. 셀 옆 저장·재확인·되돌리기 버튼은 없습니다. 저장은 합성 미리보기 메모리에만 반영되며 새로고침하면 초기화됩니다." } } },
 };
 
 export const RecalculateDispensePrescription: Story = {
@@ -383,8 +383,51 @@ export const ConfirmedEditFromSelectedRow: Story = { args: { scenario: "confirme
   const toolbar = within(await within(canvasElement.ownerDocument.body).findByRole("toolbar", { name: "선택 행 작업" }));
   await userEvent.click(toolbar.getByRole("button", { name: "수정" }));
   const body = within(canvasElement.ownerDocument.body);
-  const dialog = within(await body.findByRole("dialog", { name: "합성 조제 약품 · 오더 수정" }));
+  const dialogElement = await body.findByRole("dialog", { name: "합성 조제 약품 · 오더 수정" });
+  const dialog = within(dialogElement);
   const price = await dialog.findByLabelText("단가 (원)");
+  await expect(dialog.getByLabelText("총량", { exact: true })).toHaveAttribute("readonly");
+  for (const label of ["증감 스케줄", "병원 종 범위 예외 확인", "종 범위 예외 사유"]) {
+    await expect(dialog.queryByText(label, { exact: true })).toBeNull();
+  }
+  const footer = dialogElement.querySelector<HTMLElement>('[data-slot="dialog-footer"]')!;
+  await expect(footer).toHaveTextContent(/^취소수정 저장$/);
+  await expect(within(footer).getByRole("button", { name: "수정 저장" })).toBeDisabled();
+  const tax = dialog.getByRole("combobox", { name: "과세 구분" });
+  const reflection = dialog.getByRole("checkbox", { name: "청구에 반영" });
+  const adjustment = dialog.getByRole("combobox", { name: "할인·할증 방식" });
+  const formBody = adjustment.closest<HTMLElement>(".overflow-y-auto")!;
+  const billingViewport = () => ({
+    scrollTop: formBody.scrollTop,
+    positions: [tax, reflection].map(control => {
+      const { x, y } = control.getBoundingClientRect();
+      return [Math.round(x), Math.round(y)];
+    }),
+  });
+  await Promise.all(dialogElement.getAnimations().map(animation => animation.finished));
+  adjustment.scrollIntoView({ block: "end" });
+  const initialScroll = formBody.scrollTop;
+  const initialScrollHeight = formBody.scrollHeight;
+  for (const [method, amountLabel] of [["금액", "할인·할증 (원)"], ["비율", "할인·할증 (%)"], ["없음", null]] as const) {
+    const before = billingViewport();
+    await userEvent.click(adjustment);
+    const option = await body.findByRole("option", { name: method });
+    await expect(billingViewport()).toEqual(before);
+    await userEvent.click(option);
+    if (amountLabel) {
+      await expect(dialog.getByRole("spinbutton", { name: amountLabel })).toBeVisible();
+    } else {
+      await expect(dialog.queryByRole("spinbutton", { name: /할인·할증/ })).toBeNull();
+    }
+    await expect(billingViewport()).toEqual(before);
+    if (method === "금액") {
+      // Read the change summary at the bottom before returning to the visible menu.
+      formBody.scrollTop = formBody.scrollHeight;
+      await expect(formBody.scrollTop).toBeGreaterThan(initialScroll);
+    }
+  }
+  formBody.scrollTop = initialScroll;
+  await waitFor(() => expect(formBody.scrollHeight).toBe(initialScrollHeight));
   await userEvent.clear(price); await userEvent.type(price, "6000");
   await userEvent.click(dialog.getByRole("button", { name: "수정 저장" }));
   await waitFor(() => expect(body.queryByRole("dialog", { name: "합성 조제 약품 · 오더 수정" })).toBeNull());
@@ -416,4 +459,61 @@ export const SelectedBillingRetry: Story = { args: { scenario: "selected-billing
   await expect(posts[1].body?.idempotencyKey).toBe(posts[0].body?.idempotencyKey);
   await expect(fixture.rows[1].billingCandidateStatus).toBe("candidate_created");
   await expect(fixture.unhandled).toEqual([]);
+} };
+
+/** Actual chart catalog with empty synthetic rows; no order is applied. */
+export const CatalogFacetKeyboard: Story = { args: { scenario: "dispense-edit" }, play: async ({ canvas, canvasElement }) => {
+  await canvas.findByRole("textbox", { name: "합성 조제 약품 실 조제량" });
+  const heading = canvas.getByRole("heading", { name: "Plan/Order" });
+  await userEvent.click(within(heading.parentElement!).getByRole("button", { name: "Order 추가" }));
+  const body = within(canvasElement.ownerDocument.body);
+  const dialog = within(await body.findByRole("dialog", { name: "오더 추가" }));
+  const categories = within(dialog.getByRole("listbox", { name: "오더 카테고리" }));
+  const all = categories.getByRole("option", { name: /^전체/ });
+  await waitFor(() => expect(all).toBeEnabled());
+  all.focus(); await userEvent.keyboard("{ArrowDown}");
+  await waitFor(() => expect(dialog.getByText("진료 오더", { exact: true })).toBeVisible());
+  await userEvent.keyboard("{Home}");
+  await expect(all).toHaveAttribute("aria-selected", "true");
+  await userEvent.click(dialog.getByRole("button", { name: "전체 오더 검색 열기" }));
+  await userEvent.type(dialog.getByRole("combobox", { name: "전체 오더 검색" }), "합성");
+  await userEvent.click(all);
+  await waitFor(() => expect(dialog.queryByRole("combobox", { name: "전체 오더 검색" })).not.toBeInTheDocument());
+  await expect(dialog.getByRole("button", { name: "전체 오더 검색 열기" })).toBeVisible();
+  await userEvent.click(dialog.getByRole("button", { name: "취소" }));
+  await waitFor(() => expect(body.queryByRole("dialog", { name: "오더 추가" })).not.toBeInTheDocument());
+  await expect(fixture.requests.filter(request => request.method !== "GET")).toHaveLength(0);
+} };
+
+export const OrderFilterKeyboard: Story = { play: async ({ canvas, canvasElement }) => {
+  await ready(canvas);
+  const group = canvas.getByLabelText("처방/오더 분류");
+  const buttons = Array.from(group.querySelectorAll("button"));
+  await expect(buttons.filter(button => button.tabIndex === 0)).toHaveLength(1);
+  await expect(group).toHaveAttribute("role", "group");
+  await expect(group).toHaveStyle({ padding: "3px", height: "30px" });
+  const filters = within(group), all = filters.getByRole("button", { name: "전체오더 2" });
+  all.focus(); await userEvent.keyboard("{ArrowRight}");
+  await expect(filters.getByRole("button", { name: "진료 0" })).toHaveFocus();
+  await expect(all).toHaveAttribute("aria-pressed", "true");
+  await userEvent.keyboard("{ArrowRight}");
+  const clinical = filters.getByRole("button", { name: "임상 1" });
+  await expect(clinical).toHaveFocus();
+  clinical.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", keyCode: 229, isComposing: false, bubbles: true, cancelable: true }));
+  await expect(all).toHaveAttribute("aria-pressed", "true");
+  await userEvent.keyboard("{Enter}");
+  await expect(clinical).toHaveAttribute("aria-pressed", "true");
+  await waitFor(() => expect(canvas.queryByTestId(`chart-order-row-${fixture.rows[1].orderId}`)).not.toBeInTheDocument());
+  await expect(canvas.getByTestId(`chart-order-row-${fixture.rows[0].orderId}`)).toBeVisible();
+  await userEvent.keyboard("{End}");
+  const other = filters.getByRole("button", { name: "기타 0" });
+  await expect(other).toHaveFocus(); await userEvent.keyboard(" ");
+  await expect(other).toHaveAttribute("aria-pressed", "true");
+  await expect(canvas.queryByTestId(`chart-order-row-${fixture.rows[0].orderId}`)).not.toBeInTheDocument();
+  await userEvent.keyboard("{Home}{Enter}");
+  await expect(all).toHaveFocus(); await expect(all).toHaveAttribute("aria-pressed", "true");
+  await ready(canvas);
+  await expect(Array.from(group.querySelectorAll("button")).filter(button => button.tabIndex === 0)).toHaveLength(1);
+  await expect(fixture.requests.filter(request => request.method !== "GET")).toHaveLength(0);
+  await expect(within(canvasElement).getByRole("table", { name: "처방/오더 테이블" })).toBeVisible();
 } };

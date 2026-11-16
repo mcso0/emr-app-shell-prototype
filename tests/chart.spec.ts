@@ -7,7 +7,9 @@ import {
 } from "@playwright/test";
 
 import { resolveDispensingDoseFactor } from "../src/features/chart/dispensing-unit-conversion";
+import { createEditableDispenseRow } from "../src/features/chart/dispense-edit.stories.fixture";
 import type { PlanOrderAuthorityConfig } from "../src/features/chart/plan-order-authority-domain";
+import { syntheticInstruction } from "../src/features/dispensing/instruction-fixtures";
 
 import chartWidthVisualFixture from "./fixtures/chart-width-visual.json";
 
@@ -456,6 +458,12 @@ async function restoreKongOrderDraftDefaults(page: Page) {
 
   await expect(quantity).toHaveValue("1");
   await expect(billingName).toHaveValue(/.+/);
+}
+
+async function openChartOrderCatalog(page: Page) {
+  // The header opens the catalog; the separate Order button opens quick-add.
+  await page.getByRole("heading", { name: "Plan/Order", exact: true })
+    .locator("..").getByRole("button", { name: "Order 추가", exact: true }).click();
 }
 
 async function searchChartOrderCatalog(
@@ -942,7 +950,7 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   await expect(page.getByRole("button", { name: "SOAP 추가" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "초안 저장" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /진단명/ })).toHaveCount(0);
-  await expect(page.getByRole("tab", { name: "전체오더" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "전체오더" })).toBeVisible();
   await expect(page.getByLabel("처방 조회 범위")).toHaveCount(0);
   const soapDiagnosisGridMetrics = await page
     .getByTestId("chart-soap-diagnosis-grid")
@@ -1534,8 +1542,8 @@ test("chart Plan/Order keeps the approved pinned region and scrolls detail colum
 
   // The left pinned span includes the terminal 8px boundary gap. The visible
   // divider is drawn at its trailing edge and the scroll layer starts after it.
-  expect(referenceMetrics.leftPinnedWidth).toBe(408);
-  expect(referenceMetrics.scrollRegionWidth).toBe(1130);
+  expect(referenceMetrics.leftPinnedWidth).toBe(392);
+  expect(referenceMetrics.scrollRegionWidth).toBe(1146);
   await expect(
     orderTable
       .locator("[data-slot='table-body'] [data-slot='table-row']")
@@ -1564,7 +1572,7 @@ test("chart Plan/Order keeps the approved pinned region and scrolls detail colum
   });
 
   await expect(selectionHeader).toHaveCSS("width", "28px");
-  await expect(statusHeader).toHaveCSS("width", "96px");
+  await expect(statusHeader).toHaveCSS("width", "104px");
 
   const selectionCheckboxBox = await selectionCheckbox.boundingBox();
   const statusSortButtonBox = await statusSortButton.boundingBox();
@@ -1653,7 +1661,7 @@ test("chart Plan/Order keeps the approved pinned region and scrolls detail colum
   expect(Math.abs(pinnedXAfter - pinnedXBefore)).toBeLessThanOrEqual(1);
   expect(scrollXAfter).toBeLessThan(scrollXBefore);
 
-  await page.getByRole("tab", { name: "영상 1", exact: true }).click();
+  await page.getByRole("button", { name: "영상 1", exact: true }).click();
   await expect(
     orderTable.locator('tbody tr[data-emr-data-table-row="true"]'),
   ).toHaveCount(1);
@@ -7970,6 +7978,253 @@ test("chart safety context identifies the patient while order review shows only 
   await expect(orderConfirmDialog).not.toContainText("재요청 포함");
 });
 
+for (const [actor, canCancel] of [["user-tech", false], ["user-vet", true]] as const) {
+  test(`chart shows dispensing and treatment cancellation only to the veterinarian (${actor})`, async ({ page }) => {
+    const dispensing = {
+      ...createEditableDispenseRow("clair-demo", kongEncounterId, "soap-kong-260501"),
+      orderConfirmationStatus: "confirmed",
+      status: "confirmed",
+    };
+    const treatment = {
+      ...dispensing,
+      orderId: "synthetic-treatment-order",
+      orderType: "treatment",
+      clinicalOrderType: "treatment",
+      destinationModule: "treatment",
+      detailInputs: {},
+      appliedSnapshot: {
+        ...dispensing.appliedSnapshot,
+        billingName: "합성 처치",
+        inHospitalOrderName: "합성 처치",
+        clinicalOrderType: "treatment",
+        destinationModule: "treatment",
+        orderType: "treatment",
+      },
+    };
+    await page.route("**/chart/order-drafts?**", route => route.fulfill({
+      json: { ok: true, status: 200, etag: `"${"a".repeat(64)}"`, rows: [dispensing, treatment] },
+    }));
+    await page.route("**/chart/order-execution?**", async route => {
+      const response = await route.fetch({ headers: {
+        ...route.request().headers(),
+        "x-clair-demo-session-user-id": actor,
+      } });
+      await route.fulfill({ response });
+    });
+    await page.goto(kongScenarioUrl);
+    await page.getByRole("button", { name: /^예약 콩이 · 김하늘/ }).first().click();
+    for (const order of [dispensing, treatment]) {
+      const row = page.getByTestId(`chart-order-row-${order.orderId}`);
+      await expect(row).toHaveAttribute("data-order-confirmation", "confirmed");
+      await row.hover();
+      await row.getByTestId(`chart-order-more-${order.orderId}`).click();
+      const cancel = page.getByRole("menuitem", { name: "취소", exact: true });
+      if (canCancel) {
+        await cancel.click();
+        const dialog = page.getByRole("dialog", { name: /오더 취소/ });
+        await expect(dialog).toBeVisible();
+        await dialog.getByRole("button", { name: "취소", exact: true }).click();
+      } else {
+        await expect(page.getByRole("menuitem", { name: "이력", exact: true })).toBeVisible();
+        await expect(cancel).toHaveCount(0);
+        await page.keyboard.press("Escape");
+      }
+    }
+  });
+}
+
+for (const [queueType, label, waiting] of [
+  ["dispensing", "조제", false],
+  ["dispensing", "조제", true],
+  ["treatment", "처치", false],
+  ["treatment", "처치", true],
+] as const) {
+  test(`Plan/Order confirms navigation to the exact ${queueType} instruction item (${waiting ? "waiting" : "started"})`, async ({ page }) => {
+    const workspaceId = "clair-demo";
+    const name = waiting
+      ? `합성 ${label} 세트의 오더명이 길어도 버튼과 전체 이름을 확인할 수 있는지 검증하는 대상 오더`
+      : "SYNTHETICCOMPOUNDINGORDERWITHAVERYLONGUNBROKENNAME20261109".repeat(2);
+    const createdAt = "2026-05-01T00:00:00Z";
+    const dueAt = "2026-05-02T16:00:00Z";
+    const chartRow = createEditableDispenseRow(workspaceId, kongEncounterId, "soap-kong-260501");
+    const order = {
+      ...chartRow,
+      orderType: queueType,
+      clinicalOrderType: queueType,
+      destinationModule: queueType,
+      orderConfirmationStatus: "confirmed",
+      status: "confirmed",
+      appliedSnapshot: { ...chartRow.appliedSnapshot, inHospitalOrderName: name, clinicalOrderType: queueType, destinationModule: queueType, orderType: queueType },
+    };
+    const unlinkedOrder = { ...order, orderId: "synthetic-unlinked-order", appliedSnapshot: { ...order.appliedSnapshot, inHospitalOrderName: "합성 지시서 미연결 오더" } };
+    const draftOrder = { ...unlinkedOrder, orderId: "synthetic-unconfirmed-order", orderConfirmationStatus: "draft", status: "requested", appliedSnapshot: { ...order.appliedSnapshot, inHospitalOrderName: "합성 미확정 오더" } };
+    const workItemId = "97090000-0000-4000-8000-000000000003";
+    const priorWorkItemId = "97090000-0000-4000-8000-000000000001";
+    const siblingId = "97090000-0000-4000-8000-000000000002";
+    const task = {
+      taskId: "synthetic-instruction-current-task", orderId: order.orderId, parentTaskId: "synthetic-set-task",
+      taskRole: "execution", clinicalOrderType: queueType, destinationModule: queueType,
+      attemptNo: 2, status: waiting ? "pending" : "in_progress", priority: "normal",
+      reRequestedFromTaskId: "synthetic-instruction-prior-task", effectiveSnapshot: {},
+      resultSnapshot: null, startedAt: null, completedAt: null, cancelledAt: null, createdAt, updatedAt: createdAt,
+    };
+    const priorTask = { ...task, taskId: task.reRequestedFromTaskId, attemptNo: 1, status: "returned", reRequestedFromTaskId: null };
+    const item = {
+      ...syntheticInstruction.items[0], id: workItemId, orderId: order.orderId,
+      name, taskId: task.taskId, attemptNo: task.attemptNo, status: waiting ? "requested" : "in_progress",
+    };
+    const sibling = { ...item, id: siblingId, orderId: "synthetic-sibling-order", taskId: "synthetic-sibling-task", name: waiting ? "합성 같은 세트 오더" : name };
+    const workItems = [sibling, item].map(row => ({
+      id: row.id, orderId: row.orderId, taskId: row.taskId, taskAttemptNo: row.attemptNo, rowRevision: 1,
+      encounterId: kongEncounterId, workspaceId, queueType, status: row.status, createdAt, dueAt,
+      assignedToUserId: "synthetic-owner", patientName: "합성 환자", requesterName: "합성 수의사",
+      sourceSnapshot: { inHospitalOrderName: row.name }, updatedAt: createdAt,
+    }));
+    const exactReads: (string | null)[] = [];
+    const writes: string[] = [];
+    let denied = !waiting;
+    let pendingRead: Promise<void> | undefined;
+    // Put the started target below the viewport so visibility depends on scrolling.
+    const precedingItems = waiting ? [sibling] : [
+      sibling,
+      ...Array.from({ length: 24 }, (_, index) => ({
+        ...sibling,
+        id: `synthetic-preceding-item-${index}`,
+        orderId: `synthetic-preceding-order-${index}`,
+        taskId: `synthetic-preceding-task-${index}`,
+      })),
+    ];
+    let instructionItems = [...precedingItems, item];
+
+    await page.route("**/chart/order-drafts?*", route => route.fulfill({
+      json: { ok: true, status: 200, etag: `"${"a".repeat(64)}"`, rows: [order, unlinkedOrder, draftOrder] },
+    }));
+    await page.route("**/chart/order-execution?*", route => route.fulfill({
+      json: { ok: true, status: 200, execution: {
+        workspaceId, encounterId: kongEncounterId, tasks: [priorTask, task],
+        queues: [priorTask, task].map((entry, index) => ({
+          taskId: entry.taskId, orderId: entry.orderId, taskAttemptNo: entry.attemptNo,
+          workItemId: index === 0 ? priorWorkItemId : workItemId, queueType, destinationModule: queueType,
+          queueStatus: index === 0 ? "returned" : item.status, updatedAt: createdAt,
+        })),
+        events: [], revisions: [], billingCandidates: [],
+      } },
+    }));
+    await page.route("**/fulfillment/work-items?*", async route => {
+      const params = new URL(route.request().url()).searchParams;
+      const targetId = params.get("workItemId");
+      if (targetId) {
+        exactReads.push(targetId);
+        if (denied) return route.fulfill({ status: 403, json: { ok: false } });
+        await pendingRead;
+      }
+      const matches = params.get("queueType") === queueType &&
+        (!params.has("date") || params.get("date") === "2026-05-03");
+      return route.fulfill({ json: { ok: true, workItems: matches ? workItems.filter(row => !targetId || row.id === targetId) : [] } });
+    });
+    await page.route("**/fulfillment/work-items/*/instruction", route => {
+      if (route.request().method() !== "GET") {
+        writes.push(route.request().method());
+        return route.fulfill({ status: 409, json: { ok: false } });
+      }
+      return route.fulfill({ json: { ok: true, document: {
+        ...syntheticInstruction, queueType, items: instructionItems, changes: [],
+      } } });
+    });
+    await page.route("**/fulfillment/work-items/*/assignees", route => route.fulfill({ json: { ok: true, assignees: [] } }));
+    await page.route("**/fulfillment/instruction-review?*", route => route.fulfill({ json: { ok: true, reviews: [] } }));
+    await page.goto(kongScenarioUrl);
+
+    const row = page.getByTestId(`chart-order-row-${order.orderId}`);
+    const nameCell = row.locator('[data-column-id="displayName"]');
+    const nameText = nameCell.getByText(name, { exact: true });
+    const shortcut = nameCell.getByRole("button", { name: `${name} 지시서로 이동` });
+    await expect(shortcut).toHaveCSS("opacity", "0", { timeout: 10_000 });
+    for (const unavailable of [unlinkedOrder, draftOrder]) {
+      const unavailableCell = page.getByTestId(`chart-order-row-${unavailable.orderId}`).locator('[data-column-id="displayName"]');
+      await expect(unavailableCell).toBeVisible();
+      await unavailableCell.hover();
+      await expect(unavailableCell.getByRole("button", { name: /지시서로 이동/ })).toHaveCount(0);
+    }
+    await expect(nameText).toHaveCSS("text-overflow", "ellipsis");
+    expect(await nameText.evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true);
+    const originalNamePosition = await nameText.boundingBox();
+    await row.locator('[data-column-id="status"]').hover();
+    await expect(shortcut).toHaveCSS("opacity", "0");
+    await nameText.hover();
+    await expect(page.locator('[data-slot="tooltip-content"]').filter({ hasText: name })).toBeVisible();
+    await expect(shortcut).toHaveCSS("opacity", "1");
+    expect(await nameText.boundingBox()).toEqual(originalNamePosition);
+    await shortcut.click();
+    const dialog = page.getByRole("dialog", { name: `${label} 지시서로 이동할까요?` });
+    await expect(dialog).toContainText(name);
+    expect(await dialog.getByText(name, { exact: true }).evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+    await expect(page).toHaveURL(/\/treatment\?/);
+    expect(exactReads).toEqual([]);
+    await dialog.getByRole("button", { name: "취소", exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await expect(shortcut).toBeFocused();
+    await row.locator('[data-column-id="status"]').hover();
+    await expect(shortcut).toHaveCSS("opacity", "0");
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Tab");
+    await expect(shortcut).toBeFocused();
+    await expect(shortcut).toHaveCSS("opacity", "1");
+    await page.keyboard.press("Enter");
+    const confirm = dialog.getByRole("button", { name: "지시서로 이동", exact: true });
+    if (denied) {
+      await confirm.click();
+      await expect(dialog.getByRole("alert")).toHaveText("이 지시서를 볼 권한이 없어요.");
+      await expect(page).toHaveURL(/\/treatment\?/);
+      denied = false;
+    } else {
+      let releaseRead!: () => void;
+      pendingRead = new Promise(resolve => { releaseRead = resolve; });
+      try {
+        await confirm.click();
+        await expect(dialog.getByRole("button", { name: "확인 중" })).toBeDisabled();
+        await expect.poll(() => exactReads).toEqual([workItemId]);
+        await dialog.getByRole("button", { name: "취소", exact: true }).click();
+        await expect(dialog).toBeHidden();
+      } finally {
+        releaseRead();
+        pendingRead = undefined;
+      }
+      await expect(page).toHaveURL(/\/treatment\?/);
+      await expect(shortcut).toBeFocused();
+      await shortcut.press("Enter");
+    }
+    await confirm.click();
+    await expect(page).toHaveURL(/\/dispensing\?date=2026-05-03/);
+    expect(new URL(page.url()).searchParams.get("workItemId")).toBe(workItemId);
+    expect(exactReads).toEqual([workItemId, workItemId]);
+    const target = page.locator('tr[data-instruction-target="true"]');
+    await expect(target).toHaveCount(1);
+    await expect(target).toContainText(name);
+    await expect(target).toBeInViewport();
+    await expect(target).toBeFocused();
+    const siblingRow = waiting
+      ? page.getByRole("row").filter({ hasText: sibling.name })
+      : page.locator(`tr[data-item="${siblingId}"]`);
+    await expect(siblingRow).toBeVisible();
+    const cellBackgrounds = (row: typeof target) => row.locator(":scope > :is(th, td)").evaluateAll(
+      cells => cells.map(cell => getComputedStyle(cell).backgroundColor),
+    );
+    expect(await cellBackgrounds(target)).toEqual(await cellBackgrounds(siblingRow));
+    if (!waiting) {
+      await expect(target).toHaveAttribute("data-item", workItemId);
+    }
+    expect(writes).toEqual([]);
+    if (waiting) {
+      instructionItems = [sibling];
+      await page.reload();
+      await expect(page.getByText("연결된 조제·처치 오더를 찾을 수 없어요")).toBeVisible();
+      await expect(target).toHaveCount(0);
+      await expect(page.getByRole("row").filter({ hasText: sibling.name })).toHaveCount(0);
+    }
+  });
+}
+
 test("chart order review counts selected roots, matches scoped row charges, and cancels without a mutation", async ({ page }) => {
   await page.goto(kongScenarioUrl);
   await restoreKongOrderDraftDefaults(page);
@@ -8190,7 +8445,7 @@ test("chart keeps orders visible when SOAP sections grow", async ({ page }) => {
   await expect(soapDocument).toContainText("SOAP 확장 행 24");
   await expectTopEdgeInViewport(
     page,
-    page.getByRole("tab", { name: "전체오더" }),
+    page.getByRole("button", { name: "전체오더" }),
   );
   await expectTopEdgeInViewport(
     page,
@@ -8206,7 +8461,7 @@ test("chart grab divider resizes the SOAP and order areas", async ({
   const divider = page.getByRole("separator", {
     name: "진료 기록과 처방/오더 영역 높이 조절",
   });
-  const orderHeading = page.getByRole("tab", { name: "전체오더" });
+  const orderHeading = page.getByRole("button", { name: "전체오더" });
 
   await expect(divider).toBeVisible();
   await expect(orderHeading).toBeVisible();
@@ -8289,7 +8544,7 @@ test("chart order table supports single sort without a filter control", async ({
   await restoreKongOrderDraftDefaults(page);
 
   const orderArea = page.locator("section").filter({
-    has: page.getByRole("tablist", { name: "처방/오더 분류" }),
+    has: page.getByRole("group", { name: "처방/오더 분류" }),
   });
   const orderRows = orderArea.locator('[data-testid^="chart-order-row-"]');
   await orderArea
@@ -8891,28 +9146,28 @@ test("chart opens the Kong scenario as one SOAP, assessment, and order flow", as
   await expect(orderDetail).toContainText("구토 완화 처방");
   await orderDetail.getByRole("button", { name: "저장하고 닫기" }).click();
   await expect(
-    page.getByRole("tab", { name: "전체오더 4", exact: true }),
-  ).toHaveAttribute("aria-selected", "true");
+    page.getByRole("button", { name: "전체오더 4", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
   await expect(
-    page.getByRole("tab", { name: "임상 1", exact: true }),
+    page.getByRole("button", { name: "임상 1", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("tab", { name: "영상 1", exact: true }),
+    page.getByRole("button", { name: "영상 1", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("tab", { name: "조제 1", exact: true }),
+    page.getByRole("button", { name: "조제 1", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("tab", { name: "처치 1", exact: true }),
+    page.getByRole("button", { name: "처치 1", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("tab", { name: "원외(검사) 0", exact: true }),
+    page.getByRole("button", { name: "원외(검사) 0", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("tab", { name: "입원 0", exact: true }),
+    page.getByRole("button", { name: "입원 0", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("tab", { name: "기타 0", exact: true }),
+    page.getByRole("button", { name: "기타 0", exact: true }),
   ).toBeVisible();
 });
 
@@ -9564,7 +9819,7 @@ test("chart order catalog shows a visible loading state and count skeletons befo
   );
 
   await page.goto(kongScenarioUrl);
-  await page.getByRole("button", { name: "Order 추가", exact: true }).click();
+  await openChartOrderCatalog(page);
 
   const dialog = page.getByRole("dialog", { name: "오더 추가" });
   await expect(
@@ -9743,13 +9998,21 @@ test("chart catalog dialog searches 108 service-review dispensing candidates at 
   );
 
   await page.goto(kongScenarioUrl);
-  await page.getByRole("button", { name: "Order 추가", exact: true }).click();
+  await openChartOrderCatalog(page);
 
   const dialog = page.getByRole("dialog", {
     name: "오더 추가",
   });
   await expect(dialog.getByText("전체 오더", { exact: true })).toBeVisible();
   await expect(dialog.getByText("108개", { exact: true })).toBeVisible();
+  const categories = dialog.getByRole("listbox", { name: "오더 카테고리" });
+  const allCategory = categories.getByRole("option", { name: /^전체/ });
+  await allCategory.focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(dialog.getByText("진료 오더", { exact: true })).toBeVisible();
+  await page.keyboard.press("Home");
+  await expect(allCategory).toHaveAttribute("aria-selected", "true");
+  await expect(dialog.getByText("전체 오더", { exact: true })).toBeVisible();
   const candidateColumn = dialog.locator('section[aria-label="전체 오더"]');
   const candidateHeading = candidateColumn.getByText("전체 오더", {
     exact: true,
@@ -9765,7 +10028,8 @@ test("chart catalog dialog searches 108 service-review dispensing candidates at 
   expect(candidateHeadingBox).not.toBeNull();
   expect(firstCandidateCopyBox).not.toBeNull();
   expect(
-    Math.abs(candidateHeadingBox!.x - firstCandidateCopyBox!.x),
+    // Preserve the existing 8px candidate inset; SDK facet navigation does not change result layout.
+    Math.abs(candidateHeadingBox!.x + 8 - firstCandidateCopyBox!.x),
   ).toBeLessThanOrEqual(1);
   const candidateScroll = candidateColumn.locator(
     '[data-testid="chart-order-catalog-scroll"]',
@@ -10436,7 +10700,7 @@ test("chart order add searches active workspace catalog and adds a draft row", a
   await expect(addedRow).toContainText("[CBC 검사] #BASO");
   await expect(addedRow).toContainText("12,000");
   await expect(
-    page.getByRole("tab", { name: /전체오더 \d+/, exact: true }),
+    page.getByRole("button", { name: /전체오더 \d+/, exact: true }),
   ).toBeVisible();
 
   await addedRow.hover();
@@ -11239,10 +11503,10 @@ test("chart quick-add hides only for total-empty and restores after existing fir
   await page.getByTestId("chart-order-catalog-candidate-std-ord-lab-cbc-baso").click();
   await confirmChartOrderCatalogSelection(dialog, 1);
   await expect(composer).toBeVisible();
-  await page.getByRole("tab", { name: "영상 0", exact: true }).click();
+  await page.getByRole("button", { name: "영상 0", exact: true }).click();
   await expect(page.getByTestId("chart-order-empty-body")).toBeVisible();
   await expect(composer).toBeVisible();
-  await page.getByRole("tab", { name: /전체오더 1/, exact: true }).click();
+  await page.getByRole("button", { name: /전체오더 1/, exact: true }).click();
   await page.getByRole("button", { name: "[CBC 검사] #BASO 후보 삭제", exact: true }).click({ force: true });
   await page.getByRole("dialog").getByRole("button", { name: "삭제", exact: true }).click();
   await expect(composer).toHaveCount(0);
@@ -11586,7 +11850,7 @@ test("chart status presentation keeps edits in place until blur and hides unconf
   await expect(orderFooter).not.toContainText("총 오더");
   const initialFooterCounts = await readFooterConfirmationCounts();
   const allOrderCount = Number(
-    (await page.getByRole("tab", { name: /전체오더 \d+/, exact: true }).innerText())
+    (await page.getByRole("button", { name: /전체오더 \d+/, exact: true }).innerText())
       .match(/\d+/)?.[0],
   );
   expect(

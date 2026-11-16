@@ -1,5 +1,7 @@
 "use client";
 
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+
 import { useModuleSidePanel } from "@/components/emr/module-side-panel-context";
 
 import { useEffect, useLayoutEffect, useMemo, useState } from "react";
@@ -90,6 +92,8 @@ function isCustomerProfileReadLoading({
 function useCustomerProfileRead(workspaceId: string, enabled: boolean, profileReadAttempt = 0) {
   const setProfileReadState = useCustomerStore((state) => state.setProfileReadState);
   const authSession = useMockAuthStore((state) => state.session);
+  const readScope = `${workspaceId}:${authSession?.id}`;
+  const [completedReadScope, setCompletedReadScope] = useState<string | null>(null);
   const applyPatientGuardianLookupItem = usePatientProfileStore((state) => state.applyPatientGuardianLookupItem);
   useLayoutEffect(() => {
     if (!enabled || !isPreparedEmptyClinicWorkspace(workspaceId)) return;
@@ -143,7 +147,9 @@ function useCustomerProfileRead(workspaceId: string, enabled: boolean, profileRe
       }
     }
 
-    void loadSeededCustomerProfiles();
+    void loadSeededCustomerProfiles().finally(() => {
+      if (!cancelled) setCompletedReadScope(readScope);
+    });
 
     return () => {
       cancelled = true;
@@ -155,7 +161,9 @@ function useCustomerProfileRead(workspaceId: string, enabled: boolean, profileRe
     enabled,
     setProfileReadState,
     workspaceId,
+    readScope,
   ]);
+  return enabled && isPreparedEmptyClinicWorkspace(workspaceId) && completedReadScope !== readScope;
 }
 
 export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
@@ -404,7 +412,7 @@ export function CustomerContent() {
   const patients = usePatientProfileStore((state) => state.patients);
   const [profileReadAttempt, setProfileReadAttempt] = useState(0);
 
-  useCustomerProfileRead(workspaceId, true, profileReadAttempt);
+  const initialProfileReadPending = useCustomerProfileRead(workspaceId, true, profileReadAttempt);
   const patientRows = useMemo(
     () =>
       getCustomerPatientRows({
@@ -430,6 +438,7 @@ export function CustomerContent() {
     workspaceId,
     workspaceIdForState: profileReadState.workspaceId,
   });
+  usePageReadiness(initialProfileReadPending || customerProfileLoading, workspaceId);
   const tableReadStatus: CustomerTableReadStatus =
     profileReadState.workspaceId === workspaceId &&
     (profileReadState.status === "denied" ||

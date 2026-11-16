@@ -744,5 +744,13 @@ function findDuplicateWorkspaceTab({
 
   if (identity.surfaceType === "module") return null;
 
-  return tabs.find((tab) => tab.id !== activeTabId && tab.dedupeKey === identity.dedupeKey) ?? null;
+  const params = new URLSearchParams(href.split("?")[1]);
+  const orderChartId = params.get("orderChart") === "1" ? params.get("chartId") : null;
+  return tabs.find((tab) => {
+    if (tab.id === activeTabId || tab.dedupeKey !== identity.dedupeKey) return false;
+    if (!orderChartId) return true;
+
+    const activeParams = new URLSearchParams(tab.lastRoute.split("?")[1]);
+    return tab.moduleId === moduleId && activeParams.get("chartId") === orderChartId;
+  }) ?? null;
 }

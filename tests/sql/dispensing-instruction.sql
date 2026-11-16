@@ -87,10 +87,11 @@ begin
  jsonb_strip_nulls(jsonb_build_object('action',action,'commandId',gen_random_uuid(),'expectedRevision',d->>'revision','itemId',item_id,'assigneeId',assignee)));
 end $$;
 do $$
-declare d jsonb; cmd jsonb; previous_result jsonb; events_before bigint; orders_before bigint; notifications_before bigint;
+declare d jsonb; cmd jsonb; previous_result jsonb; sibling_before jsonb; events_before bigint; orders_before bigint; notifications_before bigint;
 begin
  d:=public.clair_get_fulfillment_instruction('workspace-a','40000000-0000-4000-8000-000000000002');
  if d->>'name' is distinct from 'Synthetic set' or d#>>'{items,0,name}' is distinct from 'Synthetic item 1' then raise exception 'canonical snapshot names missing'; end if;
+ if d->'firstStartedAt' is distinct from 'null'::jsonb then raise exception 'fresh dispensing work has a start history'; end if;
  begin perform public.clair_mutate_fulfillment_instruction('workspace-a','40000000-0000-4000-8000-000000000002',jsonb_build_object('action','complete_all','commandId',gen_random_uuid(),'expectedRevision',d->>'revision','itemId','40000000-0000-4000-8000-000000000002')); raise exception 'group accepted item scope'; exception when raise_exception then if sqlerrm<>'invalid_transition' then raise; end if; end;
  d:=pg_temp.command('claim');
  if d->>'mainAssigneeId'<>auth.uid()::text then raise exception 'claim failed'; end if;
@@ -98,7 +99,7 @@ begin
  d:=pg_temp.command('start');
  if exists(select 1 from order_fulfillment_work_items where status<>'in_progress' or assigned_to_user_id is distinct from auth.uid())
    or exists(select 1 from orders where status<>'in_progress')
-   or (d->>'canStart')::boolean then raise exception 'explicit start failed'; end if;
+   or (d->>'canStart')::boolean or (d->>'firstStartedAt')::timestamptz is distinct from now() then raise exception 'explicit start failed'; end if;
  d:=pg_temp.command('assign','40000000-0000-4000-8000-000000000003','00000000-0000-4000-8000-000000000002');
  if d->>'mainAssigneeId'<>auth.uid()::text then raise exception 'item transfer changed main'; end if;
  perform set_config('test.actor','00000000-0000-4000-8000-000000000002',true);
@@ -126,6 +127,8 @@ begin
  select count(*) into events_before from order_task_events;
  select count(*) into orders_before from order_events;
  select count(*) into notifications_before from notification_events;
+ select to_jsonb(w) into sibling_before from order_fulfillment_work_items w where w.id='40000000-0000-4000-8000-000000000003';
+ begin perform pg_temp.command('unassign'); raise exception 'completed set released directly'; exception when insufficient_privilege then null; end;
  select result_snapshot into previous_result from order_tasks where id='30000000-0000-4000-8000-000000000002';
  d:=pg_temp.command('reopen','40000000-0000-4000-8000-000000000002');
  if (select count(*) from notification_events)<>notifications_before then raise exception 'undo emitted notification'; end if;
@@ -135,6 +138,9 @@ begin
  begin update order_tasks set status='in_progress' where id='30000000-0000-4000-8000-000000000003'; raise exception 'direct reopen bypass'; exception when object_not_in_prerequisite_state then null; end;
  d:=pg_temp.command('unassign');
  if d->>'mainAssigneeId' is not null or (select status from order_fulfillment_work_items where id='40000000-0000-4000-8000-000000000002')<>'paused' then raise exception 'unassign did not pause'; end if;
+ if (select to_jsonb(w) from order_fulfillment_work_items w where w.id='40000000-0000-4000-8000-000000000003') is distinct from sibling_before then
+   raise exception 'reopen or unassign changed the completed sibling';
+ end if;
  perform set_config('test.actor','00000000-0000-4000-8000-000000000002',true);
  d:=pg_temp.command('claim');
  if not (d->>'canResume')::boolean then raise exception 'claim resumed paused work'; end if;
@@ -166,7 +172,12 @@ begin
  d:=public.clair_get_fulfillment_instruction('workspace-a','40000000-0000-4000-8000-000000000004');
  if d->>'name' is distinct from 'Actual-result synthetic' or d#>>'{items,0,name}' is distinct from 'Actual-result synthetic' then raise exception 'single canonical plan name missing'; end if;
  cmd:=jsonb_build_object('action','complete','commandId',gen_random_uuid(),'expectedRevision',d->>'revision','itemId','40000000-0000-4000-8000-000000000004');
- begin perform public.clair_mutate_fulfillment_instruction('workspace-a','40000000-0000-4000-8000-000000000004',cmd); raise exception 'missing actual result accepted'; exception when raise_exception then if sqlerrm<>'actual_execution_result_required' then raise; end if; end;
+ if d#>>'{items,0,resultRequired}' is distinct from 'false' then raise exception 'dispensing still requires actual result'; end if;
+ begin
+   update public.order_tasks set status='complete',started_at=now(),started_by_user_id=auth.uid(),completed_at=now()
+     where id='30000000-0000-4000-8000-000000000004';
+   raise exception 'unscoped completion without an actual result accepted';
+ exception when raise_exception then if sqlerrm<>'actual_execution_result_required' then raise; end if; end;
  select count(*) into events_before from order_task_events;
  begin perform public.clair_mutate_fulfillment_instruction('workspace-a','40000000-0000-4000-8000-000000000004',cmd||jsonb_build_object('action','start_item','commandId',gen_random_uuid()));
    raise exception 'unassigned requester started work'; exception when insufficient_privilege then null; end;
@@ -209,7 +220,26 @@ begin
  if not exists(select 1 from order_fulfillment_work_items where id='41000000-0000-4000-8000-000000000003' and task_attempt_no=2) then raise exception 'whole repeat wrong unchanged child attempt'; end if;
  d:=public.clair_get_fulfillment_instruction('workspace-a','41000000-0000-4000-8000-000000000002');
  if d->>'rootTaskId'='31000000-0000-4000-8000-000000000001' or jsonb_array_length(d->'items')<>2 then raise exception 'whole repeat root/readback mismatch'; end if;
+ if (d->>'firstStartedAt')::timestamptz is distinct from now()
+   or exists(select 1 from jsonb_array_elements(d->'items') item where item->>'status'<>'requested')
+   or exists(select 1 from order_fulfillment_work_items where queue_type='treatment' and started_at is not null)
+   then raise exception 'replacement treatment attempts lost the original start history or started automatically'; end if;
  if not exists(select 1 from order_task_events where order_id='11000000-0000-4000-8000-000000000002' and task_attempt_no=2 and after_values->>'nextAttemptNo'='3') then raise exception 'whole repeat next attempt history wrong'; end if;
+
+ -- New treatment attempts can complete the prescribed work without a result row.
+ insert into orders(id,workspace_id,encounter_id,status,clinical_order_type,destination_module,order_confirmation_status,row_type,requested_by_user_id,sort_order)
+ values('11000000-0000-4000-8000-000000000004','workspace-a','20000000-0000-4000-8000-000000000001','in_progress','treatment','treatment','confirmed','individual',auth.uid(),4);
+ insert into order_tasks(id,workspace_id,encounter_id,order_id,task_role,clinical_order_type,destination_module,status,priority,attempt_no,effective_snapshot,assigned_to_user_id,started_at,started_by_user_id,execution_result_schema_version)
+ values('31000000-0000-4000-8000-000000000004','workspace-a','20000000-0000-4000-8000-000000000001','11000000-0000-4000-8000-000000000004','execution','treatment','treatment','in_progress','normal',1,'{"orderDisplayName":"Synthetic treatment"}',auth.uid(),now(),auth.uid(),1);
+ insert into order_fulfillment_work_items(id,workspace_id,order_id,encounter_id,task_id,task_attempt_no,status,queue_type,source_snapshot,assigned_to_user_id)
+ values('41000000-0000-4000-8000-000000000004','workspace-a','11000000-0000-4000-8000-000000000004','20000000-0000-4000-8000-000000000001','31000000-0000-4000-8000-000000000004',1,'in_progress','treatment','{"billingReflectionEnabled":false}',auth.uid());
+ d:=public.clair_get_fulfillment_instruction('workspace-a','41000000-0000-4000-8000-000000000004');
+ if d#>>'{items,0,resultRequired}' is distinct from 'false' then raise exception 'treatment still requires actual result'; end if;
+ d:=public.clair_mutate_fulfillment_instruction('workspace-a','41000000-0000-4000-8000-000000000004',jsonb_build_object(
+   'action','complete','itemId','41000000-0000-4000-8000-000000000004','commandId',gen_random_uuid(),'expectedRevision',d->>'revision'));
+ if d#>>'{items,0,status}' is distinct from 'completed' or d#>>'{items,0,hasResult}' is distinct from 'false'
+   or not exists(select 1 from order_task_events where task_id='31000000-0000-4000-8000-000000000004' and event_type='completed' and actor_user_id=auth.uid())
+   then raise exception 'treatment completion or actor history missing'; end if;
 
  raise notice 'PASS: main/sub ownership, explicit finalization, unassign/resume, no-history reopen with preserved results, replay/conflict, billing lock, workspace isolation';
 end $$;

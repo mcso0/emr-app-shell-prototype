@@ -1812,7 +1812,7 @@ test("dispensing queue selection updates existing patient and instruction contex
   await expect(page.getByTestId("instruction-status-label")).toHaveText("재요청");
   await expect(page.getByTestId("instruction-status-label")).toHaveCSS("background-color", "rgb(255, 250, 240)");
   await expect(page.getByTestId("instruction-status-label").locator("span")).toHaveCount(0);
-  await expect(page.locator("[data-slot='instruction-header-order-info']")).toContainText(/조제 시작\s*10:34/);
+  await expect(page.locator("[data-slot='instruction-header-order-info']")).toContainText(/조제 시작\s*10:34\s*재요청/);
   const selectedQueueCard = page.getByTestId("order-queue-item-dispensing-queue-0");
   await expect(selectedQueueCard).toHaveCSS("padding-top", "8px");
   await expect(selectedQueueCard).toHaveCSS("border-radius", "10px");
@@ -1843,10 +1843,10 @@ test("dispensing queue selection updates existing patient and instruction contex
   const orderInfo = page.locator("[data-slot='instruction-header-order-info']");
   await expect(orderInfo).toContainText("2026.04.14 10:42");
   await expect(orderInfo).toContainText("나비(5세) · 러시안블루");
-  await expect(orderInfo).toContainText(/요청 일시\s*2026.04.14 10:42\s*진행중/);
+  await expect(orderInfo).toContainText(/요청 일시\s*2026.04.14 10:42\s*환자 정보/);
   await expect(orderInfo).toContainText(/요청 수의사\s*김도윤/);
   await expect(orderInfo).toContainText(/처치 담당\s*송하윤/);
-  await expect(orderInfo).toContainText(/처치 시작\s*10:45/);
+  await expect(orderInfo).toContainText(/처치 시작\s*10:45\s*진행중/);
   await expect(page.getByTestId("instruction-status-label")).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-status-info-bg)"));
 
   const resultContent = page.locator("[data-slot='instruction-result-scroll-content']");

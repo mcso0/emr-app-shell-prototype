@@ -1,18 +1,28 @@
 "use client";
 
-import { PartialOrderWorkDialog } from "@/features/fulfillment/components/partial-order-work-dialog";
 import { OralInstructionInfobar } from "./oral-instruction-infobar";
 import { TaskInstructionReview } from "@/features/fulfillment/components/task-instruction-review";
 import { EmrContentLoadingState } from "@/components/emr/empty-state";
-import { useState } from "react";
+import { EmrInlineAlert } from "@/components/emr/inline-alert";
+import { EmrSidePanelStateIcon } from "@/components/emr/side-panel-state-icon";
+import { useEffect, useEffectEvent, useId, useRef, useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup, ButtonGroupDivider, ButtonGroupIconButton, ButtonGroupPrimaryButton } from "@/components/ui/button-group";
+import { CdsActionsCheckCircleIcon } from "@/components/cds-icons/actions-and-controls";
+import { CdsContentLink2Icon } from "@/components/cds-icons/content-and-editor";
+import { CdsFilesFileTextIcon } from "@/components/cds-icons/files-and-layout";
+import { CdsNavigationChevronDownIcon } from "@/components/cds-icons/navigation";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Radio, RadioGroup } from "@/components/ui/radio-group";
+import { EmrInstructionOutputMenu } from "@/components/emr/instruction-header-stack";
 import { Dialog } from "@/components/ui/dialog";
-import { EmrWorkEntryAction } from "@/components/emr/work-entry-action";
+import { EmrWorkEntryAction, EmrWorkEntryTrigger } from "@/components/emr/work-entry-action";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { ExecutionResultDialog } from "@/features/fulfillment/components/execution-result-dialog";
 import { instructionCompletionConfirmation } from "@/features/fulfillment/instruction-contract";
-import { createInstructionView } from "../instruction-view-model";
+import { cn } from "@/lib/utils";
+import { createInstructionView, getOrderRerequestChanges, getInstructionStatusLabel, hasPendingInstructionRerequest, isAssignedInstructionRerequest, isWaitingInstruction } from "../instruction-view-model";
 import type { FulfillmentInstructionController } from "../use-fulfillment-instruction";
 import { InstructionDocumentTable } from "./instruction-document-table";
 
@@ -21,9 +31,18 @@ type Props = {
   onChanged: () => void;
   workspaceId: string;
   prework?: boolean;
+  inDocumentToolbar?: boolean;
   onEntered?: () => void;
   onCompletionOpenChange?: (open: boolean) => void;
 };
+
+const disabledCompletionGroupClass = cn(
+  "rounded-lg bg-[var(--emr-surface-disabled)] outline-1 -outline-offset-1 outline-border",
+  "[&>[data-button-group-segment]:disabled]:bg-transparent",
+  "[&>[data-button-group-segment]:disabled]:text-[color:var(--emr-text-tertiary)]",
+  "[&>[data-button-group-segment]:disabled]:opacity-100",
+  "[&>[data-slot=button-group-divider]]:bg-border",
+);
 
 function CompletionConfirmation(props: Props & { itemId?: string; open: boolean; onClose: () => void }) {
   return props.open && props.controller.document
@@ -31,102 +50,234 @@ function CompletionConfirmation(props: Props & { itemId?: string; open: boolean;
     : null;
 }
 
-function CompletionFlow({ controller, workspaceId, itemId, onClose, onChanged }: Props & { itemId?: string; onClose: () => void }) {
-  const [resultItem, setResultItem] = useState<string | null>(null);
+function CompletionFlow({ controller, itemId, onClose, onChanged }: Props & { itemId?: string; onClose: () => void }) {
   const document = controller.document;
   if (!document) return null;
   const confirmation = instructionCompletionConfirmation(document, itemId);
-  const targets = document.items.filter((item) => !itemId || item.id === itemId);
-  const missingResults = targets.filter((item) => item.resultRequired && !["completed", "cancelled", "returned"].includes(item.status));
   const busy = controller.busy || controller.loading;
-  const canComplete = itemId ? targets.some((item) => item.canComplete) : document.canCompleteAll;
-  const executionItem = document.items.find((item) => item.id === resultItem);
-  return <>
-    <Dialog open={resultItem === null} onOpenChange={(next) => { if (!next && !busy) onClose(); }}>
+  const canComplete = !document.finalized && (itemId ? document.items.some((item) => item.id === itemId && item.canComplete) : document.canCompleteAll);
+  return (
+    <Dialog open onOpenChange={(next) => { if (!next && !busy) onClose(); }}>
       <EmrDialogShell
         title={confirmation.title}
-        description={missingResults.length ? "완료할 항목의 실제 수행값을 먼저 기록해 주세요." : confirmation.description}
+        description={confirmation.description}
         secondaryAction={<Button variant="outline" disabled={busy} onClick={onClose}>취소</Button>}
-        primaryAction={<Button disabled={busy || !canComplete || missingResults.length > 0} onClick={async () => {
+        primaryAction={<Button disabled={busy || !canComplete} onClick={async () => {
           if (await controller.mutate(itemId ? { action: "complete", itemId } : { action: "complete_all" })) {
             onClose(); onChanged();
           }
         }}>{controller.busy ? "저장 중" : "완료"}</Button>}
       >
-        {missingResults.length > 0 && <ul className="space-y-2">
-          {missingResults.map((item) => <li key={item.id} className="flex items-center justify-between gap-3">
-            <span className="min-w-0 break-words">{item.name}</span>
-            <Button variant="outline" disabled={busy || !item.canComplete} aria-label={`${item.name} 수행값 입력`} onClick={() => setResultItem(item.id)}>수행값 입력</Button>
-          </li>)}
-        </ul>}
         {controller.error && <p role="alert" className="text-sm text-destructive">{controller.error}</p>}
       </EmrDialogShell>
     </Dialog>
-    {executionItem && <ExecutionResultDialog
-      workspaceId={workspaceId} workItemId={executionItem.id} open
-      instructionCompletion
-      ownershipAllowed={!busy && executionItem.canComplete}
-      ownershipKey={document.revision} authorityStatus={executionItem.status}
-      onOpenChange={(next) => { if (!next) setResultItem(null); }}
-      onSaved={async () => {
-        setResultItem(null);
-        controller.refresh();
-        onChanged();
-        if (itemId || !document.isSet) onClose();
-      }}
-    />}
-  </>;
+  );
+}
+
+function ReopenConfirmation({ controller, onChanged, onClose }: Props & { onClose: () => void }) {
+  const document = controller.document!;
+  const items = document.items.filter(item => item.status === "completed" && item.canReopen);
+  const labelId = useId();
+  const [revision] = useState(document.revision);
+  const [itemId, setItemId] = useState(items.length === 1 ? items[0].id : "");
+  const stale = revision !== document.revision;
+  const busy = controller.busy || controller.loading;
+  const canSubmit = !busy && !stale && items.some(item => item.id === itemId);
+  const canClose = !busy || Boolean(controller.error);
+
+  return <Dialog open onOpenChange={open => { if (!open && canClose) onClose(); }}>
+    <EmrDialogShell title="진행 중으로 변경할까요?"
+      description={document.isSet ? "선택한 항목만 다시 진행해요. 기존 수행기록은 유지돼요." : "기존 수행기록은 유지돼요."}
+      showCloseButton={canClose}
+      secondaryAction={<Button variant="outline" disabled={!canClose} onClick={onClose}>취소</Button>}
+      primaryAction={<Button disabled={!canSubmit} onClick={async () => {
+        if (await controller.mutate({ action: "reopen", itemId }, onClose)) {
+          onClose();
+          onChanged();
+        }
+      }}>{controller.busy ? "저장 중" : "진행 중으로 변경"}</Button>}>
+      {document.isSet ? (
+        <RadioGroup aria-label="다시 진행할 항목" value={itemId} disabled={busy || stale}
+          onValueChange={value => setItemId(String(value))}
+          className="max-h-[min(12rem,30dvh)] overflow-y-auto p-1">
+          {items.map((item, index) => (
+            <label key={item.id} className="flex min-w-0 items-center gap-2 text-sm">
+              <Radio value={item.id} className="shrink-0" aria-labelledby={`${labelId}-${index}`} />
+              <span id={`${labelId}-${index}`} className="min-w-0 break-words">{item.name}</span>
+            </label>
+          ))}
+        </RadioGroup>
+      ) : <p className="break-words text-sm font-medium">{document.name}</p>}
+      {(stale || controller.error) && <p role="alert" className="mt-3 text-sm text-destructive">
+        {stale ? "업무 상태가 변경됐어요. 창을 닫고 최신 상태를 확인해 주세요." : controller.error}
+      </p>}
+    </EmrDialogShell>
+  </Dialog>;
 }
 
 export function InstructionActions(props: Props) {
-  return <InstructionActionsContent key={`${props.workspaceId}:${props.controller.document?.rootTaskId}`} {...props} />;
+  const document = props.controller.document;
+  return <InstructionActionsContent
+    key={`${props.workspaceId}:${document?.rootTaskId}:${document?.queueType}:${document?.pauseReason ?? ""}`}
+    {...props}
+  />;
 }
 
-function InstructionActionsContent({ controller, onChanged, workspaceId, prework = false, onEntered, onCompletionOpenChange }: Props) {
+function InstructionActionsContent({ controller, onChanged, workspaceId, prework = false, inDocumentToolbar = false, onEntered, onCompletionOpenChange }: Props) {
   const [takeover, setTakeover] = useState(false);
   const [reason, setReason] = useState("");
   const [confirm, setConfirm] = useState(false);
+  const [reopen, setReopen] = useState(false);
   const document = controller.document;
+  const assignedRerequest = !prework && Boolean(document && isAssignedInstructionRerequest(document));
+  const autoReviewKey = assignedRerequest && document?.canStart && !controller.loading
+    ? document.items.filter(item => item.attemptNo > 1 && item.status === "requested").map(item => item.taskId).join(":")
+    : "";
+  const openedReview = useRef("");
+  const openReviewOnEntry = useEffectEvent(() => controller.openRerequestReview?.(onChanged));
+  useEffect(() => {
+    if (!autoReviewKey || openedReview.current === autoReviewKey) return;
+    openedReview.current = autoReviewKey;
+    openReviewOnEntry();
+  }, [autoReviewKey]);
+
   if (!document) return null;
   const busy = controller.busy || controller.loading;
-  const change = async (action: "claim" | "start" | "resume" | "unassign") => {
-    if (await controller.mutate({ action })) { onChanged(); if (action === "claim" || action === "start") onEntered?.(); }
+  const completionLabel = document.queueType === "dispensing" ? "조제 완료" : "처치 완료";
+  if (document.pauseReason) {
+    return <ButtonGroup aria-label={`${completionLabel} 보조 작업`} className={disabledCompletionGroupClass}>
+      <ButtonGroupPrimaryButton type="button" size="sm" variant="outline" disabled>
+        <CdsActionsCheckCircleIcon data-icon="inline-start" aria-hidden="true" />
+        {completionLabel}
+      </ButtonGroupPrimaryButton>
+      <ButtonGroupDivider />
+      <ButtonGroupIconButton type="button" size="sm" aria-label="업무 상태 변경" disabled>
+        <CdsNavigationChevronDownIcon className="size-3" aria-hidden="true" />
+      </ButtonGroupIconButton>
+    </ButtonGroup>;
+  }
+  if (assignedRerequest) {
+    return document.canStart ? (
+      <Button size="sm" disabled={busy} onClick={() => controller.openRerequestReview?.(onChanged)}>
+        업무 이어가기
+      </Button>
+    ) : null;
+  }
+  const continuingRerequest = Boolean(document.firstStartedAt) && hasPendingInstructionRerequest(document);
+  const entryMode = document.canClaim ? "claim" : document.canTakeover ? "takeover" : document.canStart ? "start" : "blocked";
+  const claimStartsWork = isWaitingInstruction(document);
+  const claimIntent = { action: "claim" as const, ...(claimStartsWork ? { startWork: true as const } : {}) };
+  const openCompletion = () => {
+    setConfirm(true);
+    onCompletionOpenChange?.(true);
   };
+  const canReopen = !prework && document.items.some(item => item.status === "completed" && item.canReopen);
+  const canUnassign = !prework && !document.finalized && document.canUnassign;
+  const showStatusMenu = canReopen || canUnassign;
+  const canComplete = !document.finalized && document.canCompleteAll;
+  const primaryCompletion = canComplete && !document.canClaim;
+  const splitCompletion = inDocumentToolbar && canComplete && showStatusMenu;
+  const separateStatus = !inDocumentToolbar || document.finalized;
+  const completionMenuAction = canComplete
+    ? { label: completionLabel, triggerLabel: "완료 메뉴 열기", onSelect: openCompletion }
+    : undefined;
+  const enterWork = () => {
+    onChanged();
+    onEntered?.();
+  };
+  const rerequestContinuation = continuingRerequest ? {
+    label: document.queueType === "dispensing" ? "확인하고 조제 계속" : "확인하고 처치 계속",
+    onSuccess: enterWork,
+  } : undefined;
+  const change = async (action: "claim" | "start" | "resume" | "unassign") => {
+    const intent = action === "claim" ? claimIntent : { action };
+    const entersWork = action === "claim" || action === "start";
+    const continuing = !prework && (action === "start" || (action === "claim" && claimStartsWork));
+    if (await controller.mutate(intent, undefined, continuing ? rerequestContinuation : undefined)) {
+      if (entersWork) enterWork();
+      else onChanged();
+    }
+  };
+  const statusMenu = showStatusMenu ? (
+    <DropdownMenu>
+      <DropdownMenuTrigger render={splitCompletion || separateStatus ? (
+        <ButtonGroupIconButton type="button" size="sm" variant={splitCompletion && primaryCompletion ? "default" : "ghost"}
+          className={splitCompletion ? "rounded-r-lg" : undefined} aria-label="업무 상태 변경" disabled={busy} />
+      ) : (
+        <Button type="button" size="icon-sm" variant="outline" aria-label="업무 상태 변경" disabled={busy} />
+      )}>
+        <CdsNavigationChevronDownIcon className="size-3" aria-hidden="true" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-max">
+        {canReopen && <DropdownMenuItem onClick={() => setReopen(true)}>
+          {document.finalized ? "진행 중으로 변경" : "완료 항목 다시 진행"}
+        </DropdownMenuItem>}
+        {canUnassign && <DropdownMenuItem onClick={() => void change("unassign")}>담당 취소</DropdownMenuItem>}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  ) : null;
+  const completionContent = (
+    <>
+      {inDocumentToolbar ? <CdsActionsCheckCircleIcon data-icon="inline-start" aria-hidden="true" /> : null}
+      {completionLabel}
+    </>
+  );
   return (
     <>
-      {!prework && document.mainAssigneeName ? (
+      {!prework && !inDocumentToolbar && document.mainAssigneeName ? (
         <span className="text-sm text-muted-foreground">
           {document.mainAssigneeName}
         </span>
       ) : null}
-      {prework ? <EmrWorkEntryAction
+      {prework && entryMode === "start" ? (
+        <EmrWorkEntryTrigger size="default" label="업무 시작하기" disabled={busy} onClick={() => void change("start")} menuAction={completionMenuAction} />
+      ) : prework ? <EmrWorkEntryAction
+        size="default"
+        menuAction={completionMenuAction}
         scopeKey={`${workspaceId}:${document.rootTaskId}:${document.queueType}`}
         authorityKey={document.revision}
-        mode={document.canClaim ? "claim" : document.canTakeover ? "takeover" : document.canStart ? "start" : "blocked"}
+        mode={entryMode}
         assigneeName={document.mainAssigneeName}
         busy={busy} error={controller.error}
-        context={<><strong>{document.queueType === "dispensing" ? "조제" : "처치"} · {document.items.length}개</strong><p>현재 담당: {document.mainAssigneeName ?? "미지정"}</p></>}
-        onConfirm={async (reason) => {
-          const action = document.canClaim ? "claim" : document.canTakeover ? "takeover" : "start";
-          if (action === "start" && controller.instructionReview && !await controller.instructionReview.check()) return "review_required";
-          const succeeded = await controller.mutate(action === "takeover" ? { action, reason } : { action });
+        description={entryMode === "claim" && claimStartsWork
+          ? "담당을 지정하면 업무가 바로 시작됩니다."
+          : entryMode === "takeover"
+            ? "담당을 변경하면 업무가 바로 시작됩니다. 변경 사유는 요청 수의사에게 전달됩니다."
+            : undefined}
+        onConfirm={entryMode === "blocked" ? undefined : async (reason) => {
+          const intent = entryMode === "claim" ? claimIntent
+            : { action: "takeover" as const, startWork: true as const, reason };
+          let reviewRequired = false;
+          const continuation = entryMode === "claim" && claimStartsWork ? rerequestContinuation : undefined;
+          const succeeded = await controller.mutate(intent, () => { reviewRequired = true; }, continuation);
           if (succeeded) onChanged();
-          return succeeded;
+          return reviewRequired ? "review_required" : succeeded;
         }}
         onEntered={onEntered}
-      /> : null}
+      >
+        {entryMode !== "blocked" && (
+          <div className={entryMode === "takeover" ? "mb-4" : undefined}>
+            <p className="break-words text-sm font-medium">
+              {entryMode === "claim" ? "미지정" : document.mainAssigneeName?.trim() || "기존 담당자"} → 나
+            </p>
+            <ul aria-label="대상 오더" className="mt-2 max-h-[min(7rem,20dvh)] list-disc space-y-1 overflow-y-auto pl-5 text-sm text-muted-foreground">
+              {document.items.map((item) => <li key={item.id} className="break-words">{item.name}</li>)}
+            </ul>
+          </div>
+        )}
+      </EmrWorkEntryAction> : null}
       {!prework && document.canClaim ? (
         <Button size="sm" disabled={busy} onClick={() => void change("claim")}>
-          담당하기
+          {continuingRerequest && claimStartsWork ? "업무 계속하기" : "담당하기"}
         </Button>
       ) : null}
       {!prework && document.canTakeover ? <Button size="sm" disabled={busy} onClick={() => setTakeover(true)}>담당하기</Button> : null}
       <Dialog open={takeover} onOpenChange={(open) => { if (!busy) setTakeover(open); }}>
         <EmrDialogShell title="담당자를 변경할까요?"
-          description={`해당 업무는 ${document.mainAssigneeName ?? "다른 담당자"}님이 담당자로 지정된 업무입니다. 담당을 변경하면 요청 수의사에게 사유가 전달됩니다.`}
+          description={`해당 업무는 ${document.mainAssigneeName ?? "다른 담당자"}님이 담당자로 지정된 업무입니다. 담당을 변경하고 ${continuingRerequest ? "업무를 이어갑니다." : "바로 업무를 시작합니다."} 요청 수의사에게 사유가 전달됩니다.`}
           secondaryAction={<Button variant="outline" disabled={busy} onClick={() => setTakeover(false)}>취소</Button>}
           primaryAction={<Button disabled={busy || !reason.trim() || !document.canTakeover} onClick={async () => {
-            if (await controller.mutate({ action: "takeover", reason: reason.trim() })) {
+            if (await controller.mutate({ action: "takeover", startWork: true, reason: reason.trim() }, () => setTakeover(false))) {
               setTakeover(false); setReason(""); onChanged(); onEntered?.();
             }
           }}>{controller.busy ? "저장 중" : "담당하기"}</Button>}>
@@ -137,7 +288,7 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
       </Dialog>
       {!prework && document.canStart ? (
         <Button size="sm" disabled={busy} onClick={() => void change("start")}>
-          {prework ? "업무 시작하기" : document.queueType === "dispensing" ? "조제 시작" : "처치 시작"}
+          {continuingRerequest ? "업무 계속하기" : document.queueType === "dispensing" ? "조제 시작" : "처치 시작"}
         </Button>
       ) : null}
       {document.canResume ? (
@@ -145,22 +296,34 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
           재개
         </Button>
       ) : null}
-      {!prework && document.canUnassign ? (
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={busy}
-          onClick={() => void change("unassign")}
+      {!prework && canComplete ? (splitCompletion ? (
+        <ButtonGroup
+          aria-label={`${completionLabel} 보조 작업`}
+          className={cn(
+            "shrink-0",
+            !primaryCompletion && "rounded-lg border border-border bg-card",
+            busy && disabledCompletionGroupClass,
+          )}
         >
-          담당 취소
+          <ButtonGroupPrimaryButton size="sm" variant={primaryCompletion ? "default" : "outline"} className="rounded-l-lg" disabled={busy} onClick={openCompletion}>
+            {completionContent}
+          </ButtonGroupPrimaryButton>
+          <ButtonGroupDivider className={primaryCompletion ? undefined : "bg-border"} />
+          {statusMenu}
+        </ButtonGroup>
+      ) : (
+        <Button size="sm" variant={primaryCompletion ? "default" : "outline"} disabled={busy} onClick={openCompletion}>
+          {completionContent}
         </Button>
-      ) : null}
-      {document.canCompleteAll ? (
-        <Button size="sm" variant={document.canClaim ? "outline" : "default"} disabled={busy} onClick={() => { setConfirm(true); onCompletionOpenChange?.(true); }}>
-          {document.queueType === "dispensing" ? "조제 완료" : "처치 완료"}
-        </Button>
-      ) : null}
-      {document.finalized ? <span className="text-sm">완료</span> : null}
+      )) : null}
+      {!splitCompletion && (separateStatus && statusMenu ? (
+        <ButtonGroup aria-label="업무 상태" className="shrink-0 items-center rounded-md border border-border bg-card">
+          <span className="flex items-center px-2 text-sm">{getInstructionStatusLabel(document)}</span>
+          <ButtonGroupDivider className="bg-border" />
+          {statusMenu}
+        </ButtonGroup>
+      ) : document.finalized ? <span className="text-sm">완료</span> : statusMenu)}
+      {reopen && <ReopenConfirmation controller={controller} workspaceId={workspaceId} onChanged={onChanged} onClose={() => setReopen(false)} />}
       <CompletionConfirmation
         controller={controller}
         workspaceId={workspaceId}
@@ -174,20 +337,31 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
 
 export function InstructionBody({
   controller,
+  focusedItemId,
   onChanged,
   workspaceId,
-}: Props) {
-  const [confirmItem, setConfirmItem] = useState<string | null>(null);
-  const [partialTask, setPartialTask] = useState<{ taskId: string; name: string } | null>(null);
-  const [historyItem, setHistoryItem] = useState<string | null | undefined>(
+}: Props & { focusedItemId?: string }) {
+  const [completion, setCompletion] = useState<{ itemId: string; revision: string } | null>(null);
+  const [historyItemIds, setHistoryItemIds] = useState<readonly string[] | null | undefined>(
     undefined,
   );
-  const [resultItem, setResultItem] = useState<string | null>(null);
   const [executionHistory, setExecutionHistory] = useState(false);
-  const [instructionDraft, setInstructionDraft] = useState<string | null>(null);
+  const [editInstruction, setEditInstruction] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const document = controller.document;
+  const readOnly = Boolean(document && (document.pauseReason || isAssignedInstructionRerequest(document)));
+  const confirmItem = completion && completion.revision === document?.revision ? completion.itemId : null;
   const view = document ? createInstructionView(document) : null;
+  const historyEvents = (document?.changes ?? []).flatMap(change => {
+    const event = view?.events.find(event => event.id === change.id && (
+      !historyItemIds || event.changes.some(field => historyItemIds.includes(field.itemId))
+    ));
+    if (!event) return [];
+    const fields = historyItemIds
+      ? event.changes.filter(field => historyItemIds.includes(field.itemId))
+      : event.changes;
+    return fields.length ? [{ ...event, changes: fields }] : [];
+  });
   return (
     <div
       className="instruction-document-surface"
@@ -205,69 +379,31 @@ export function InstructionBody({
         </div>
       ) : null}
       {controller.loading && !document ? <EmrContentLoadingState testId="instruction-document-loading" title="조제/처치 업무를 불러오는 중입니다" /> : null}
-      {controller.instructionReview && <TaskInstructionReview controller={controller.instructionReview} />}
-      {!controller.instructionReview && document?.oralInstruction && <OralInstructionInfobar key={document.oralInstruction.chartId} instruction={document.oralInstruction} />}
-      <Dialog
-        open={instructionDraft !== null}
-        onOpenChange={(open) => {
-          if (!open && !controller.busy) setInstructionDraft(null);
-        }}
-      >
-        <EmrDialogShell
-          title={document?.isSet ? "세트 공통 지시 수정" : "오더 지시 수정"}
-          description="완료 상태는 유지됩니다."
-          secondaryAction={
-            <Button
-              variant="outline"
-              disabled={controller.busy}
-              onClick={() => setInstructionDraft(null)}
-            >
-              취소
-            </Button>
-          }
-          primaryAction={
-            <Button
-              disabled={
-                controller.busy ||
-                controller.loading ||
-                instructionDraft === document?.instruction
-              }
-              onClick={async () => {
-                if (
-                  instructionDraft !== null &&
-                  (await controller.mutate({
-                    action: "edit_instruction",
-                    instruction: instructionDraft,
-                  }))
-                ) {
-                  setInstructionDraft(null);
-                  onChanged();
-                }
-              }}
-            >
-              {controller.busy ? "저장 중" : "저장"}
-            </Button>
-          }
+      {document?.pauseReason === "order_edit" && (
+        <EmrInlineAlert
+          className="mb-3 border-[var(--emr-status-hold-border)] bg-[var(--emr-status-hold-bg)] text-[var(--emr-status-hold-text)]"
+          severity="info"
+          testId="order-edit-hold"
+          title="수의사가 오더를 수정 중입니다."
+          icon={<EmrSidePanelStateIcon state="hold" aria-hidden="true" />}
         >
-          <Textarea
-            aria-label="공통 지시"
-            maxLength={5000}
-            value={instructionDraft ?? ""}
-            disabled={controller.busy}
-            onChange={(event) => setInstructionDraft(event.target.value)}
-          />
-          {controller.error ? (
-            <p role="alert" className="mt-2 text-sm text-destructive">
-              {controller.error}
-            </p>
-          ) : null}
-        </EmrDialogShell>
-      </Dialog>
+          지시서는 볼 수 있어요. 수정이 끝나면 업무를 이어갈 수 있어요.
+        </EmrInlineAlert>
+      )}
+      {controller.instructionReview && <TaskInstructionReview controller={controller.instructionReview}
+        readOnly={Boolean(document?.pauseReason)}
+        orderType={document?.queueType === "treatment" ? "처치" : "조제"}
+        orderChanges={document
+          ? getOrderRerequestChanges(document, controller.instructionReview.reviews)
+          : undefined} />}
+      {!controller.instructionReview && document?.oralInstruction && <OralInstructionInfobar key={document.oralInstruction.chartId} instruction={document.oralInstruction} />}
       {view ? (
         <InstructionDocumentTable
           {...view}
+          focusedItemId={focusedItemId}
           refresh={controller.refresh}
-          editSetInstruction={document?.canEditInstruction ? () => setInstructionDraft(document.instruction) : undefined}
+          editSetInstruction={document?.canEditInstruction && !document.finalized && !readOnly
+            ? () => setEditInstruction(document.revision) : undefined}
           openExecutionHistory={() => setExecutionHistory(true)}
           busy={controller.busy || controller.loading}
           names={{
@@ -280,33 +416,20 @@ export function InstructionBody({
             ),
           }}
           eligibleAssignees={controller.assignees.map((item) => item.userId)}
-          history={(_orderId, itemId) => setHistoryItem(itemId ?? null)}
+          history={setHistoryItemIds}
           notify={setNotice}
           act={async (_orderId, action, extra) => {
-            if (!extra?.itemId) return;
-            const item = document?.items.find(
-              (item) => item.id === extra.itemId,
-            );
-            if (action === "toggle_complete" && item?.status !== "completed") {
-              setConfirmItem(extra.itemId);
+            if (!extra?.itemId || !document || document.finalized || readOnly || controller.busy || controller.loading) return;
+            const item = document.items.find(item => item.id === extra.itemId);
+            if (action === "complete") {
+              if (item?.canComplete && item.status !== "completed") setCompletion({ itemId: item.id, revision: document.revision });
               return;
             }
-            const intent =
-              action === "toggle_complete"
-                ? { action: "reopen" as const, itemId: extra.itemId }
-                : {
-                    action: "assign" as const,
-                    itemId: extra.itemId,
-                    assigneeId: extra.assignees?.[0] ?? "",
-                  };
-            if (await controller.mutate(intent)) onChanged();
+            const assigneeId = extra.assignees?.[0];
+            if (item?.canAssign && assigneeId && await controller.mutate({ action: "assign", itemId: item.id, assigneeId })) onChanged();
           }}
         />
       ) : null}
-      {document && document.items.some(item => ["in_progress", "paused", "completed"].includes(item.status)) && <div className="flex flex-wrap gap-2 px-4 py-3">
-        {document.items.filter(item => ["in_progress", "paused", "completed"].includes(item.status)).map(item => <Button key={item.id} size="sm" variant="outline" onClick={() => setPartialTask({ taskId: item.taskId, name: item.name })}>{document.isSet ? `${item.name} · ` : ""}부분 수행 기록</Button>)}
-      </div>}
-      {partialTask && <PartialOrderWorkDialog key={partialTask.taskId} workspaceId={workspaceId} {...partialTask} onClose={() => setPartialTask(null)} onSaved={() => { controller.refresh(); onChanged(); }} />}
       {document && !document.items.length ? (
         <p className="p-6 text-sm text-muted-foreground">
           표시할 오더가 없어요.
@@ -322,13 +445,13 @@ export function InstructionBody({
         workspaceId={workspaceId}
         onChanged={onChanged}
         itemId={confirmItem ?? undefined}
-        open={confirmItem !== null}
-        onClose={() => setConfirmItem(null)}
+        open={confirmItem !== null && !readOnly}
+        onClose={() => setCompletion(null)}
       />
       <Dialog
-        open={historyItem !== undefined}
+        open={historyItemIds !== undefined}
         onOpenChange={(open) => {
-          if (!open) setHistoryItem(undefined);
+          if (!open) setHistoryItemIds(undefined);
         }}
       >
         <EmrDialogShell
@@ -337,88 +460,138 @@ export function InstructionBody({
           description={document?.name}
         >
           <ol className="space-y-5">
-            {document?.changes
-              .filter(
-                (change) =>
-                  !historyItem ||
-                  change.orderId ===
-                    document.items.find((item) => item.id === historyItem)
-                      ?.orderId,
-              )
-              .map((change) => {
-                const event = view?.events.find(
-                  (event) => event.id === change.id,
-                );
-                return (
-                  <li key={change.id} className="border-l-2 pl-4 text-sm">
-                    <p>
-                      {change.actorName ?? "작성자 정보 없음"} ·{" "}
-                      {new Date(change.createdAt).toLocaleString("ko-KR", {
-                        timeZone: "Asia/Seoul",
-                      })}
-                    </p>
-                    {event?.changes.map((field) => (
-                      <p
-                        key={`${field.itemId}:${field.field}`}
-                        className="mt-1 whitespace-pre-wrap text-muted-foreground"
-                      >
-                        {(
-                          {
-                            dose: "1회량",
-                            doseUnit: "단위",
-                            frequency: "횟수",
-                            days: "일수",
-                            total: "총량",
-                            totalUnit: "총량 단위",
-                            route: "경로",
-                            medicationGuide: "복약",
-                            storage: "보관",
-                            note: "지시",
-                            instruction: "공통 지시",
-                          } as Record<string, string>
-                        )[field.field] ?? field.field}
-                        : {field.before || "없음"} → {field.after || "없음"}
-                      </p>
-                    ))}
-                  </li>
-                );
-              })}
+            {historyEvents.map(event => (
+              <li key={event.id} className="border-l-2 pl-4 text-sm">
+                <p>
+                  {view?.names[event.actor] ?? "작성자 정보 없음"} ·{" "}
+                  {new Date(event.at).toLocaleString("ko-KR", {
+                    timeZone: "Asia/Seoul",
+                  })}
+                </p>
+                {event.changes.map((field) => (
+                  <p
+                    key={`${field.itemId}:${field.field}`}
+                    className="mt-1 whitespace-pre-wrap text-muted-foreground"
+                  >
+                    {(
+                      {
+                        dose: "1회량",
+                        doseUnit: "단위",
+                        frequency: "횟수",
+                        days: "일수",
+                        total: document?.queueType === "dispensing" ? "요청 조제량" : "총량",
+                        totalUnit: document?.queueType === "dispensing" ? "요청 조제량 단위" : "총량 단위",
+                        route: "경로",
+                        medicationGuide: "복약",
+                        storage: "보관",
+                        note: "지시",
+                        instruction: "공통 지시",
+                      } as Record<string, string>
+                    )[field.field] ?? field.field}
+                    : {field.before || "없음"} → {field.after || "없음"}
+                  </p>
+                ))}
+              </li>
+            ))}
           </ol>
-          {!document?.changes.length ? (
+          {!historyEvents.length ? (
             <p className="text-sm text-muted-foreground">수정 이력이 없어요.</p>
           ) : null}
         </EmrDialogShell>
       </Dialog>
-      <Dialog open={executionHistory && !resultItem} onOpenChange={setExecutionHistory}>
-        <EmrDialogShell title="수행기록" description={document?.name}>
-          <ul className="space-y-2">
-            {document?.items.filter((item) => item.hasResult).map((item) => <li key={item.id}>
-              <Button variant="ghost" disabled={controller.loading || controller.busy} onClick={() => setResultItem(item.id)}>{item.name}</Button>
-            </li>)}
-          </ul>
-        </EmrDialogShell>
-      </Dialog>
-      {resultItem ? (
-        <ExecutionResultDialog
-          workspaceId={workspaceId}
-          workItemId={resultItem}
-          open
-          ownershipAllowed={!(controller.loading || controller.busy) && (
-            document?.items.find((item) => item.id === resultItem)
-              ?.canComplete ||
-            document?.items.find((item) => item.id === resultItem)?.canReopen)
-          }
-          ownershipKey={document?.revision}
-          authorityStatus={document?.items.find((item) => item.id === resultItem)?.status}
-          onOpenChange={(open) => {
-            if (!open) setResultItem(null);
-          }}
-          onSaved={async () => {
-            controller.refresh();
-            onChanged();
-          }}
-        />
-      ) : null}
+      {executionHistory && (
+        <InstructionRecords controller={controller} workspaceId={workspaceId} onChanged={onChanged}
+          mode="history" onClose={() => setExecutionHistory(false)} />
+      )}
+      {document && !readOnly && editInstruction === document.revision && (
+        <InstructionEdit controller={controller} workspaceId={workspaceId} onChanged={onChanged}
+          onClose={() => setEditInstruction(null)} />
+      )}
     </div>
   );
+}
+
+function InstructionEdit({ controller, onChanged, onClose, completed = false }: Props & { onClose: () => void; completed?: boolean }) {
+  const document = controller.document!;
+  const [draft, setDraft] = useState(document.instruction);
+  const [revision] = useState(document.revision);
+  const busy = controller.busy || controller.loading;
+  const stale = revision !== document.revision || document.finalized !== completed;
+  return <Dialog open onOpenChange={open => { if (!open && !busy) onClose(); }}>
+    <EmrDialogShell
+      title={document.isSet ? "세트 공통 지시 수정" : "오더 지시 수정"}
+      description="완료 상태는 유지됩니다."
+      secondaryAction={<Button variant="outline" disabled={busy} onClick={onClose}>취소</Button>}
+      primaryAction={<Button disabled={busy || stale || !document.canEditInstruction || draft === document.instruction} onClick={async () => {
+        if (await controller.mutate({ action: "edit_instruction", instruction: draft })) {
+          onClose();
+          onChanged();
+        }
+      }}>{controller.busy ? "저장 중" : "저장"}</Button>}>
+      <Textarea aria-label="공통 지시" maxLength={5000} value={draft} disabled={busy || stale} onChange={event => setDraft(event.target.value)} />
+      {(stale || controller.error) && <p role="alert" className="mt-2 text-sm text-destructive">
+        {stale ? "지시서가 변경됐어요. 창을 닫고 최신 내용을 확인해 주세요." : controller.error}
+      </p>}
+    </EmrDialogShell>
+  </Dialog>;
+}
+
+function InstructionRecords({ controller, workspaceId, onChanged, onClose, mode }: Props & { onClose: () => void; mode: "history" | "amend" }) {
+  const [itemId, setItemId] = useState<string | null>(null);
+  const document = controller.document;
+  const items = document?.items.filter(item => item.hasResult && (mode === "history" || (item.status === "completed" && item.canReopen))) ?? [];
+  const item = items.find(item => item.id === itemId);
+  const busy = controller.loading || controller.busy;
+  return item ? <ExecutionResultDialog
+    workspaceId={workspaceId}
+    workItemId={item.id}
+    open
+    ownershipAllowed={!busy && !document?.pauseReason && (mode === "amend" ? !!document?.finalized : !document?.finalized && (item.canComplete || item.canReopen))}
+    ownershipKey={document?.revision}
+    authorityStatus={item.status}
+    onOpenChange={open => { if (!open) setItemId(null); }}
+    onSaved={async () => { controller.refresh(); onChanged(); }}
+  /> : <Dialog open onOpenChange={open => { if (!open) onClose(); }}>
+    <EmrDialogShell title={mode === "amend" ? "수행기록 정정" : "수행기록"} description={document?.name}>
+      <ul className="space-y-2">
+        {items.map(item => <li key={item.id}>
+          <Button variant="ghost" disabled={busy} onClick={() => setItemId(item.id)}>{item.name}</Button>
+        </li>)}
+      </ul>
+    </EmrDialogShell>
+  </Dialog>;
+}
+
+type InstructionDocumentOutputMenuProps = Props & {
+  onOpenChart?: () => void;
+  onCopyLink: () => void;
+};
+
+export function InstructionDocumentOutputMenu(props: InstructionDocumentOutputMenuProps) {
+  const document = props.controller.document;
+  return <InstructionDocumentOutputActions key={`${props.workspaceId}:${document?.rootTaskId}:${document?.queueType}:${document?.finalized}`} {...props} />;
+}
+
+function InstructionDocumentOutputActions(props: InstructionDocumentOutputMenuProps) {
+  const [action, setAction] = useState<"amend" | "edit" | null>(null);
+  const { document, busy, loading } = props.controller;
+  const canEdit = document?.finalized && document.canEditInstruction;
+  const canAmend = document?.finalized && document.items.some(item => item.status === "completed" && item.canReopen && item.hasResult);
+  return <>
+    <EmrInstructionOutputMenu>
+      <DropdownMenuItem disabled={!props.onOpenChart} onClick={props.onOpenChart}>
+        <CdsFilesFileTextIcon aria-hidden="true" />
+        오더 차트로 이동
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={props.onCopyLink}>
+        <CdsContentLink2Icon aria-hidden="true" />
+        지시서 링크 복사
+      </DropdownMenuItem>
+      {(canEdit || canAmend) && <DropdownMenuSeparator />}
+      {canEdit && <DropdownMenuItem disabled={busy || loading} onClick={() => setAction("edit")}>{document.isSet ? "세트 공통 지시 수정" : "오더 지시 수정"}</DropdownMenuItem>}
+      {canAmend && <DropdownMenuItem disabled={busy || loading} onClick={() => setAction("amend")}>수행기록 정정</DropdownMenuItem>}
+    </EmrInstructionOutputMenu>
+    {document?.finalized && action === "edit" && <InstructionEdit {...props} completed onClose={() => setAction(null)} />}
+    {document?.finalized && action === "amend" && <InstructionRecords {...props} mode="amend" onClose={() => setAction(null)} />}
+  </>;
 }

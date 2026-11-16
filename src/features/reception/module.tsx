@@ -1,7 +1,11 @@
 "use client";
 
+import { ReceptionPatientCombobox } from "./reception-patient-combobox";
+
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+
 import { getReceptionPatientOptionLabel, getSpeciesLabel, mapLookupItemToReceptionPatientSummary } from "./reception-patient-lookup-model";
-import { useReceptionPatientLookup, receptionPatientLookupDebounceMs, type ReceptionPatientLookupState } from "./use-reception-patient-lookup";
+import { useReceptionPatientLookup, receptionPatientLookupDebounceMs } from "./use-reception-patient-lookup";
 
 import { OrderQueueSortMenu, OrderQueueFilterMenu, type OrderQueueSortKey, type OrderQueueDetailFilter } from "@/components/emr/order-queue-side-panel";
 import { useModuleSidePanel, useModuleSidePanelPathname, useModuleSidePanelRouter, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
@@ -338,43 +342,6 @@ const allReceptionStaff: ReceptionStaffMember[] = mockStaffUsers
   .filter((staff) => staff.roles.length > 0);
 const defaultVeterinarian = allVeterinarians[0];
 type ReceptionDrawerPresentation = "drawer" | "side-panel";
-
-const receptionPatientLookupDecorationClassName =
-  "absolute right-[var(--clair-spacing-8)] top-1/2 flex size-[var(--clair-spacing-24)] -translate-y-1/2 items-center justify-center p-0.5";
-
-function ReceptionPatientLookupDecoration({
-  hasQuery,
-  onClear,
-}: {
-  hasQuery: boolean;
-  onClear: () => void;
-}) {
-  if (hasQuery) {
-    return (
-      <button
-        type="button"
-        className={`${receptionPatientLookupDecorationClassName} rounded-full text-muted-foreground outline-none transition-colors hover:text-[var(--emr-text-secondary)] focus-visible:ring-3 focus-visible:ring-ring/50`}
-        aria-label="환자 선택 초기화"
-        data-state="clear"
-        data-testid="reception-patient-lookup-decoration"
-        onClick={onClear}
-      >
-        <CdsActionsXIcon className="size-4" aria-hidden="true" />
-      </button>
-    );
-  }
-
-  return (
-    <span
-      className={`${receptionPatientLookupDecorationClassName} pointer-events-none text-[var(--clair-color-atomic-neutral-500)]`}
-      aria-hidden="true"
-      data-state="search"
-      data-testid="reception-patient-lookup-decoration"
-    >
-      <CdsActionsSearchIcon className="size-4" aria-hidden="true" />
-    </span>
-  );
-}
 
 const receptionRightPanelDrawerTypes = new Set([
   "reception-appointment",
@@ -897,36 +864,6 @@ const defaultWalkInDepartment = "영상의학과 · 방사선종양학과";
 const receptionDurationOptions = [15, 30, 45, 60, 90, 120, 180, 240].map(
   (minutes) => `${minutes}분`,
 );
-function ReceptionPatientLookupStateMessage({
-  lookupActive,
-  lookupState,
-  resultCount,
-}: {
-  lookupActive: boolean;
-  lookupState: ReceptionPatientLookupState;
-  resultCount: number;
-}) {
-  if (!lookupActive) return null;
-
-  const message =
-    lookupState === "loading"
-      ? "DB 환자 검색 중입니다."
-      : lookupState === "error"
-        ? "환자 검색을 불러오지 못했습니다."
-        : resultCount === 0
-          ? "검색 결과가 없습니다."
-          : undefined;
-
-  if (!message) return null;
-
-  return (
-    <div className="px-3 py-2 text-sm text-[var(--emr-text-secondary)]">
-      {message}
-    </div>
-  );
-}
-
-
 async function submitWalkInEncounter({
   actorRole,
   input,
@@ -4250,7 +4187,12 @@ function getReceptionMonthDatePickerCells(
   const firstCellDate = new Date(monthStart);
   firstCellDate.setUTCDate(1 - monthStart.getUTCDay());
 
-  return Array.from({ length: 35 }, (_, index) => {
+  // Preserve five rows unless the month's final dates need a sixth week.
+  const cellCount = Math.max(
+    35,
+    Math.ceil((monthStart.getUTCDay() + getDaysInMonth(parts.year, parts.month)) / 7) * 7,
+  );
+  return Array.from({ length: cellCount }, (_, index) => {
     const cellDate = new Date(firstCellDate);
     cellDate.setUTCDate(firstCellDate.getUTCDate() + index);
     const key = getIsoDateFromUtcDate(cellDate);
@@ -6387,6 +6329,9 @@ export function ReceptionContent() {
         : veterinarians.length === 0
           ? "empty"
           : "ready";
+  const pageReadScope = `${workspaceId}:${authSession?.id}:${operatingDate}`;
+  const [completedPageReadScope, setCompletedPageReadScope] = useState<string | null>(null);
+  usePageReadiness(calendarResourceState === "loading" || completedPageReadScope !== pageReadScope, pageReadScope);
   const visibleAppointments = useMemo(
     () =>
       appointments.filter(
@@ -6756,34 +6701,24 @@ export function ReceptionContent() {
     let cancelled = false;
 
     async function refresh() {
-      await refreshReceptionReads({ showLoading: true });
+      const result = await refreshReceptionReads({ showLoading: true });
+      if (!cancelled && !result.stale) setCompletedPageReadScope(pageReadScope);
     }
 
-    void refresh().then(() => {
-      if (cancelled) return;
-    });
+    void refresh();
 
     return () => {
       cancelled = true;
     };
-  }, [readRetryNonce, refreshReceptionReads]);
+  }, [readRetryNonce, refreshReceptionReads, pageReadScope]);
 
   useEffect(() => {
     if (!liveStaffSourceEnabled) return;
 
-    const refresh = () => {
-      if (document.visibilityState !== "visible") return;
-      void refreshReceptionReads();
-    };
-    window.addEventListener("focus", refresh);
-    document.addEventListener("visibilitychange", refresh);
-    const intervalId = window.setInterval(refresh, 60_000);
-
-    return () => {
-      window.removeEventListener("focus", refresh);
-      document.removeEventListener("visibilitychange", refresh);
-      window.clearInterval(intervalId);
-    };
+    return subscribeVisibleRefresh({
+      intervalMs: 60_000,
+      onRefresh: () => { void refreshReceptionReads(); },
+    });
   }, [liveStaffSourceEnabled, refreshReceptionReads]);
 
   return (
@@ -7102,9 +7037,6 @@ function ReceptionWalkInFormDrawer({
   const patientOptionText = selectedSummary
     ? getReceptionPatientOptionLabel(selectedSummary)
     : "";
-  const lookupMatchesSelectedPatient =
-    Boolean(selectedSummary) && lookupQuery === patientOptionText;
-  const shouldShowPatientLookup = patientLookupOpen && lookupActive;
   const trimmedVisitPurpose = visitPurpose.trim();
   const vitalBuild = useMemo(
     () => buildReceptionVitalInput(vitalDraft, vitalSettings, patient),
@@ -7464,100 +7396,33 @@ function ReceptionWalkInFormDrawer({
                 required
                 variant="create"
               >
-                <div
-                  className="relative"
-                  onBlur={(event) => {
-                    if (!event.currentTarget.contains(event.relatedTarget)) {
-                      setPatientLookupOpen(false);
-                    }
-                  }}
-                >
-                  <Input
-                    aria-label="환자 검색"
-                    aria-required="true"
-                    autoComplete="off"
-                    className="bg-[var(--emr-reception-create-field-bg)] pr-[var(--clair-spacing-32)] font-medium"
-                    placeholder="환자를 선택해주세요"
-                    value={lookupQuery}
-                    onFocus={() => setPatientLookupOpen(true)}
-                    onValueChange={(value) => {
-                      setDirty(true);
-                      setLookupQuery(value);
-                      if (
-                        selectedLookupSummary &&
-                        value !==
-                          getReceptionPatientOptionLabel(
-                            selectedLookupSummary,
-                          )
-                      ) {
-                        setPatientId("");
-                        setSelectedLookupSummary(null);
-                      }
-                      setPatientLookupOpen(true);
-                    }}
-                  />
-                  <ReceptionPatientLookupDecoration
-                    hasQuery={Boolean(lookupQuery)}
-                    onClear={() => {
-                      setDirty(true);
-                      setLookupQuery("");
+                <ReceptionPatientCombobox
+                  inputClassName="bg-[var(--emr-reception-create-field-bg)] font-medium"
+                  open={patientLookupOpen}
+                  onOpenChange={setPatientLookupOpen}
+                  lookupState={lookupState}
+                  query={lookupQuery}
+                  selectedSummary={selectedSummary}
+                  summaries={selectablePatientSummaries}
+                  onQueryChange={(value) => {
+                    setDirty(true);
+                    setLookupQuery(value);
+                    if (selectedLookupSummary && value !== getReceptionPatientOptionLabel(selectedLookupSummary)) {
                       setPatientId("");
                       setSelectedLookupSummary(null);
-                      setVitalDraft(createReceptionVitalDraft(undefined, vitalSettings));
-                      setPatientLookupOpen(true);
-                    }}
-                  />
-                  {shouldShowPatientLookup ? (
-                    <div
-                      role="listbox"
-                      aria-label="검색 결과"
-                      className="absolute left-0 right-0 top-[calc(100%+4px)] z-[80] grid max-h-72 gap-1 overflow-y-auto rounded-lg bg-popover p-1.5 text-popover-foreground shadow-md ring-1 ring-foreground/10"
-                    >
-                      {lookupState === "loading" ? (
-                        <div className="px-2.5 py-2 emr-text-dense text-muted-foreground">
-                          DB 환자 검색 중입니다.
-                        </div>
-                      ) : null}
-                      {lookupState === "error" ? (
-                        <div className="px-2.5 py-2 emr-text-dense text-[var(--emr-status-danger-text)]">
-                          환자 검색을 불러오지 못했습니다.
-                        </div>
-                      ) : null}
-                      {lookupState === "idle" &&
-                      !lookupMatchesSelectedPatient &&
-                      selectablePatientSummaries.length === 0 ? (
-                        <div className="px-2.5 py-2 emr-text-dense text-muted-foreground">
-                          검색 결과가 없습니다.
-                        </div>
-                      ) : null}
-                      {selectablePatientSummaries.map((summary) => {
-                        const selected = summary.patient.id === patientId;
-                        const optionLabel =
-                          getReceptionPatientOptionLabel(summary);
-
-                        return (
-                          <button
-                            key={summary.patient.id}
-                            type="button"
-                            role="option"
-                            aria-selected={selected}
-                            className="grid gap-0.5 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-[var(--emr-state-hover)] aria-selected:bg-[var(--emr-state-selected)]"
-                            onMouseDown={(event) => event.preventDefault()}
-                            onClick={() => selectPatientSummary(summary)}
-                          >
-                            <span className="truncate emr-text-dense font-semibold text-foreground">
-                              {optionLabel}
-                            </span>
-                            <span className="truncate emr-text-metadata text-muted-foreground">
-                              {summary.primaryGuardian?.mobilePhone ??
-                                "보호자 연락처 미등록"}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : null}
-                </div>
+                    }
+                    setPatientLookupOpen(true);
+                  }}
+                  onClear={() => {
+                    setDirty(true);
+                    setLookupQuery("");
+                    setPatientId("");
+                    setSelectedLookupSummary(null);
+                    setVitalDraft(createReceptionVitalDraft(undefined, vitalSettings));
+                    setPatientLookupOpen(true);
+                  }}
+                  onSelect={selectPatientSummary}
+                />
               </ReceptionSidePanelField>
 
               <ReceptionSidePanelField
@@ -7859,100 +7724,33 @@ function ReceptionWalkInFormDrawer({
           <RegistrationFormSection separated={false} title="환자 정보">
             <div className="grid gap-3">
               <RegistrationFormField label="환자명" required>
-                <div
-                  className="relative"
-                  onBlur={(event) => {
-                    if (!event.currentTarget.contains(event.relatedTarget)) {
-                      setPatientLookupOpen(false);
-                    }
-                  }}
-                >
-                  <Input
-                    aria-label="환자 검색"
-                    aria-required="true"
-                    autoComplete="off"
-                    className="h-9 bg-card pr-[var(--clair-spacing-32)]"
-                    placeholder="환자를 선택해주세요"
-                    value={lookupQuery}
-                    onFocus={() => setPatientLookupOpen(true)}
-                    onValueChange={(value) => {
-                      setDirty(true);
-                      setLookupQuery(value);
-                      if (
-                        selectedLookupSummary &&
-                        value !==
-                          getReceptionPatientOptionLabel(
-                            selectedLookupSummary,
-                          )
-                      ) {
-                        setPatientId("");
-                        setSelectedLookupSummary(null);
-                      }
-                      setPatientLookupOpen(true);
-                    }}
-                  />
-                  <ReceptionPatientLookupDecoration
-                    hasQuery={Boolean(lookupQuery)}
-                    onClear={() => {
-                      setDirty(true);
-                      setLookupQuery("");
+                <ReceptionPatientCombobox
+                  inputClassName="h-9 bg-card"
+                  open={patientLookupOpen}
+                  onOpenChange={setPatientLookupOpen}
+                  lookupState={lookupState}
+                  query={lookupQuery}
+                  selectedSummary={selectedSummary}
+                  summaries={selectablePatientSummaries}
+                  onQueryChange={(value) => {
+                    setDirty(true);
+                    setLookupQuery(value);
+                    if (selectedLookupSummary && value !== getReceptionPatientOptionLabel(selectedLookupSummary)) {
                       setPatientId("");
                       setSelectedLookupSummary(null);
-                      setVitalDraft(createReceptionVitalDraft(undefined, vitalSettings));
-                      setPatientLookupOpen(true);
-                    }}
-                  />
-                  {shouldShowPatientLookup ? (
-                    <div
-                      role="listbox"
-                      aria-label="검색 결과"
-                      className="absolute left-0 right-0 top-[calc(100%+4px)] z-[80] grid max-h-72 gap-1 overflow-y-auto rounded-lg bg-popover p-1.5 text-popover-foreground shadow-md ring-1 ring-foreground/10"
-                    >
-                      {lookupState === "loading" ? (
-                        <div className="px-2.5 py-2 emr-text-dense text-muted-foreground">
-                          DB 환자 검색 중입니다.
-                        </div>
-                      ) : null}
-                      {lookupState === "error" ? (
-                        <div className="px-2.5 py-2 emr-text-dense text-[var(--emr-status-danger-text)]">
-                          환자 검색을 불러오지 못했습니다.
-                        </div>
-                      ) : null}
-                      {lookupState === "idle" &&
-                      !lookupMatchesSelectedPatient &&
-                      selectablePatientSummaries.length === 0 ? (
-                        <div className="px-2.5 py-2 emr-text-dense text-muted-foreground">
-                          검색 결과가 없습니다.
-                        </div>
-                      ) : null}
-                      {selectablePatientSummaries.map((summary) => {
-                        const selected = summary.patient.id === patientId;
-                        const optionLabel =
-                          getReceptionPatientOptionLabel(summary);
-
-                        return (
-                          <button
-                            key={summary.patient.id}
-                            type="button"
-                            role="option"
-                            aria-selected={selected}
-                            className="grid gap-0.5 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-[var(--emr-state-hover)] aria-selected:bg-[var(--emr-state-selected)]"
-                            onMouseDown={(event) => event.preventDefault()}
-                            onClick={() => selectPatientSummary(summary)}
-                          >
-                            <span className="truncate emr-text-dense font-semibold text-foreground">
-                              {optionLabel}
-                            </span>
-                            <span className="truncate emr-text-metadata text-muted-foreground">
-                              {summary.primaryGuardian?.mobilePhone ??
-                                "보호자 연락처 미등록"}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : null}
-                </div>
+                    }
+                    setPatientLookupOpen(true);
+                  }}
+                  onClear={() => {
+                    setDirty(true);
+                    setLookupQuery("");
+                    setPatientId("");
+                    setSelectedLookupSummary(null);
+                    setVitalDraft(createReceptionVitalDraft(undefined, vitalSettings));
+                    setPatientLookupOpen(true);
+                  }}
+                  onSelect={selectPatientSummary}
+                />
               </RegistrationFormField>
 
             </div>
@@ -8317,8 +8115,6 @@ function ReceptionReservationFormDrawer({
     !selectedTimeOption?.disabled &&
     !closedDay &&
     date >= todayDate;
-  const shouldShowPatientLookup =
-    patientLookupOpen && patientLookup.lookupActive;
   useEffect(() => {
     onDirtyChange?.(dirty);
   }, [dirty, onDirtyChange]);
@@ -8503,84 +8299,30 @@ function ReceptionReservationFormDrawer({
                 required
                 variant="create"
               >
-                <div
-                  className="relative"
-                  onBlur={(event) => {
-                    if (!event.currentTarget.contains(event.relatedTarget)) {
-                      setPatientLookupOpen(false);
-                    }
+                <ReceptionPatientCombobox
+                  inputClassName="bg-[var(--emr-reception-create-field-bg)] font-medium"
+                  open={patientLookupOpen}
+                  onOpenChange={setPatientLookupOpen}
+                  lookupState={patientLookup.lookupState}
+                  query={patientLookup.lookupQuery}
+                  selectedSummary={patientLookup.selectedSummary}
+                  summaries={patientLookup.selectablePatientSummaries}
+                  onQueryChange={(value) => {
+                    setDirty(true);
+                    patientLookup.updateLookupQuery(value);
+                    setPatientLookupOpen(true);
                   }}
-                >
-                  <Input
-                    aria-label="환자 검색"
-                    aria-required="true"
-                    autoComplete="off"
-                    className="bg-[var(--emr-reception-create-field-bg)] pr-[var(--clair-spacing-32)] font-medium"
-                    placeholder="환자를 선택해주세요"
-                    value={patientLookup.lookupQuery}
-                    onFocus={() => setPatientLookupOpen(true)}
-                    onValueChange={(value) => {
-                      setDirty(true);
-                      patientLookup.updateLookupQuery(value);
-                      setPatientLookupOpen(true);
-                    }}
-                  />
-                  <ReceptionPatientLookupDecoration
-                    hasQuery={Boolean(patientLookup.lookupQuery)}
-                    onClear={() => {
-                      setDirty(true);
-                      patientLookup.clearPatientSelection();
-                      setPatientLookupOpen(true);
-                    }}
-                  />
-                  {shouldShowPatientLookup ? (
-                    <div
-                      role="listbox"
-                      aria-label="검색 결과"
-                      className="absolute left-0 right-0 top-[calc(100%+4px)] z-[80] grid max-h-72 gap-1 overflow-y-auto rounded-lg bg-popover p-1.5 text-popover-foreground shadow-md ring-1 ring-foreground/10"
-                    >
-                      <ReceptionPatientLookupStateMessage
-                        lookupActive={patientLookup.lookupActive}
-                        lookupState={patientLookup.lookupState}
-                        resultCount={
-                          patientLookup.selectablePatientSummaries.length
-                        }
-                      />
-                      {patientLookup.selectablePatientSummaries.map(
-                        (summary) => {
-                          const selected =
-                            summary.patient.id === patientLookup.patientId;
-                          const optionLabel =
-                            getReceptionPatientOptionLabel(summary);
-
-                          return (
-                            <button
-                              key={summary.patient.id}
-                              type="button"
-                              role="option"
-                              aria-selected={selected}
-                              className="grid gap-0.5 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-[var(--emr-state-hover)] aria-selected:bg-[var(--emr-state-selected)]"
-                              onMouseDown={(event) => event.preventDefault()}
-                              onClick={() => {
-                                setDirty(true);
-                                patientLookup.selectPatientSummary(summary);
-                                setPatientLookupOpen(false);
-                              }}
-                            >
-                              <span className="truncate emr-text-dense font-semibold text-foreground">
-                                {optionLabel}
-                              </span>
-                              <span className="truncate emr-text-metadata text-muted-foreground">
-                                {summary.primaryGuardian?.mobilePhone ??
-                                  "보호자 연락처 미등록"}
-                              </span>
-                            </button>
-                          );
-                        },
-                      )}
-                    </div>
-                  ) : null}
-                </div>
+                  onClear={() => {
+                    setDirty(true);
+                    patientLookup.clearPatientSelection();
+                    setPatientLookupOpen(true);
+                  }}
+                  onSelect={(summary) => {
+                    setDirty(true);
+                    patientLookup.selectPatientSummary(summary);
+                    setPatientLookupOpen(false);
+                  }}
+                />
               </ReceptionSidePanelField>
 
               <ReceptionSidePanelField
@@ -8856,84 +8598,30 @@ function ReceptionReservationFormDrawer({
           <RegistrationFormSection separated={false} title="환자 정보">
             <div className="grid gap-3">
               <RegistrationFormField label="환자명" required>
-                <div
-                  className="relative"
-                  onBlur={(event) => {
-                    if (!event.currentTarget.contains(event.relatedTarget)) {
-                      setPatientLookupOpen(false);
-                    }
+                <ReceptionPatientCombobox
+                  inputClassName="h-9 bg-card"
+                  open={patientLookupOpen}
+                  onOpenChange={setPatientLookupOpen}
+                  lookupState={patientLookup.lookupState}
+                  query={patientLookup.lookupQuery}
+                  selectedSummary={patientLookup.selectedSummary}
+                  summaries={patientLookup.selectablePatientSummaries}
+                  onQueryChange={(value) => {
+                    setDirty(true);
+                    patientLookup.updateLookupQuery(value);
+                    setPatientLookupOpen(true);
                   }}
-                >
-                  <Input
-                    aria-label="환자 검색"
-                    aria-required="true"
-                    autoComplete="off"
-                    className="h-9 bg-card pr-[var(--clair-spacing-32)]"
-                    placeholder="환자를 선택해주세요"
-                    value={patientLookup.lookupQuery}
-                    onFocus={() => setPatientLookupOpen(true)}
-                    onValueChange={(value) => {
-                      setDirty(true);
-                      patientLookup.updateLookupQuery(value);
-                      setPatientLookupOpen(true);
-                    }}
-                  />
-                  <ReceptionPatientLookupDecoration
-                    hasQuery={Boolean(patientLookup.lookupQuery)}
-                    onClear={() => {
-                      setDirty(true);
-                      patientLookup.clearPatientSelection();
-                      setPatientLookupOpen(true);
-                    }}
-                  />
-                  {shouldShowPatientLookup ? (
-                    <div
-                      role="listbox"
-                      aria-label="검색 결과"
-                      className="absolute left-0 right-0 top-[calc(100%+4px)] z-[80] grid max-h-72 gap-1 overflow-y-auto rounded-lg bg-popover p-1.5 text-popover-foreground shadow-md ring-1 ring-foreground/10"
-                    >
-                      <ReceptionPatientLookupStateMessage
-                        lookupActive={patientLookup.lookupActive}
-                        lookupState={patientLookup.lookupState}
-                        resultCount={
-                          patientLookup.selectablePatientSummaries.length
-                        }
-                      />
-                      {patientLookup.selectablePatientSummaries.map(
-                        (summary) => {
-                          const selected =
-                            summary.patient.id === patientLookup.patientId;
-                          const optionLabel =
-                            getReceptionPatientOptionLabel(summary);
-
-                          return (
-                            <button
-                              key={summary.patient.id}
-                              type="button"
-                              role="option"
-                              aria-selected={selected}
-                              className="grid gap-0.5 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-[var(--emr-state-hover)] aria-selected:bg-[var(--emr-state-selected)]"
-                              onMouseDown={(event) => event.preventDefault()}
-                              onClick={() => {
-                                setDirty(true);
-                                patientLookup.selectPatientSummary(summary);
-                                setPatientLookupOpen(false);
-                              }}
-                            >
-                              <span className="truncate emr-text-dense font-semibold text-foreground">
-                                {optionLabel}
-                              </span>
-                              <span className="truncate emr-text-metadata text-muted-foreground">
-                                {summary.primaryGuardian?.mobilePhone ??
-                                  "보호자 연락처 미등록"}
-                              </span>
-                            </button>
-                          );
-                        },
-                      )}
-                    </div>
-                  ) : null}
-                </div>
+                  onClear={() => {
+                    setDirty(true);
+                    patientLookup.clearPatientSelection();
+                    setPatientLookupOpen(true);
+                  }}
+                  onSelect={(summary) => {
+                    setDirty(true);
+                    patientLookup.selectPatientSummary(summary);
+                    setPatientLookupOpen(false);
+                  }}
+                />
               </RegistrationFormField>
             </div>
           </RegistrationFormSection>

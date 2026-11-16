@@ -9,6 +9,11 @@ records the exact release candidate, remote migration and Preview/Production
 evidence for this authorized task. Scope and verification limits remain in
 [CLINICAL-FULFILLMENT-PR-010](../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#prework-context-and-assignment--2026-11-02-local-implementation).
 
+The 2026-11-07 local 조제/처치 candidate starts waiting work on 담당하기.
+It persists assignment and start together and retains takeover reasons and
+requester notifications. Local evidence is recorded in
+[CLINICAL-FULFILLMENT-PR-010](../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#start-waiting-dispensing-and-treatment-work-on-assignment--2026-11-07).
+
 Updated: 2026-11-02
 
 Lab result sheet phase 2 and attachment fixes were merged in PRs #848, #851,

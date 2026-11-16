@@ -104,13 +104,19 @@ async function frames() {
   );
 }
 export const NewNotification: Story = {
-  parameters: { docs: { description: { story: "일반 알림을 추가하고 닫은 뒤 알림함 기록이 남는지 확인합니다." } } },
+  parameters: { docs: { description: { story: "일반 알림이 화면 우측 하단에 표시되고 닫은 뒤 알림함 기록이 남는지 확인합니다." } } },
   play: async ({ canvas }) => {
     await frames();
     await userEvent.click(
       canvas.getByRole("button", { name: "일반 알림 생성" }),
     );
-    await expect(await canvas.findByText("예시 일반 알림")).toBeVisible();
+    const card = await canvas.findByRole("status");
+    await expect(card).toHaveTextContent("예시 일반 알림");
+    await expect(card).toBeVisible();
+    await expect(card).toHaveStyle({ borderRadius: "12px" });
+    const bounds = card.getBoundingClientRect();
+    await expect(window.innerWidth - bounds.right).toBeCloseTo(16);
+    await expect(window.innerHeight - bounds.bottom).toBeCloseTo(16);
     await waitFor(() =>
       expect(
         Number.parseInt(

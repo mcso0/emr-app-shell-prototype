@@ -17,7 +17,7 @@ export type PatientQueueRow = PatientQueueMetadata & {
   waitMinutes?: number;
 };
 export const patientQueueStatusLabels: Record<string, string> = {
-  requested: "대기", in_progress: "진행중", paused: "진행중",
+  requested: "대기", in_progress: "진행중", paused: "일시중지",
   returned: "재요청", completed: "완료", cancelled: "취소",
 };
 export function patientQueueStatus(status?: string) {
@@ -25,7 +25,7 @@ export function patientQueueStatus(status?: string) {
     waiting: "requested", pending: "requested", received: "in_progress",
     entered: "in_progress", reading: "in_progress", captured: "in_progress",
     inProgress: "in_progress", reRequested: "returned", re_requested: "returned",
-    canceled: "cancelled", reviewed: "completed", paused: "in_progress",
+    canceled: "cancelled", reviewed: "completed",
   };
   return aliases[status ?? ""] ?? status ?? "requested";
 }
@@ -37,7 +37,7 @@ export function queueTimestamp(value?: string | null) {
   return Number.isFinite(result) ? result : 0;
 }
 function statusRank(row: PatientQueueRow) {
-  const rank = ["returned", "in_progress", "requested", "completed", "cancelled"].indexOf(patientQueueStatus(row.status));
+  const rank = ["returned", "in_progress", "paused", "requested", "completed", "cancelled"].indexOf(patientQueueStatus(row.status));
   return rank < 0 ? 2 : rank;
 }
 export function comparePatientQueueRows(a: PatientQueueRow, b: PatientQueueRow, sort: PatientQueueOrderSort) {
@@ -59,7 +59,6 @@ export function groupPatientQueue<T extends PatientQueueRow>(rows: T[], sort: Pa
   return [...groups].map(([key, items]) => ({
     key, items: [...items].sort((a,b) => comparePatientQueueRows(a,b,orderSort)),
     urgentCount: items.filter(item => item.priority === "urgent").length,
-    returnedCount: items.filter(item => patientQueueStatus(item.status) === "returned").length,
     latest: Math.max(...items.map(item => queueTimestamp(item.requestedAt))),
     rank: Math.min(...items.map(item => item.priority === "urgent" ? 0 : patientQueueStatus(item.status) === "returned" ? 1 : ["requested", "in_progress", "paused"].includes(patientQueueStatus(item.status)) ? 2 : 3)),
   })).sort((a,b) => (sort === "priority" ? a.rank-b.rank : 0) || b.latest-a.latest || a.key.localeCompare(b.key));

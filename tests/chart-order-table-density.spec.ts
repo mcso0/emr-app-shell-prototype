@@ -8,9 +8,9 @@ test("chart order header matches the compact count tabs and current actions", as
 }) => {
   await page.goto(chartOrderUrl);
 
-  const orderTabs = page.getByRole("tablist", { name: "처방/오더 분류" });
+  const orderTabs = page.getByRole("group", { name: "처방/오더 분류" });
   const orderArea = page.locator("section").filter({ has: orderTabs });
-  const allOrdersTab = orderTabs.getByRole("tab", {
+  const allOrdersTab = orderTabs.getByRole("button", {
     name: /전체오더 \d+/,
     exact: true,
   });
@@ -70,7 +70,7 @@ test("chart order table changes density and resets to standard on reload", async
   await page.goto(chartOrderUrl);
 
   const orderArea = page.locator("section").filter({
-    has: page.getByRole("tablist", { name: "처방/오더 분류" }),
+    has: page.getByRole("group", { name: "처방/오더 분류" }),
   });
   const densityTrigger = orderArea.getByRole("button", {
     name: /^테이블 보기 밀도:/,

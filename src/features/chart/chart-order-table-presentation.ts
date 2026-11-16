@@ -10,7 +10,7 @@ export type ChartOrderPresentationRow = {
     rowType?: string;
   };
   executionTask?: Pick<ChartOrderExecutionTask,
-    "status" | "clinicalOrderType" | "detailedPhase" | "requestCycle" | "attemptNo">;
+    "status" | "pauseReason" | "clinicalOrderType" | "detailedPhase" | "requestCycle" | "attemptNo">;
 };
 
 export type ChartOrderConfirmationState = "ready" | "invalid" | "confirmed";
@@ -71,12 +71,13 @@ export function getChartOrderWorkPresentation(row: ChartOrderPresentationRow): {
   }
   const task = row.executionTask;
   if (!task) return { label: "-", icon: null, unconfirmed: false };
+  if (task.pauseReason) return { label: "일시중지", icon: "hold", unconfirmed: false };
   let label: string;
   let icon: EmrSidePanelStateIconState;
   switch (task.status) {
     case "cancelled": label = "취소"; icon = "cancel"; break;
     case "returned": label = "반려"; icon = "rework"; break;
-    case "paused": label = "일시중지"; icon = "stop"; break;
+    case "paused": label = "일시중지"; icon = "hold"; break;
     case "complete": label = task.clinicalOrderType === "imaging" ? "판독완" : "완료"; icon = "done"; break;
     case "partial_complete": label = "부분완"; icon = "done"; break;
     case "pending": {
