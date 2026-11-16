@@ -46,14 +46,17 @@ function Example({
       history: [], snapshots: [],
     } : undefined,
     isSet: !single,
-    items: displayConditions ? mixedStatuses.map(([name, status], index) => {
-      const id = `synthetic-filter-${index}`;
-      return { ...structuredClone(syntheticInstruction.items[0]), id, orderId: id, taskId: id, name, status };
-    }) : structuredClone(single ? syntheticInstruction.items.slice(0, 1) : syntheticInstruction.items)
+    items: displayConditions ? [
+      ...mixedStatuses.map(([name, status], index) => {
+        const id = `synthetic-filter-${index}`;
+        return { ...structuredClone(syntheticInstruction.items[0]), id, orderId: id, taskId: id, name, status };
+      }),
+      { ...structuredClone(syntheticInstruction.items[0]), name: "합성 수정" },
+    ] : structuredClone(single ? syntheticInstruction.items.slice(0, 1) : syntheticInstruction.items)
       .map((item, index) => splitRoutes && index === 1 ? {
         ...item, plan: { ...item.plan, detailInputs: { ...item.plan.detailInputs as object, route: "topical" } },
       } : item),
-    changes: displayConditions ? [] : splitRoutes ? [
+    changes: splitRoutes ? [
       ...syntheticInstruction.changes,
       {
         ...syntheticInstruction.changes[0],
@@ -200,7 +203,22 @@ export const SetInstruction: Story = {
     );
   },
 };
-export const SingleInstruction: Story = { args: { single: true } };
+export const SingleInstruction: Story = {
+  args: { single: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(canvas.getByRole("button", { name: "필터" }));
+    const emptyGroup = await body.findByRole("menuitemradio", { name: "취소된 오더" });
+    const count = within(emptyGroup).getByText("0", { exact: true });
+    await waitFor(() => expect(count).toBeVisible());
+    await userEvent.click(emptyGroup);
+    await expect(canvas.queryByRole("cell", { name: "합성 품목 A" })).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("button", { name: "필터 초기화" }));
+    await expect(canvas.getByRole("button", { name: "필터" })).toHaveFocus();
+    await expect(canvas.getByRole("cell", { name: "합성 품목 A" })).toBeVisible();
+  },
+};
 export const Compact: Story = {
   args: { width: 760 },
   play: async ({ args, canvasElement }) => {
@@ -219,22 +237,51 @@ export const TreatmentWithHistory: Story = { args: { queueType: "treatment" } };
 const testFilterAndSort: NonNullable<Story["play"]> = async ({ canvasElement }) => {
   const canvas = within(canvasElement);
   const body = within(canvasElement.ownerDocument.body);
-  const existingNames = () => Array.from(canvasElement.querySelectorAll(".fd-existing .fd-name"), (cell) => cell.textContent);
+  const clickMenuOption = async (name: string) => {
+    const option = await body.findByRole("menuitemradio", { name });
+    await waitFor(() => expect(option).toHaveStyle({ pointerEvents: "auto" }));
+    await userEvent.click(option);
+  };
+  const visibleNames = () => Array.from(canvasElement.querySelectorAll(".fd-name"), (cell) => cell.textContent);
   const original = ["합성 다", "합성 가", "합성 나"];
-  await expect(existingNames()).toEqual(original);
-  await expect(canvas.getByRole("cell", { name: "합성 반려" })).toBeVisible();
+  const groups = [
+    ["추가된 오더", ["합성 대기"]],
+    ["수정된 오더", ["합성 수정"]],
+    ["기존 오더", original],
+    ["완료 오더", ["합성 완료"]],
+    ["취소된 오더", ["합성 취소", "합성 반려"]],
+  ] as const;
+  const allNames = groups.flatMap(([, names]) => [...names]);
+  await expect(visibleNames()).toEqual(allNames);
+  await expect(canvas.queryByRole("button", { name: "필터 해제" })).not.toBeInTheDocument();
 
   const filter = canvas.getByRole("button", { name: "필터" });
   filter.focus();
   await userEvent.keyboard("{Enter}");
-  await userEvent.click(await body.findByRole("menuitemradio", { name: "미완료" }));
-  const activeFilter = canvas.getByRole("button", { name: "필터, 미완료, 조건 1개 적용 중" });
-  await expect(activeFilter).toBeVisible();
-  for (const name of ["합성 완료", "합성 취소", "합성 반려"]) {
-    await expect(canvas.queryByRole("cell", { name })).not.toBeInTheDocument();
+  const options = await body.findAllByRole("menuitemradio");
+  await expect(options).toHaveLength(5);
+  for (const [index, [label, names]] of groups.entries()) {
+    await expect(options[index]).toHaveAccessibleName(label);
+    await expect(options[index]).toHaveAttribute("aria-checked", "false");
+    const count = within(options[index]).getByText(String(names.length), { exact: true });
+    await waitFor(() => expect(count).toBeVisible());
   }
-  await expect(canvas.getByText("1/7 작업완료")).toBeVisible();
-  await expect(canvas.getByRole("cell", { name: "합성 대기" })).toBeVisible();
+  await userEvent.keyboard("{Escape}");
+
+  for (const [label, names] of groups) {
+    await userEvent.click(canvas.getByRole("button", { name: /^필터(?:,|$)/ }));
+    await clickMenuOption(label);
+    await expect(canvas.getByRole("button", { name: `필터, ${label}, 조건 1개 적용 중` })).toBeVisible();
+    await expect(visibleNames()).toEqual(names);
+    const headings = canvasElement.querySelectorAll(".fd-section-heading");
+    await expect(headings).toHaveLength(1);
+    await expect(within(headings[0] as HTMLElement).getByText(label, { exact: true })).toBeVisible();
+  }
+  await expect(canvas.getByText("1/8 작업완료")).toBeVisible();
+
+  await userEvent.click(canvas.getByRole("button", { name: /^필터,/ }));
+  await clickMenuOption("기존 오더");
+  const activeFilter = canvas.getByRole("button", { name: "필터, 기존 오더, 조건 1개 적용 중" });
 
   for (const [label, order] of [
     ["항목명 오름차순", ["합성 가", "합성 나", "합성 다"]],
@@ -242,18 +289,21 @@ const testFilterAndSort: NonNullable<Story["play"]> = async ({ canvasElement }) 
     ["기본순", original],
   ] as const) {
     await userEvent.click(canvas.getByRole("button", { name: /^정렬,/ }));
-    await userEvent.click(await body.findByRole("menuitemradio", { name: label }));
-    await waitFor(() => expect(existingNames()).toEqual(order));
+    await clickMenuOption(label);
+    await waitFor(() => expect(visibleNames()).toEqual(order));
   }
-  await expect(activeFilter).toBeVisible();
-  await expect(canvas.queryByRole("cell", { name: "합성 반려" })).not.toBeInTheDocument();
   await userEvent.click(activeFilter);
-  await userEvent.click(await body.findByRole("menuitemradio", { name: "반려" }));
-  await expect(canvas.getByRole("cell", { name: "합성 반려" })).toBeVisible();
-  await expect(canvas.queryByRole("cell", { name: "합성 취소" })).not.toBeInTheDocument();
-  await userEvent.click(canvas.getByRole("button", { name: "필터, 반려, 조건 1개 적용 중" }));
-  await userEvent.click(await body.findByRole("menuitemradio", { name: "전체" }));
-  await expect(canvas.getByRole("cell", { name: "합성 취소" })).toBeVisible();
+  const selectedGroup = await body.findByRole("menuitemradio", { name: "기존 오더", checked: true });
+  await expect(selectedGroup).toHaveAttribute("aria-checked", "true");
+  await userEvent.keyboard("{Escape}");
+
+  const clearFilter = canvas.getByRole("button", { name: "필터 해제" });
+  await expect(clearFilter).toBeVisible();
+  clearFilter.focus();
+  await userEvent.keyboard("{Enter}");
+  await expect(visibleNames()).toEqual(allNames);
+  await expect(canvas.getByRole("button", { name: /^필터$/ })).toHaveFocus();
+  await expect(clearFilter).not.toBeInTheDocument();
 };
 
 export const DispensingFilterAndSort: Story = {
