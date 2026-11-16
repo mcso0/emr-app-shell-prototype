@@ -242,7 +242,7 @@ function OrderCard({
   const visibleItems = pending ? o.items.filter(item => !["completed", "cancelled"].includes(item.status)) : o.items;
   const historyItemIds = o.items.map(item => item.id);
   if (o.set) historyItemIds.push(o.id);
-  const showHistory = o.kind === "처치" || events.some(event =>
+  const showHistory = events.some(event =>
     event.orderId === o.id && event.changes.some(change => historyItemIds.includes(change.itemId)),
   );
 

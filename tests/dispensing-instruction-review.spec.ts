@@ -269,6 +269,25 @@ test("unassigned requester completes dispensing without result input and retries
   await expect(page.getByRole("button", { name: "업무 상태 변경" })).toHaveCount(0);
 });
 
+test("treatment history is available only after a displayable revision", async ({ page }) => {
+  const { document, actions } = await install(page, { queueType: "treatment", started: true });
+  const card = page.locator(".fd-card");
+  const history = card.getByRole("button", { name: "수정이력" });
+  const divider = card.locator(".fd-toolbar-divider");
+  await expect(card).toBeVisible();
+  await expect(history).toHaveCount(0);
+  await expect(divider).toHaveCount(0);
+
+  const revision = syntheticInstruction.changes[0];
+  document.changes = [{ ...revision, orderId: document.items[0].orderId }];
+  await page.reload();
+  await expect(history).toBeVisible();
+  await expect(divider).toBeVisible();
+  await history.click();
+  await expect(page.getByRole("dialog", { name: "수정 이력" })).toContainText("1회량: 0.25 → 0.5");
+  expect(actions).toEqual([]);
+});
+
 test("treatment set completes one item and then the rest without result input", async ({ page }) => {
   const { actions, writes, document } = await install(page, { queueType: "treatment", set: true, started: true });
   await page.getByRole("button", { name: "합성 품목 1 완료", exact: true }).click();
