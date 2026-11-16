@@ -119,14 +119,39 @@ Observed so far:
   and checks the unchanged, source-backed 8px result inset rather than expecting
   zero. No result CSS changed.
 
-Current local evidence: 30 focused stories across eight files passed, plus the
-actual chart catalog keyboard story; the final six relevant stories also pass
-with Safari 229 guards. Full lint and full typecheck passed. The production
-bundle compiled and built successfully (existing PRD filesystem-tracing warning
-retained). Actual synthetic catalog loading and 108-row search/virtualization
-checks passed, as did the new calendar route/keyboard/geometry check. Visual
-inspection of synthetic calendar and lookup previews preserves CLAiR geometry.
+## Final Local Evidence — 2026-11-16
 
-Latest-main reconciliation and final post-rebase checks remain before handoff.
-The exact local candidate SHA will be reported in the handoff.
+- Code candidate `ebca45f066c3b638b9aa93b1a8243589018dfe75` is cleanly
+  rebased onto verified `origin/main` at `ca3222a8`. Upstream handoff/dispensing
+  changes are preserved. The following evidence-only commit does not alter
+  runtime source.
+- **31/31 focused Chromium stories passed:** 30 across shared suggestion,
+  toggle/line controls, calendar, SOAP tabs, diagnosis facets and reception
+  lookup; plus the actual editable chart catalog keyboard/reset story.
+- **12/12 actual-screen synthetic browser regressions passed:** walk-in and
+  reservation creation, three lookup-state paths, guardian registration/retry,
+  date return and keyboard/route/calendar/queue synchronization, SOAP overflow,
+  catalog loading and 108-row catalog keyboard/search/virtualization.
+- **7/7 selected Storybook MCP interaction runs passed**, including mixed
+  existing dialogs, selected-facet/filter reactivation, hidden-page closure and
+  actual chart category resets. This is not a claim of exhaustive axe coverage.
+- Full `npx tsc --noEmit`, `npm run lint`, `npm run build`,
+  `npm run docs:check` (1083 docs/agent files) and diff checks passed.
+  The existing PRD dynamic-filesystem-tracing build warning remains out of scope.
+- Visual review of synthetic calendar/lookup/autocomplete previews preserves
+  CLAiR styling. Actual calendar geometry asserts 42 cells, 27px cells and a
+  227px panel. Same-value callbacks are tested once per mouse/Enter/Space
+  activation; IME tests include both composition flags and Safari keyCode 229.
+- Next dev's generated-only AGENTS append is backed up outside the checkout
+  and excluded. Primary-checkout WIP and existing Storybook on 6006 are not
+  changed. Rollout preview is local on 6007.
+
+Review previews:
+
+- [Actual chart category keyboard/reset](http://localhost:6007/?path=/story/features-chart-actual-workspace--catalog-facet-keyboard)
+- [Reception patient keyboard/clear](http://localhost:6007/?path=/story/features-reception-patient-combobox--keyboard-and-clear)
+
+The baseline failures described above are not included in the passing focused
+sets. Existing-owner decisions in the family table remain deliberate; this
+candidate does not claim a blanket conversion of every screen/control.
 No remote delivery or human acceptance is claimed.
