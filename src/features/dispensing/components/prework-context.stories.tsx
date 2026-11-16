@@ -21,6 +21,7 @@ type Args = {
   failOnce?: boolean;
   denied?: boolean;
   requester?: boolean;
+  releasedRerequest?: boolean;
   width?: number;
   loadingContext?: boolean;
   refreshDuringEntry?: boolean;
@@ -132,6 +133,7 @@ const meta = {
       rootOrderId: id,
       queueType: args.treatment ? "treatment" : "dispensing",
       revision: "1",
+      firstStartedAt: args.releasedRerequest ? "2026-11-02T08:05:00Z" : null,
       finalized: false,
       mainAssigneeId:
         args.owner === "unassigned"
@@ -160,7 +162,8 @@ const meta = {
           ...structuredClone(item),
           id: index === 0 ? id : "71000000-0000-4000-8000-000000000004",
           taskId: index === 0 ? id : "71000000-0000-4000-8000-000000000004",
-          status: "requested",
+          status: args.releasedRerequest ? "paused" : "requested",
+          attemptNo: args.releasedRerequest ? 2 : 1,
           resultRequired: false,
           hasResult: false,
           name: (index === 0 ? args.firstItemName : undefined) ?? (args.treatment
@@ -331,6 +334,16 @@ export const Overview: Story = {
         story: "담당 전 화면의 전체 구성을 검토하는 합성 예시입니다.",
       },
     },
+  },
+};
+
+export const ReleasedRerequest: Story = {
+  args: { releasedRerequest: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const prework = within(await canvas.findByTestId("fulfillment-prework"));
+    await expect(prework.getByTestId("instruction-status-label")).toHaveTextContent("재요청");
+    await waitFor(() => expect(prework.getByRole("button", { name: /^담당하기$/ })).toBeEnabled());
   },
 };
 export const Unassigned: Story = {

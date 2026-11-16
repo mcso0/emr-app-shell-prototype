@@ -1819,7 +1819,7 @@ function DispensingContentBody({
   const [preworkCompletionRoot, setPreworkCompletionRoot] = useState<string | null>(null);
   const instructionScope = instruction.document ? `${instruction.document.rootTaskId}:${instruction.document.queueType}` : null;
   const firstStartedAt = instruction.document?.firstStartedAt;
-  const keepStartedRerequestOpen = firstStartedAt && instruction.document
+  const keepStartedRerequestOpen = firstStartedAt && instruction.document?.mainAssigneeId
     && hasPendingInstructionRerequest(instruction.document);
   const preworkEligible = !allowLegacyFixtureFallback && instruction.document && selectedFulfillmentWorkItem
     && !instruction.document.finalized && instruction.document.items.length > 0

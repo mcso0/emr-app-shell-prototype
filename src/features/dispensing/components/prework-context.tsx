@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useId, useState } from "react";
 import { CdsFilesClockIcon } from "@/components/cds-icons/files-and-layout";
 import { CdsMedicalClipboardCheckIcon, CdsMedicalNotebookTextIcon } from "@/components/cds-icons/medical-and-domain";
+import { EmrStatusBadge } from "@/components/emr/status-badge";
 import { EmrTableCellText } from "@/components/emr/table-primitives";
 import { EmrWorkEntrySection as Section, EmrWorkEntrySummary } from "@/components/emr/work-entry-page";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -14,7 +15,7 @@ import { PatientOrderPrework, type PatientOrderPreworkItem } from "@/features/fu
 import { TaskInstructionReview } from "@/features/fulfillment/components/task-instruction-review";
 import type { InstructionDocument } from "@/features/fulfillment/instruction-contract";
 import type { EffectiveInstructions } from "@/features/fulfillment/task-instruction-review-contract";
-import { createInstructionView, formatInstructionValue } from "../instruction-view-model";
+import { createInstructionView, formatInstructionValue, getDispensingRerequestChanges, hasPendingInstructionRerequest } from "../instruction-view-model";
 import type { FulfillmentInstructionController } from "../use-fulfillment-instruction";
 import { InstructionItemRow, InstructionRowDisclosure, InstructionRowNote } from "./instruction-document-table";
 import { InstructionActions } from "./instruction-workspace";
@@ -141,14 +142,17 @@ function PreworkOrderTable({ document, focusedItemId, items, label }: {
   );
 }
 
-function RequestInstructions({ document, label, instructions }: {
+function RequestInstructions({ document, label, instructions, onReview }: {
   document: InstructionDocument;
   label: string;
   instructions: EffectiveInstructions[];
+  onReview?: () => void;
 }) {
   const entries = new Map<string, { label: string; text: string }>();
+  let hasClinicalEdit = false;
   for (const group of instructions) {
     for (const entry of group.entries) {
+      if (entry.kind === "clinical_edit") hasClinicalEdit = true;
       const key = JSON.stringify([group.chartId, entry.scope, entry.orderId, entry.kind, entry.legacy, entry.revision]);
       entries.set(key, {
         label: entry.kind === "clinical_edit" ? "업무 변경" : entry.legacy ? "경구 지시"
@@ -165,13 +169,20 @@ function RequestInstructions({ document, label, instructions }: {
     <>
       <Separator />
       <Section title={label + " 요청 사항"} icon={<CdsMedicalClipboardCheckIcon aria-hidden="true" />}>
-        <div className="grid min-h-[52px] gap-2 rounded-lg border border-[var(--emr-border-subtle)] bg-[var(--clair-color-atomic-neutral-50)] px-4 py-3 sm:px-6 sm:py-4">
-          {[...entries].map(([key, entry]) => (
-            <div key={key} className="flex min-w-0 items-start gap-2">
-              <span className="shrink-0 whitespace-nowrap rounded bg-[var(--emr-surface-muted)] px-1.5 text-xs font-medium leading-5 text-[var(--emr-text-secondary)]">{entry.label}</span>
-              <p className="min-w-0 whitespace-pre-wrap break-words text-sm leading-5">{entry.text}</p>
-            </div>
-          ))}
+        <div className="flex min-h-[52px] flex-col gap-2 rounded-lg border border-[var(--emr-border-subtle)] bg-[var(--clair-color-atomic-neutral-50)] px-4 py-3 sm:flex-row sm:items-center sm:px-6 sm:py-4">
+          <div className="grid min-w-0 flex-1 gap-2">
+            {[...entries].map(([key, entry]) => (
+              <div key={key} className="flex min-w-0 items-start gap-2">
+                <span className="shrink-0 whitespace-nowrap rounded bg-[var(--emr-surface-muted)] px-1.5 text-xs font-medium leading-5 text-[var(--emr-text-secondary)]">{entry.label}</span>
+                <p className="min-w-0 whitespace-pre-wrap break-words text-sm leading-5">{entry.text}</p>
+              </div>
+            ))}
+          </div>
+          {hasClinicalEdit && onReview && (
+            <Button className="self-end sm:self-center" size="sm" variant="outline" aria-haspopup="dialog" onClick={onReview}>
+              변경 내용 보기
+            </Button>
+          )}
         </div>
       </Section>
     </>
@@ -192,8 +203,10 @@ export function DispensingPreworkContext({ controller, focusedItemId, workItem, 
   const label = document.queueType === "dispensing" ? "조제" : "처치";
   const items = createInstructionView(document).orders[0].items;
   const representativeName = items[0]?.name ?? document.name;
+  const rerequest = hasPendingInstructionRerequest(document);
+  const review = controller.instructionReview;
   const renderInstructions = (instructions: EffectiveInstructions[]) => (
-    <RequestInstructions document={document} label={label} instructions={instructions} />
+    <RequestInstructions document={document} label={label} instructions={instructions} onReview={rerequest ? review?.show : undefined} />
   );
   return (
     <PatientOrderPrework
@@ -219,7 +232,12 @@ export function DispensingPreworkContext({ controller, focusedItemId, workItem, 
               <EmrTableCellText tooltipOnOverflow>{representativeName}</EmrTableCellText>
               {items.length > 1 && <span className="shrink-0 whitespace-nowrap">외 {items.length - 1}건</span>}
             </span>],
-            ["요청 시각", <RequestTime key="requested-at" value={workItem.createdAt} />],
+            ["요청 시각", rerequest ? (
+              <span key="requested-at" className="flex flex-wrap items-center gap-1.5">
+                <RequestTime value={workItem.createdAt} />
+                <EmrStatusBadge label="재요청" marker="none" testId="instruction-status-label" />
+              </span>
+            ) : <RequestTime key="requested-at" value={workItem.createdAt} />],
             ["요청자", <StaffValue key="requester" name={workItem.requesterName} />],
             ["담당자", <StaffValue key="assignee" name={document.mainAssigneeName} />],
           ]}
@@ -228,8 +246,9 @@ export function DispensingPreworkContext({ controller, focusedItemId, workItem, 
           <PreworkOrderTable key={document.rootTaskId} document={document} items={items} label={label} focusedItemId={focusedItemId} />
         ) : <p className="text-sm text-muted-foreground">요청된 오더가 없어요.</p>}
       </Section>
-      {controller.instructionReview
-        ? <TaskInstructionReview controller={controller.instructionReview} renderInstructions={renderInstructions} />
+      {review
+        ? <TaskInstructionReview controller={review} renderInstructions={renderInstructions}
+            dispensingChanges={rerequest && document.queueType === "dispensing" ? getDispensingRerequestChanges(document, review.reviews) : undefined} />
         : renderInstructions([])}
     </PatientOrderPrework>
   );

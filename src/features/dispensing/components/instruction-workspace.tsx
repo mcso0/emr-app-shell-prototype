@@ -135,18 +135,22 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
   const completionMenuAction = canComplete
     ? { label: completionLabel, triggerLabel: "완료 메뉴 열기", onSelect: openCompletion }
     : undefined;
+  const enterWork = () => {
+    onChanged();
+    onEntered?.();
+  };
+  const rerequestContinuation = continuingRerequest ? {
+    label: document.queueType === "dispensing" ? "확인하고 조제 계속" : "확인하고 처치 계속",
+    onSuccess: enterWork,
+  } : undefined;
   const change = async (action: "claim" | "start" | "resume" | "unassign") => {
     const intent = action === "claim" ? claimIntent : { action };
-    const onSuccess = () => {
-      onChanged();
-      if (action === "claim" || action === "start") onEntered?.();
-    };
-    const continuing = !prework && continuingRerequest && (action === "start" || (action === "claim" && claimStartsWork));
-    const continueAfterReview = continuing ? {
-      label: document.queueType === "dispensing" ? "확인하고 조제 계속" : "확인하고 처치 계속",
-      onSuccess,
-    } : undefined;
-    if (await controller.mutate(intent, undefined, continueAfterReview)) onSuccess();
+    const entersWork = action === "claim" || action === "start";
+    const continuing = !prework && (action === "start" || (action === "claim" && claimStartsWork));
+    if (await controller.mutate(intent, undefined, continuing ? rerequestContinuation : undefined)) {
+      if (entersWork) enterWork();
+      else onChanged();
+    }
   };
   const statusMenu = showStatusMenu ? (
     <DropdownMenu>
@@ -198,7 +202,8 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
           const intent = entryMode === "claim" ? claimIntent
             : { action: "takeover" as const, startWork: true as const, reason };
           let reviewRequired = false;
-          const succeeded = await controller.mutate(intent, () => { reviewRequired = true; });
+          const continuation = entryMode === "claim" && claimStartsWork ? rerequestContinuation : undefined;
+          const succeeded = await controller.mutate(intent, () => { reviewRequired = true; }, continuation);
           if (succeeded) onChanged();
           return reviewRequired ? "review_required" : succeeded;
         }}
