@@ -2,8 +2,19 @@ import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, within, waitFor } from "storybook/test";
 import { syntheticInstruction } from "../instruction-fixtures";
+import type { InstructionItem } from "@/features/fulfillment/instruction-contract";
 import type { InstructionIntent } from "../use-fulfillment-instruction";
 import { InstructionActions, InstructionBody, InstructionDocumentOutputMenu } from "./instruction-workspace";
+
+const mixedStatuses: Array<[string, InstructionItem["status"]]> = [
+  ["합성 다", "in_progress"],
+  ["합성 가", "paused"],
+  ["합성 나", "in_progress"],
+  ["합성 대기", "requested"],
+  ["합성 완료", "completed"],
+  ["합성 취소", "cancelled"],
+  ["합성 반려", "returned"],
+];
 
 function Example({
   single = false,
@@ -11,6 +22,7 @@ function Example({
   failed = false,
   splitRoutes = false,
   queueType = "dispensing",
+  displayConditions = false,
   width = 1100,
 }: {
   single?: boolean;
@@ -18,6 +30,7 @@ function Example({
   failed?: boolean;
   splitRoutes?: boolean;
   queueType?: typeof syntheticInstruction.queueType;
+  displayConditions?: boolean;
   width?: number;
 }) {
   const [document, setDocument] = useState(() => ({
@@ -29,11 +42,14 @@ function Example({
       history: [], snapshots: [],
     } : undefined,
     isSet: !single,
-    items: structuredClone(single ? syntheticInstruction.items.slice(0, 1) : syntheticInstruction.items)
+    items: displayConditions ? mixedStatuses.map(([name, status], index) => {
+      const id = `synthetic-filter-${index}`;
+      return { ...structuredClone(syntheticInstruction.items[0]), id, orderId: id, taskId: id, name, status };
+    }) : structuredClone(single ? syntheticInstruction.items.slice(0, 1) : syntheticInstruction.items)
       .map((item, index) => splitRoutes && index === 1 ? {
         ...item, plan: { ...item.plan, detailInputs: { ...item.plan.detailInputs as object, route: "topical" } },
       } : item),
-    changes: splitRoutes ? [
+    changes: displayConditions ? [] : splitRoutes ? [
       ...syntheticInstruction.changes,
       {
         ...syntheticInstruction.changes[0],
@@ -182,6 +198,56 @@ export const SetInstruction: Story = {
 export const SingleInstruction: Story = { args: { single: true } };
 export const Compact: Story = { args: { width: 760 } };
 export const TreatmentWithHistory: Story = { args: { queueType: "treatment" } };
+const testFilterAndSort: NonNullable<Story["play"]> = async ({ canvasElement }) => {
+  const canvas = within(canvasElement);
+  const body = within(canvasElement.ownerDocument.body);
+  const existingNames = () => Array.from(canvasElement.querySelectorAll(".fd-existing .fd-name"), (cell) => cell.textContent);
+  const original = ["합성 다", "합성 가", "합성 나"];
+  await expect(existingNames()).toEqual(original);
+  await expect(canvas.getByRole("cell", { name: "합성 반려" })).toBeVisible();
+
+  const filter = canvas.getByRole("button", { name: "필터" });
+  filter.focus();
+  await userEvent.keyboard("{Enter}");
+  await userEvent.click(await body.findByRole("menuitemradio", { name: "미완료" }));
+  const activeFilter = canvas.getByRole("button", { name: "필터, 미완료, 조건 1개 적용 중" });
+  await expect(activeFilter).toBeVisible();
+  for (const name of ["합성 완료", "합성 취소", "합성 반려"]) {
+    await expect(canvas.queryByRole("cell", { name })).not.toBeInTheDocument();
+  }
+  await expect(canvas.getByText("1/7 작업완료")).toBeVisible();
+  await expect(canvas.getByRole("cell", { name: "합성 대기" })).toBeVisible();
+
+  for (const [label, order] of [
+    ["항목명 오름차순", ["합성 가", "합성 나", "합성 다"]],
+    ["항목명 내림차순", ["합성 다", "합성 나", "합성 가"]],
+    ["기본순", original],
+  ] as const) {
+    await userEvent.click(canvas.getByRole("button", { name: /^정렬,/ }));
+    await userEvent.click(await body.findByRole("menuitemradio", { name: label }));
+    await waitFor(() => expect(existingNames()).toEqual(order));
+  }
+  await expect(activeFilter).toBeVisible();
+  await expect(canvas.queryByRole("cell", { name: "합성 반려" })).not.toBeInTheDocument();
+  await userEvent.click(activeFilter);
+  await userEvent.click(await body.findByRole("menuitemradio", { name: "반려" }));
+  await expect(canvas.getByRole("cell", { name: "합성 반려" })).toBeVisible();
+  await expect(canvas.queryByRole("cell", { name: "합성 취소" })).not.toBeInTheDocument();
+  await userEvent.click(canvas.getByRole("button", { name: "필터, 반려, 조건 1개 적용 중" }));
+  await userEvent.click(await body.findByRole("menuitemradio", { name: "전체" }));
+  await expect(canvas.getByRole("cell", { name: "합성 취소" })).toBeVisible();
+};
+
+export const DispensingFilterAndSort: Story = {
+  args: { displayConditions: true },
+  play: testFilterAndSort,
+};
+
+export const TreatmentFilterAndSort: Story = {
+  args: { displayConditions: true, queueType: "treatment", width: 760 },
+  play: testFilterAndSort,
+};
+
 export const HistoryByRoute: Story = {
   args: { splitRoutes: true },
   play: async ({ canvasElement }) => {

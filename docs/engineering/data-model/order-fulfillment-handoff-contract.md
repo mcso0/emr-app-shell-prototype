@@ -207,6 +207,11 @@ revision.
   set's common instruction. The dialog shows those changes.
 - The finalized instruction body keeps filters, sorting, density, disclosures,
   and access to available history. Row completion and assignment controls are disabled.
+- Inside each order card, the status filter offers `전체`, `미완료`, `완료`,
+  `취소`, and `반려`. `미완료` includes requested, in-progress, and paused
+  items. The sort menu orders items by name within each existing section.
+  Choosing `기본순` restores the original order and keeps the status filter.
+  The completion count uses all items in the card.
 - The header's `완료 ⌄` offers `진행 중으로 변경` when the server reports an
   eligible completed item. A set confirmation submits one selected item through
   the existing revision-checked `reopen` command. Other items and queue types

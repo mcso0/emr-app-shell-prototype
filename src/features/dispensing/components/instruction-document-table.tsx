@@ -3,6 +3,8 @@
 import { formatInstructionValue } from "../instruction-view-model";
 
 import React, { useEffect, useState, useRef, useLayoutEffect } from "react";
+import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
+import { EmrTableFilterTrigger } from "@/components/emr/table-filter-trigger";
 import { EmrTableCellText, EmrTableColumnResizeHandle } from "@/components/emr/table-primitives";
 import { Button } from "@/components/ui/button";
 import { usePagePortalVisibility } from "@/components/emr/page-loading-boundary";
@@ -21,6 +23,10 @@ import {
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
   DropdownMenuItem,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
@@ -106,6 +112,76 @@ const group = (i: Item) =>
     : ["completed", "cancelled"].includes(i.status)
       ? i.status
       : i.change;
+
+const filterLabels = {
+  all: "전체",
+  unfinished: "미완료",
+  completed: "완료",
+  cancelled: "취소",
+  returned: "반려",
+};
+type InstructionFilter = keyof typeof filterLabels;
+
+const sortLabels = {
+  default: "기본순",
+  ascending: "항목명 오름차순",
+  descending: "항목명 내림차순",
+};
+type InstructionSort = keyof typeof sortLabels;
+
+const itemNameCollator = new Intl.Collator("ko", { numeric: true });
+
+function matchesFilter(item: Item, filter: InstructionFilter) {
+  if (filter === "all") return true;
+  if (filter === "unfinished") {
+    return ["requested", "in_progress", "paused"].includes(item.status);
+  }
+  return item.status === filter;
+}
+
+function sortItems(items: Item[], sort: InstructionSort) {
+  if (sort === "default") return items;
+  const direction = sort === "ascending" ? 1 : -1;
+  return [...items].sort((left, right) => {
+    if (!left.name || !right.name) return Number(!left.name) - Number(!right.name);
+    return direction * itemNameCollator.compare(left.name, right.name);
+  });
+}
+
+function InstructionChoiceMenu<T extends string>({
+  label,
+  trigger,
+  options,
+  value,
+  onChange,
+  getCount,
+}: {
+  label: string;
+  trigger: React.ReactElement;
+  options: Record<T, string>;
+  value: T;
+  onChange: (value: T) => void;
+  getCount?: (value: T) => number;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger render={trigger} />
+      <DropdownMenuContent align="end" sideOffset={6} className="w-max min-w-40">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="px-2">{label}</DropdownMenuLabel>
+          <DropdownMenuRadioGroup value={value} onValueChange={(next) => onChange(next as T)}>
+            {(Object.keys(options) as T[]).map((option) => (
+              <DropdownMenuRadioItem key={option} value={option} closeOnClick className="min-h-8 gap-3 pl-2">
+                {options[option]}
+                {getCount && <span aria-hidden="true" className="ml-auto text-xs text-muted-foreground">{getCount(option)}</span>}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 function getItemColumnWidth(handle: HTMLButtonElement) {
   return handle.closest("tr")?.querySelector(".fd-col-1")?.getBoundingClientRect().width;
@@ -236,10 +312,11 @@ function OrderCard({
   const readOnly = o.status === "completed";
   const [collapsed, setCollapsed] = useState(false),
     [density, setDensity] = useState(40),
-    [sort, setSort] = useState(false),
-    [pending, setPending] = useState(false),
+    [sort, setSort] = useState<InstructionSort>("default"),
+    [filter, setFilter] = useState<InstructionFilter>("all"),
     [hidden, setHidden] = useState<string[]>([]);
-  const visibleItems = pending ? o.items.filter(item => !["completed", "cancelled"].includes(item.status)) : o.items;
+  const filterTriggerRef = useRef<HTMLButtonElement>(null);
+  const visibleItems = filter === "all" ? o.items : o.items.filter((item) => matchesFilter(item, filter));
   const historyItemIds = o.items.map(item => item.id);
   if (o.set) historyItemIds.push(o.id);
   const showHistory = events.some(event =>
@@ -311,7 +388,7 @@ function OrderCard({
       .forEach((n) => observer.observe(n));
     measure();
     return () => observer.disconnect();
-  }, [o.items, density, collapsed, pending]);
+  }, [o.items, density, collapsed, filter]);
   const totalLabel = o.kind === "조제" ? "요청 조제량" : "총 용량";
   const fieldLabels: Record<string, string> = {
     dose: "1회 용량",
@@ -423,24 +500,40 @@ function OrderCard({
           {o.items.length} 작업완료
         </span>
         <div className="grow" />
-        <Button
-          variant="outline"
-          className="fd-tool"
-          aria-pressed={pending}
-          onClick={() => setPending((v) => !v)}
-        >
-          <Icon name="filter" />
-          <span className="fd-button-label">{pending ? "미완료" : "필터"}</span>
-        </Button>
-        <Button
-          variant="outline"
-          className="fd-tool"
-          aria-pressed={sort}
-          onClick={() => setSort((v) => !v)}
-        >
-          <Icon name="sort" />
-          <span className="fd-button-label">{sort ? "이름순" : "정렬"}</span>
-        </Button>
+        <InstructionChoiceMenu
+          label="작업 상태 필터"
+          options={filterLabels}
+          value={filter}
+          onChange={setFilter}
+          getCount={(option) => o.items.filter((item) => matchesFilter(item, option)).length}
+          trigger={
+            <EmrTableFilterTrigger
+              ref={filterTriggerRef}
+              activeCount={filter === "all" ? 0 : 1}
+              aria-label={filter === "all" ? "필터" : `필터, ${filterLabels[filter]}, 조건 1개 적용 중`}
+              className="fd-tool fd-choice"
+            />
+          }
+        />
+        <InstructionChoiceMenu
+          label="항목 정렬"
+          options={sortLabels}
+          value={sort}
+          onChange={setSort}
+          trigger={
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="fd-tool fd-choice"
+              data-sort-active={sort !== "default" || undefined}
+              aria-label={`정렬, ${sortLabels[sort]}`}
+            >
+              <CdsUtilitiesSortIcon size={14} aria-hidden="true" />
+              <span className="fd-button-label">{sort === "default" ? "정렬" : sortLabels[sort]}</span>
+            </Button>
+          }
+        />
         <DropdownMenu>
           <DropdownMenuTrigger
             render={<Button variant="outline" className="fd-tool fd-density" />}
@@ -512,11 +605,22 @@ function OrderCard({
       </header>
       {!collapsed && (
         <div className="fd-sections">
-          {pending && !visibleItems.length && <p className="p-3 text-sm text-muted-foreground" role="status">미완료 오더가 없어요.</p>}
+          <p className="sr-only" role="status">
+            {filterLabels[filter]} · {visibleItems.length}개 항목 · {sortLabels[sort]}
+          </p>
+          {!visibleItems.length && (
+            <div className="flex flex-col items-center gap-2 p-6">
+              <p className="text-sm text-muted-foreground">조건에 맞는 항목이 없어요.</p>
+              <Button type="button" variant="outline" size="sm" onClick={() => {
+                setFilter("all");
+                filterTriggerRef.current?.focus();
+              }}>
+                필터 초기화
+              </Button>
+            </div>
+          )}
           {groups.map(([key, title]) => {
-            let rows = visibleItems.filter(item => group(item) === key);
-            if (sort)
-              rows = [...rows].sort((a, b) => a.name.localeCompare(b.name));
+            const rows = sortItems(visibleItems.filter((item) => group(item) === key), sort);
             if (!rows.length) return null;
             return (
               <section key={key} className={`fd-section fd-${key}`}>
