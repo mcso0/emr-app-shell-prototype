@@ -229,9 +229,11 @@ revision.
   focus to the order action. `지시서로 이동` reads the exact work item under
   the existing workspace permission and uses its operating date. The shell
   runs its existing save guard before switching screens.
-- The destination scrolls to and highlights the exact item in the instruction
-  document or the prework order table. For a set, it identifies the clicked
-  child by work item ID. A missing or denied target shows a recovery message.
+- The destination scrolls to and focuses the exact item in the instruction
+  document or the prework order table. The row keeps its standard background
+  and shows a focus outline when keyboard focus is visible. For a set, it
+  identifies the clicked child by work item ID. A missing or denied target shows
+  a recovery message.
 
 ## Dispensing and treatment order cancellation authority — 2026-11-09
 
