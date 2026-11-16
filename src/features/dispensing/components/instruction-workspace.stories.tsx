@@ -10,21 +10,24 @@ function Example({
   readOnly = false,
   failed = false,
   splitRoutes = false,
+  queueType = "dispensing",
   width = 1100,
 }: {
   single?: boolean;
   readOnly?: boolean;
   failed?: boolean;
   splitRoutes?: boolean;
+  queueType?: typeof syntheticInstruction.queueType;
   width?: number;
 }) {
   const [document, setDocument] = useState(() => ({
     ...structuredClone(syntheticInstruction),
-    oralInstruction: {
+    queueType,
+    oralInstruction: queueType === "dispensing" ? {
       chartId: "28110000-0000-4000-8000-000000000011", revision: 1,
       instruction: "현재 차트 경구제 전체 지시입니다.\n여러 줄이어도 지시사항을 모두 확인할 수 있어요.",
       history: [], snapshots: [],
-    },
+    } : undefined,
     isSet: !single,
     items: structuredClone(single ? syntheticInstruction.items.slice(0, 1) : syntheticInstruction.items)
       .map((item, index) => splitRoutes && index === 1 ? {
@@ -178,6 +181,7 @@ export const SetInstruction: Story = {
 };
 export const SingleInstruction: Story = { args: { single: true } };
 export const Compact: Story = { args: { width: 760 } };
+export const TreatmentWithHistory: Story = { args: { queueType: "treatment" } };
 export const HistoryByRoute: Story = {
   args: { splitRoutes: true },
   play: async ({ canvasElement }) => {
