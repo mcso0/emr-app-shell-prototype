@@ -1129,6 +1129,19 @@ test("dispensing queue reconciles server totals with visible type-filter counts"
     },
   );
 
+  await page.route(`**/api/workspaces/${targetWorkspaceId}/fulfillment/work-items/*/instruction`, route => {
+    const id = new URL(route.request().url()).pathname.split("/").at(-2);
+    const workItem = [...queueItems.dispensing, ...queueItems.treatment].find(item => item.id === id);
+    if (!workItem) return route.fulfill({ status: 404, json: { ok: false } });
+    return route.fulfill({ json: { ok: true, document: { ...structuredClone(syntheticInstruction),
+      rootOrderId: workItem.orderId, rootTaskId: workItem.id, isSet: false, queueType: workItem.queueType,
+      name: workItem.sourceSnapshot.orderDisplayName,
+      items: [{ ...syntheticInstruction.items[0], id: workItem.id, orderId: workItem.orderId,
+        taskId: workItem.id, name: workItem.sourceSnapshot.orderDisplayName, status: workItem.status }],
+    } } });
+  });
+  await page.route(`**/api/workspaces/${targetWorkspaceId}/fulfillment/work-items/*/assignees`, route => route.fulfill({ json: { ok: true, assignees: [] } }));
+
   await page.goto(`/w/${targetWorkspaceId}/dispensing?modulePanel=open`);
 
   const typeFilter = page.getByRole("group", { name: "오더 유형 필터" });
@@ -1152,10 +1165,8 @@ test("dispensing queue reconciles server totals with visible type-filter counts"
     .getByTestId("order-queue-item-live-fulfillment-reconcile-dispensing-1")
     .click();
   await expect(
-    page.getByTestId(
-      "order-row-section-0-live-order-row-reconcile-dispensing-1",
-    ),
-  ).toContainText("정합성 조제 1");
+    page.getByTestId("fulfillment-prework").getByRole("rowheader", { name: "정합성 조제 1", exact: true }),
+  ).toBeVisible();
 
   await typeFilter.getByRole("button", { name: /처치\s*2/ }).click();
   await expect(queueRows).toHaveCount(2);

@@ -91,27 +91,26 @@ export function useFulfillmentInstruction(
         setFailure(null);
         setAssignees([]);
         setLoaded({ endpoint, document: parsed.data });
-        const candidatesResponse = await fetch(
-          endpoint.replace(/instruction$/, "assignees"),
-          { cache: "no-store", signal: abort.signal },
-        );
-        const candidates = await candidatesResponse.json();
-        if (generation.current === current && (!candidatesResponse.ok || !candidates.ok)) {
-          reportError("담당자 정보를 불러오지 못했어요. 다시 조회해 주세요.");
-        }
-        if (
-          generation.current === current &&
-          candidatesResponse.ok &&
-          candidates.ok &&
-          Array.isArray(candidates.assignees)
-        ) {
+        try {
+          const candidatesResponse = await fetch(
+            endpoint.replace(/instruction$/, "assignees"),
+            { cache: "no-store", signal: abort.signal },
+          );
+          const candidates = await candidatesResponse.json();
+          if (generation.current !== current) return;
+          if (!candidatesResponse.ok || !candidates.ok || !Array.isArray(candidates.assignees)) {
+            throw new Error("assignee_read_failed");
+          }
           setAssignees(
             candidates.assignees.filter(
               (item: FulfillmentEligibleAssignee) =>
-                typeof item.userId === "string" &&
-                typeof item.displayName === "string",
+                typeof item.userId === "string" && typeof item.displayName === "string",
             ),
           );
+        } catch {
+          if (!abort.signal.aborted && generation.current === current) {
+            reportError("담당자 정보를 불러오지 못했어요. 다시 조회해 주세요.");
+          }
         }
       } catch {
         if (!abort.signal.aborted && generation.current === current)
