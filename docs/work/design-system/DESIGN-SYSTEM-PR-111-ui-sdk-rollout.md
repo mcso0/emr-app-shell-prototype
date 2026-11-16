@@ -25,7 +25,7 @@ Work starts in an isolated worktree at `c9754c4`. The primary checkout's WIP is
 untouched. Local implementation, synthetic fixtures and verification are in
 scope. Remote data/migrations, provider calls, merge, deploy and release
 configuration changes are excluded. Reconcile the latest main before handing
-off the candidate; upstream progressed to `ca3222a8` during implementation.
+off the candidate; upstream progressed through `ca3222a8` to `2cb16b4d` during implementation.
 
 ## Foundation And Sources
 
@@ -51,10 +51,10 @@ off the candidate; upstream progressed to `ca3222a8` during implementation.
 | Family | Actual adoption | Ownership preserved |
 | --- | --- | --- |
 | Combobox | Shared CLAiR input/content/item adapters; four walk-in/reservation drawer/side-panel variants; existing-guardian registration | SDK alone owns list focus, active descendant, selection interaction, placement and dismissal. Features retain lookup/debounce/stale-request handling, selected IDs, vitals, dirty state, validation and workspace permissions. |
-| Autocomplete | Shared free-text adapter and the reused breed field in patient forms | Arbitrary typed breeds remain valid. Do not coerce free text into a selected catalog ID. |
+| Autocomplete | Shared free-text adapter and reused single breed field in patient forms | Arbitrary typed breeds remain valid. Do not coerce free text into a selected catalog ID. |
 | Toggle groups | Shared LineTabs and SegmentedControl, including instruction filters, table/display-mode controls and calendar view controls | Preserve `group`, button `aria-pressed`, single non-deselectable selection, native disabled buttons and existing tokens/geometry. SDK adds grouped keyboard navigation. |
 | True tabs | Chart SOAP overflow tab group | SDK owns roving focus and activation. Existing overflow measurement, More menu and one shared SOAP editor panel remain. |
-| Calendar | Reception side-panel mini calendar | ISO dates, caller-owned operating date, today/selected/range colors, return action and 42-cell/27px geometry remain. SDK owns month/date keyboard navigation and proper grid/gridcell semantics. |
+| Calendar | Reception side-panel mini calendar and shared EmrDateNavigator popup used by Home, billing, lab/imaging and order queues | ISO dates, caller-owned operating date, today/selected/range colors, return action and 42-cell/27px geometry remain. SDK owns month/date keyboard navigation and proper grid/gridcell semantics. The shared popup retains 28px chips/244px width and now renders complete six-week months rather than truncating after 35 cells. |
 | Listbox | Shared classification single-choice facets, diagnosis systems/disease groups and order catalog categories | SDK owns selection, typeahead and roving focus. Catalog reads/search, draft order/diagnosis selection, locking, reorder and TanStack result virtualization remain feature-owned. |
 | Mixed overlay integration | SDK suggestions inside existing Base Dialog and retained module/page boundaries | No Base popup or input behavior wraps an SDK suggestion. SDK controllers close suggestions when their cached panel/page hides; content preserves owner metadata and page visibility. |
 
@@ -63,6 +63,11 @@ change callbacks alone do not fire for reselecting an active facet/filter. The
 wrappers preserve pointer and keyboard reactivation used to reset child filters,
 clear catalog search or reopen collapsed history groups, with callback-count
 regressions to prevent duplicate notifications.
+
+Patient lookup also preserves selection actions when the same patient is chosen
+again. The feature commits once on the SDK's item-press dismissal, separating
+selection actions from value changes. SDK composition guards prevent Safari
+keyCode 229 from triggering premature keyboard activation.
 
 Existing hooks are deliberately not replaced with SDK async loaders: their
 workspace/authentication, cancellation, debounce, error and selected-record
@@ -76,8 +81,9 @@ client filtering disabled.
 | Dialog, alert dialog, popover, drawer/sheet, menu, tooltip | Retain working Base shared primitives. They implement page visibility, cached-panel actions, focus return and permission workflows. Verify mixed SDK nesting rather than create a competing global overlay system. |
 | Select, checkbox, radio, switch, basic toggle and profile tabs | Retain working Base adapters. Their state/validation contracts are already centralized; replacement has no demonstrated efficiency gain. Profile tabs also intentionally skip disabled tabs, unlike SDK Tabs' discoverable-disabled policy. |
 | Field, label, input, textarea, number/password/OTP/time/date input | Retain existing native/Base validation and form contracts. Add SDK behavior only to actual suggestion fields. Do not move domain validation or timezone/min-date rules into a new form layer. |
-| Other date pickers and full scheduling views | Keep existing specialized date/range/business-hours behavior. Mini-calendar adoption is verified separately; it does not authorize replacing appointment/calendar interaction models wholesale. |
-| Command and SOAP editor menus/toolbar | Retain cmdk and BlockNote-owned behavior. Editor selection/IME, command execution and layered focus are tightly coupled; do not attach a second navigation engine. |
+| Multi-breed chip input | Evaluated and reverted this local conversion. Beta SDK controlled `submitOnSelect` reads the pre-render query for partial-label selection, while value-change alone misses exact-label activation. Compensating refs/event glue make this one-off form less simple. Keep its working native/Base behavior and add preservation regressions; do not force SDK usage. |
+| Other date pickers and full scheduling views | Shared simple day picking adopts SDK Calendar. Keep specialized date/range/business-hours behavior and appointment/calendar interaction models; those contracts are not generic day selection. |
+| Command and SOAP editor menus/toolbar | Retain cmdk and BlockNote-owned behavior. SOAP toolbar has an explicit initial style tab stop plus overflow More fallback; ready SDK Toolbar starts at the first item and cannot preserve that contract without a second custom focus layer and trigger rewrites. Editor selection/IME, command execution and layered focus stay with their existing owner. |
 | Table/data grid, pagination, sorting/filter engine and virtualization | Retain TanStack Table/Virtual and server query contracts. Shared segmented/line controls adopt SDK without replacing table state or static table markup. |
 | Scroll area and resizable split panels | Retain tested Base ScrollArea and react-resizable-panels/custom chart persistence contracts. No evidence justifies swapping their functioning integrations. |
 | Drag/reorder, attachments, image/PDF zoom, editor | Retain dnd-kit, existing attachment/provider boundaries, PDF/zoom and BlockNote implementations. SDK is not a reason to rewrite specialized behavior. |
@@ -119,7 +125,7 @@ Observed so far:
   and checks the unchanged, source-backed 8px result inset rather than expecting
   zero. No result CSS changed.
 
-## Final Local Evidence — 2026-11-16
+## First Tranche Local Evidence — 2026-11-16
 
 - Code candidate `ebca45f066c3b638b9aa93b1a8243589018dfe75` is cleanly
   rebased onto verified `origin/main` at `ca3222a8`. Upstream handoff/dispensing
@@ -155,3 +161,18 @@ The baseline failures described above are not included in the passing focused
 sets. Existing-owner decisions in the family table remain deliberate; this
 candidate does not claim a blanket conversion of every screen/control.
 No remote delivery or human acceptance is claimed.
+
+## Extension Tranche And Final Reconciliation
+
+The second tranche adds real shared date-popup adoption, not another parallel UI
+system. New regressions cover six-week months, selected date reactivation and
+dismissal, same-patient reactivation and composition guards. The multi-breed
+conversion was reverted after parity review demonstrated extra beta-API glue;
+retained behavior is checked for exact-label pointer and keyboard commits,
+partial-label pointer selection and custom text/deduplication.
+Actual Home checks observe caller-owned local operating date and matching
+work-item reads; Home does not own this date in its URL. Existing reception
+checks continue to verify reception's separate URL/read contract.
+
+Final combined verification and latest-main reconciliation are still pending.
+Do not treat the first tranche's passing counts as evidence for the extension.

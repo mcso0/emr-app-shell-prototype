@@ -10,14 +10,14 @@ const summaries: ReceptionPatientSummary[] = ["합성 환자 가", "합성 환�
   primaryGuardian: { id: `synthetic-guardian-${index}`, workspaceId: "synthetic-sdk", name: `합성 보호자 ${index + 1}`, mobilePhone: `0100000000${index}`, createdAt: "2026-11-16T00:00:00Z", updatedAt: "2026-11-16T00:00:00Z" }, searchText: name,
 }));
 function Example({ status = "idle" }: { status?: "idle" | "loading" | "error" }) {
-  const [query, setQuery] = useState(""); const [selected, setSelected] = useState<ReceptionPatientSummary>(); const [open, setOpen] = useState(false); const [loading, setLoading] = useState(false);
+  const [query, setQuery] = useState(""); const [selected, setSelected] = useState<ReceptionPatientSummary>(); const [open, setOpen] = useState(false); const [loading, setLoading] = useState(false); const [selectCalls, setSelectCalls] = useState(0);
   return <div className="grid w-80 gap-3">
     <button type="button" onClick={() => setLoading((value) => !value)}>화면 로딩 전환</button>
     <EmrPageLoadingBoundary loading={loading}><ReceptionPatientCombobox inputClassName="h-9 bg-card" lookupState={status} query={query} open={open} onOpenChange={setOpen} summaries={status === "idle" && query !== "없음" ? summaries : []} selectedSummary={selected}
       onQueryChange={(value) => { setQuery(value); setSelected(undefined); setOpen(true); }}
       onClear={() => { setQuery(""); setSelected(undefined); setOpen(true); }}
-      onSelect={(summary) => { setSelected(summary); setQuery(getReceptionPatientOptionLabel(summary)); setOpen(false); }} /></EmrPageLoadingBoundary>
-    <output aria-label="선택한 합성 환자">{selected?.patient.id ?? "미선택"}</output>
+      onSelect={(summary) => { setSelectCalls((count) => count + 1); setSelected(summary); setQuery(getReceptionPatientOptionLabel(summary)); setOpen(false); }} /></EmrPageLoadingBoundary>
+    <output aria-label="선택한 합성 환자">{selected?.patient.id ?? "미선택"}</output><output aria-label="합성 환자 선택 횟수">{selectCalls}</output>
   </div>;
 }
 const meta = { title: "Features/Reception/Patient Combobox", component: Example, tags: ["autodocs"], args: { status: "idle" }, parameters: { docs: { description: { component: "접수와 예약의 drawer/side-panel 네 호출자가 사용하는 실제 환자/보호자 검색 UI입니다. 합성 결과만 주입하며 DB/API/메시지 발송은 실행하지 않습니다. 기존 hook이 조회·debounce·stale result·권한을 소유하고 UI SDK만 키보드와 목록 상호작용을 소유합니다." } } } } satisfies Meta<typeof Example>;
@@ -50,4 +50,21 @@ export const HiddenWhilePageLoads: Story = { play: async ({ canvasElement }) => 
   await waitFor(() => expect(body.queryByRole("listbox")).not.toBeInTheDocument());
   await userEvent.click(body.getByRole("button", { name: "화면 로딩 전환" }));
   await expect(body.queryByRole("listbox")).not.toBeInTheDocument();
+} };
+
+export const ReselectPatient: Story = { play: async ({ canvasElement }) => {
+  const body = within(canvasElement.ownerDocument.body), input = body.getByRole("combobox", { name: "환자 검색" });
+  await userEvent.type(input, "합성"); await userEvent.keyboard("{ArrowDown}{Enter}");
+  await expect(body.getByLabelText("합성 환자 선택 횟수")).toHaveTextContent("1");
+  await userEvent.click(input); await userEvent.click(await body.findByRole("option", { name: /합성 환자 가/ }));
+  await expect(body.getByLabelText("합성 환자 선택 횟수")).toHaveTextContent("2");
+  await userEvent.click(input); await userEvent.keyboard("{ArrowDown}");
+  input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", keyCode: 229, bubbles: true }));
+  await expect(body.getByLabelText("합성 환자 선택 횟수")).toHaveTextContent("2");
+  await expect(input).toHaveAttribute("aria-expanded", "true");
+  await userEvent.keyboard("{Enter}");
+  await expect(body.getByLabelText("합성 환자 선택 횟수")).toHaveTextContent("3");
+  await userEvent.click(input); await userEvent.keyboard("{ArrowDown}{ArrowDown}{Enter}");
+  await expect(body.getByLabelText("합성 환자 선택 횟수")).toHaveTextContent("4");
+  await expect(body.getByLabelText("선택한 합성 환자")).toHaveTextContent("synthetic-patient-1");
 } };

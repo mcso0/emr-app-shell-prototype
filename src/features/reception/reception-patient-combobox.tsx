@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef } from "react";
+
 import { CdsActionsSearchIcon, CdsActionsXIcon } from "@/components/cds-icons/actions-and-controls";
 import { Combobox, ComboboxContent, ComboboxInput, ComboboxItem, ComboboxList } from "@/components/ui/combobox";
 import { cn } from "@/lib/utils";
@@ -22,6 +24,7 @@ type Props = {
 
 /** Features retain async/workspace lookup, selected patient and vital/dirty state. */
 export function ReceptionPatientCombobox({ inputClassName, lookupState, onClear, onOpenChange, onQueryChange, onSelect, open, query, selectedSummary, summaries }: Props) {
+  const pendingPatientId = useRef<string | null>(null);
   const message = lookupState === "loading" ? "DB 환자 검색 중입니다."
     : lookupState === "error" ? "환자 검색을 불러오지 못했습니다."
     : summaries.length === 0 ? "검색 결과가 없습니다." : undefined;
@@ -32,7 +35,17 @@ export function ReceptionPatientCombobox({ inputClassName, lookupState, onClear,
       value={selectedSummary?.patient.id ?? null}
       query={query}
       open={open && Boolean(query.trim())}
-      onOpenChange={onOpenChange}
+      onOpenChange={(nextOpen, details) => {
+        // A commit closes the single-select popup even when its value is unchanged.
+        // Keep feature actions (including draft reset on reselect) separate from value changes.
+        const committedId = pendingPatientId.current ?? selectedSummary?.patient.id;
+        pendingPatientId.current = null;
+        if (!nextOpen && details.reason === "item-press") {
+          const summary = summaries.find((item) => item.patient.id === committedId);
+          if (summary) onSelect(summary);
+        }
+        onOpenChange(nextOpen);
+      }}
       filter={false}
       status={lookupState}
       itemToLabel={(id) => {
@@ -45,8 +58,7 @@ export function ReceptionPatientCombobox({ inputClassName, lookupState, onClear,
       }}
       onValueChange={(id, details) => {
         if (details.reason !== "item-press") return;
-        const summary = summaries.find((item) => item.patient.id === id);
-        if (summary) onSelect(summary);
+        pendingPatientId.current = id;
       }}
       announcement={(change) => change.type === "results" && !change.loading ? `검색 결과 ${change.count}건` : null}
     >

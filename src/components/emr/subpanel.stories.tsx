@@ -228,3 +228,49 @@ export const FloatingPin: Story = {
     await expect(canvas.getByText("기존 패널 내용")).toBeVisible();
   },
 };
+
+function CompleteDatePickerExample() {
+  const [date, setDate] = useState("2026-05-31"), [calls, setCalls] = useState(0);
+  return <div className="w-[288px]"><EmrDateNavigator dateLabel={date} selectedDate={date} todayDate="2026-05-01" todayLabel={date === "2026-05-01" ? "오늘" : undefined} onDateChange={(next) => { setDate(next); setCalls(count => count + 1); }} /><output aria-label="합성 날짜 선택">{date}</output><output aria-label="합성 날짜 활성화 횟수">{calls}</output></div>;
+}
+export const DatePickerFullWeeksKeyboard: Story = {
+  render: () => <CompleteDatePickerExample />,
+  parameters: { controls: { disable: true }, docs: { description: { story: "실제 공통 EmrDateNavigator 팝업입니다. UI SDK Calendar가 월의 모든 주와 키보드 날짜 탐색을 소유하며 기존244px 팝업·28px 날짜 칩·한국어 이름·오늘 이동과 닫힌 후 초점을 유지합니다. 합성 ISO 날짜만 사용합니다." } } },
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(body.getByRole("button", { name: /26\.05\.31\s*\(일\) 날짜 선택/ }));
+    const grid = within(await body.findByRole("grid"));
+    await expect(grid.getAllByRole("gridcell")).toHaveLength(42);
+    const lastDay = grid.getByRole("gridcell", { name: "26.05.31 (일) 선택됨" });
+    const chip = lastDay.querySelector("span")!;
+    await waitFor(() => {
+      expect(chip.getBoundingClientRect().width).toBe(28);
+      expect(chip.getBoundingClientRect().height).toBe(28);
+      expect(lastDay.closest('[data-slot="popover-content"]')!.getBoundingClientRect().width).toBe(244);
+    });
+    lastDay.focus();
+    lastDay.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", keyCode: 229, isComposing: false, bubbles: true, cancelable: true }));
+    await expect(body.getByLabelText("합성 날짜 활성화 횟수")).toHaveTextContent("0");
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(body.queryByRole("grid")).not.toBeInTheDocument());
+    await expect(body.getByLabelText("합성 날짜 활성화 횟수")).toHaveTextContent("1");
+    await userEvent.click(body.getByRole("button", { name: /26\.05\.31\s*\(일\) 날짜 선택/ }));
+    await userEvent.click(body.getByRole("gridcell", { name: "26.05.31 (일) 선택됨" }));
+    await waitFor(() => expect(body.queryByRole("grid")).not.toBeInTheDocument());
+    await expect(body.getByLabelText("합성 날짜 활성화 횟수")).toHaveTextContent("2");
+    await userEvent.click(body.getByRole("button", { name: /26\.05\.31\s*\(일\) 날짜 선택/ }));
+    body.getByRole("gridcell", { name: "26.05.31 (일) 선택됨" }).focus();
+    await userEvent.keyboard("{ArrowLeft}{Enter}");
+    await waitFor(() => expect(body.queryByRole("grid")).not.toBeInTheDocument());
+    const trigger = body.getByRole("button", { name: /26\.05\.30\s*\(토\) 날짜 선택/ });
+    await expect(trigger).toHaveFocus();
+    await userEvent.click(trigger);
+    await userEvent.click(body.getByRole("button", { name: "다음 달" }));
+    await expect(body.getByText("2026년 6월")).toBeVisible();
+    await userEvent.click(body.getByRole("button", { name: "이전 달" }));
+    await expect(body.getByText("2026년 5월")).toBeVisible();
+    await userEvent.click(body.getByRole("button", { name: "오늘로 이동" }));
+    await waitFor(() => expect(body.getByLabelText("합성 날짜 선택")).toHaveTextContent("2026-05-01"));
+    await waitFor(() => expect(body.queryByRole("grid")).not.toBeInTheDocument());
+  },
+};
