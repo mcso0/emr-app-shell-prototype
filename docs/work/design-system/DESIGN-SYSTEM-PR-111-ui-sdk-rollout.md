@@ -239,3 +239,66 @@ PR as it becomes available. Stop on failed required checks, unexpected scope,
 non-Ready Preview, secret findings, source mismatch or failed required smoke.
 No additional reservation-picker or Plan/Order redesign is included; those are
 separate possible follow-up opportunities, not unfinished release scope.
+
+## Escape Regression Correction Release — 2026-11-16
+
+PR [#1096](https://github.com/mcso0/emr-app-shell-prototype/pull/1096) delivered
+main `70704694`. Its Ready Production is `dpl_8ascKGUH6xgj9fi3CXCJ5FfNBx4q`,
+served by `emr-app-shell-prototype.vercel.app`. Authenticated read-only smoke in
+the source-allowlisted Cheongdam synthetic workspace found a newly introduced
+mixed-overlay Escape regression: dismissing guardian suggestions also opened
+the enclosing registration discard confirmation. Local actual-screen tests
+reproduced it for both guardian Combobox and single-breed Autocomplete.
+Independent synthetic source A/B compared pre-rollout `910512f2` with the
+current registration code and confirmed the old Base popup preserved the parent.
+
+The original bounded UI SDK deployment/verification approval covers correcting
+this rollout regression after fresh PR, CI, Preview and focused verification.
+Only this correction is isolated from main: the separate local reservation
+calendar and Plan/Order filter follow-ups remain preserved and **excluded**.
+No database, provider, permission, dependency or global release-setting change
+belongs to this correction.
+
+### Smallest Correction
+
+Base Dialog's Escape handling runs before the SDK popup's document-level
+dismissal, and the SDK child is outside Base's popup tree. Mark the shared SDK
+search inputs explicitly. For an expanded, marked input only, cancel the parent
+Escape close and allow propagation to the child's own dismissal. The next
+Escape retains normal parent behavior. This adds no state, refs, event listener,
+new overlay stack or focus manager. Existing Base Select and non-SDK fixed-list
+combobox behavior remain unchanged and regression-covered.
+
+### Candidate And Verification
+
+- Base re-fetched at `70704694`; current Production and duplicate PR state
+  checked before preparation. The earlier local follow-up branch is untouched.
+- Scope: three small shared input/Dialog runtime files, related Dialog story,
+  registration Escape tests and this release evidence. No feature module or
+  reservation/filter adoption is part of the diff.
+- Required evidence: actual guardian/breed first-child-then-parent Escape,
+  value/focus retention, no registration write, existing registration/search
+  flows, controlled dialog state/callback counts, Base Select/fixed-list
+  preservation, full local gates, current PR Release Check and Ready Preview.
+- Isolated candidate verification passed **5/5 actual-screen E2Es** and **8/8
+  focused Dialog/Combobox/Autocomplete stories**. Full typecheck, lint, docs,
+  secret scan and UX copy checks passed. Production build and remote release
+  gates are still required before merge; final results belong to the PR packet.
+- Scoped Production smoke repeats those read-only/draft-cancel interactions
+  after the exact-source deployment is Ready. Do not activate registration,
+  clinical/order, invitation, email or payment submissions. Navigation may
+  retain its existing app-shell preferences; do not claim zero network writes.
+- Rollback reference is the prior `70704694` deployment above. It contains the
+  Escape regression and is not described as fully known-good. No rollback is
+  authorized implicitly; stop and report any failed required smoke.
+
+Earlier live screenshots at 2560×1256 showed no page overflow and the observed
+console had no errors/warnings. Patient lookup, breed full-label commits,
+calendar and diagnosis/order facet reset behavior passed the scoped smoke.
+Only one SOAP tab existed, so multi-tab live testing was not performed. No
+authenticated old-version visual/performance baseline was captured; earlier
+public login network timings cannot establish SDK-caused speed or INP changes.
+
+PR/check/Preview/merge/Production and final smoke evidence will be recorded in
+the correction PR. Human acceptance and exhaustive browser/accessibility
+coverage are not claimed by automated checks.

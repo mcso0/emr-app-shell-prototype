@@ -17,7 +17,7 @@ function Autocomplete({ controller: providedController, ...props }: ComponentPro
   return <SdkAutocomplete controller={controller} {...props} />;
 }
 function AutocompleteInput({ className, ...props }: ComponentProps<typeof SdkAutocompleteInput>) {
-  return <SdkAutocompleteInput className={cn(inputClassName, className)} {...props} />;
+  return <SdkAutocompleteInput data-ui-sdk-search-input="" className={cn(inputClassName, className)} {...props} />;
 }
 function AutocompleteContent({ className, ...props }: ComponentProps<typeof SdkAutocompleteContent>) {
   const panel = useModuleSidePanel();
