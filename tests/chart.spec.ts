@@ -8030,6 +8030,7 @@ for (const [actor, canCancel] of [["user-tech", false], ["user-vet", true]] as c
 for (const [queueType, label, waiting] of [
   ["dispensing", "조제", false],
   ["dispensing", "조제", true],
+  ["treatment", "처치", false],
   ["treatment", "처치", true],
 ] as const) {
   test(`Plan/Order confirms navigation to the exact ${queueType} instruction item (${waiting ? "waiting" : "started"})`, async ({ page }) => {
@@ -8077,7 +8078,17 @@ for (const [queueType, label, waiting] of [
     const writes: string[] = [];
     let denied = !waiting;
     let pendingRead: Promise<void> | undefined;
-    let instructionItems = [sibling, item];
+    // Put the started target below the viewport so visibility depends on scrolling.
+    const precedingItems = waiting ? [sibling] : [
+      sibling,
+      ...Array.from({ length: 24 }, (_, index) => ({
+        ...sibling,
+        id: `synthetic-preceding-item-${index}`,
+        orderId: `synthetic-preceding-order-${index}`,
+        taskId: `synthetic-preceding-task-${index}`,
+      })),
+    ];
+    let instructionItems = [...precedingItems, item];
 
     await page.route("**/chart/order-drafts?*", route => route.fulfill({
       json: { ok: true, status: 200, etag: `"${"a".repeat(64)}"`, rows: [order, unlinkedOrder, draftOrder] },
@@ -8186,16 +8197,16 @@ for (const [queueType, label, waiting] of [
     await expect(target).toContainText(name);
     await expect(target).toBeInViewport();
     await expect(target).toBeFocused();
-    if (waiting) {
-      const siblingRow = page.getByRole("row").filter({ hasText: sibling.name });
-      await expect(siblingRow).toBeVisible();
-      const cellBackgrounds = (row: typeof target) => row.locator(":scope > :is(th, td)").evaluateAll(
-        cells => cells.map(cell => getComputedStyle(cell).backgroundColor),
-      );
-      expect(await cellBackgrounds(target)).toEqual(await cellBackgrounds(siblingRow));
-    } else {
+    const siblingRow = waiting
+      ? page.getByRole("row").filter({ hasText: sibling.name })
+      : page.locator(`tr[data-item="${siblingId}"]`);
+    await expect(siblingRow).toBeVisible();
+    const cellBackgrounds = (row: typeof target) => row.locator(":scope > :is(th, td)").evaluateAll(
+      cells => cells.map(cell => getComputedStyle(cell).backgroundColor),
+    );
+    expect(await cellBackgrounds(target)).toEqual(await cellBackgrounds(siblingRow));
+    if (!waiting) {
       await expect(target).toHaveAttribute("data-item", workItemId);
-      await expect(page.locator(`tr[data-item="${siblingId}"]`)).toBeVisible();
     }
     expect(writes).toEqual([]);
     if (waiting) {
