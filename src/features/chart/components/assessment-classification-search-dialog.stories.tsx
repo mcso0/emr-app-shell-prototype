@@ -22,7 +22,7 @@ function Example({ scenario }: { scenario: Scenario }) {
 }
 const meta = {
   title: "Features/Chart/Assessment Classification Search", component: Example, tags: ["autodocs"], args: { scenario: "ready" as Scenario }, argTypes: { scenario: { control: false } },
-  parameters: { docs: { story: { inline: false, height: "880px" }, description: { component: "ChartContent가 사용하는 실제 AssessmentClassificationSearchDialog와 ClassificationExplorer UI를 함께 렌더합니다. 합성 카탈로그의 계통·구분·진단·동의어·진단 유형을 실제 props 계약에 제공합니다. 로컬 전체 조회 상태(nextCursor=null)의 검색·선택·순서 변경과 읽기 전용 상태를 확인합니다. 완료 결과는 화면에 표시합니다. 원격 진단 마스터 조회·채택과 차트 저장, 페이지 추가 조회는 이 예시의 범위에 포함되지 않습니다." } } },
+  parameters: { docs: { story: { inline: false, height: "880px" }, description: { component: "ChartContent가 사용하는 실제 AssessmentClassificationSearchDialog와 ClassificationExplorer UI를 함께 렌더합니다. 합성 카탈로그의 계통·구분·진단·동의어·진단 유형을 실제 props 계약에 제공합니다. 로컬 전체 조회 상태(nextCursor=null)의 검색·선택·순서 변경과 읽기 전용 상태를 확인합니다. UI SDK Listbox가 계통·구분의 단일 선택, 화살표/Home/End와 typeahead를 소유합니다. 완료 결과는 화면에 표시합니다. 원격 진단 마스터 조회·채택과 차트 저장, 페이지 추가 조회는 이 예시의 범위에 포함되지 않습니다." } } },
 } satisfies Meta<typeof Example>;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -35,7 +35,23 @@ async function open(canvas: ReturnType<typeof within>, element: HTMLElement) {
 }
 export const FilterSearchAndComplete: Story = { play: async ({ canvas, canvasElement }) => {
   const { body, dialog } = await open(canvas, canvasElement);
-  await userEvent.click(within(dialog.getByRole("listbox", { name: "진단 계통 목록" })).getByRole("option", { name: /^합성 계통 A/ }));
+  const systems = within(dialog.getByRole("listbox", { name: "진단 계통 목록" }));
+  systems.getByRole("option", { name: /^전체/ }).focus();
+  await userEvent.keyboard("{ArrowDown}");
+  await waitFor(() => expect(systems.getByRole("option", { name: /^합성 계통 A/ })).toHaveAttribute("aria-selected", "true"));
+  const groups = within(dialog.getByRole("listbox", { name: "질환 구분 목록" }));
+  await userEvent.click(groups.getByRole("option", { name: /^합성 구분 A/ }));
+  await expect(groups.getByRole("option", { name: /^합성 구분 A/ })).toHaveAttribute("aria-selected", "true");
+  await userEvent.click(systems.getByRole("option", { name: /^합성 계통 A/ }));
+  await expect(groups.getByRole("option", { name: /^전체/ })).toHaveAttribute("aria-selected", "true");
+  await userEvent.click(groups.getByRole("option", { name: /^합성 구분 A/ }));
+  const activeSystem = systems.getByRole("option", { name: /^합성 계통 A/ });
+  activeSystem.focus();
+  // Safari's final IME Enter can have isComposing=false with keyCode=229.
+  activeSystem.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", keyCode: 229, isComposing: false, bubbles: true, cancelable: true }));
+  await expect(groups.getByRole("option", { name: /^합성 구분 A/ })).toHaveAttribute("aria-selected", "true");
+  await userEvent.keyboard(" ");
+  await expect(groups.getByRole("option", { name: /^전체/ })).toHaveAttribute("aria-selected", "true");
   const diagnoses = within(dialog.getByRole("listbox", { name: "진단명 목록" }));
   await expect(diagnoses.queryByRole("option", { name: "합성 진단 B" })).not.toBeInTheDocument();
   await expect(diagnoses.getByRole("option", { name: "합성 진단 C" })).toBeVisible();

@@ -460,6 +460,12 @@ async function restoreKongOrderDraftDefaults(page: Page) {
   await expect(billingName).toHaveValue(/.+/);
 }
 
+async function openChartOrderCatalog(page: Page) {
+  // The header opens the catalog; the separate Order button opens quick-add.
+  await page.getByRole("heading", { name: "Plan/Order", exact: true })
+    .locator("..").getByRole("button", { name: "Order 추가", exact: true }).click();
+}
+
 async function searchChartOrderCatalog(
   dialog: Locator,
   query: string,
@@ -9813,7 +9819,7 @@ test("chart order catalog shows a visible loading state and count skeletons befo
   );
 
   await page.goto(kongScenarioUrl);
-  await page.getByRole("button", { name: "Order 추가", exact: true }).click();
+  await openChartOrderCatalog(page);
 
   const dialog = page.getByRole("dialog", { name: "오더 추가" });
   await expect(
@@ -9992,13 +9998,21 @@ test("chart catalog dialog searches 108 service-review dispensing candidates at 
   );
 
   await page.goto(kongScenarioUrl);
-  await page.getByRole("button", { name: "Order 추가", exact: true }).click();
+  await openChartOrderCatalog(page);
 
   const dialog = page.getByRole("dialog", {
     name: "오더 추가",
   });
   await expect(dialog.getByText("전체 오더", { exact: true })).toBeVisible();
   await expect(dialog.getByText("108개", { exact: true })).toBeVisible();
+  const categories = dialog.getByRole("listbox", { name: "오더 카테고리" });
+  const allCategory = categories.getByRole("option", { name: /^전체/ });
+  await allCategory.focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(dialog.getByText("진료 오더", { exact: true })).toBeVisible();
+  await page.keyboard.press("Home");
+  await expect(allCategory).toHaveAttribute("aria-selected", "true");
+  await expect(dialog.getByText("전체 오더", { exact: true })).toBeVisible();
   const candidateColumn = dialog.locator('section[aria-label="전체 오더"]');
   const candidateHeading = candidateColumn.getByText("전체 오더", {
     exact: true,
@@ -10014,7 +10028,8 @@ test("chart catalog dialog searches 108 service-review dispensing candidates at 
   expect(candidateHeadingBox).not.toBeNull();
   expect(firstCandidateCopyBox).not.toBeNull();
   expect(
-    Math.abs(candidateHeadingBox!.x - firstCandidateCopyBox!.x),
+    // Preserve the existing 8px candidate inset; SDK facet navigation does not change result layout.
+    Math.abs(candidateHeadingBox!.x + 8 - firstCandidateCopyBox!.x),
   ).toBeLessThanOrEqual(1);
   const candidateScroll = candidateColumn.locator(
     '[data-testid="chart-order-catalog-scroll"]',

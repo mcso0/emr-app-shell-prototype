@@ -38,7 +38,7 @@ const meta = {
   parameters: {
     docs: {
       description: {
-        component: "목록의 간단한 필터를 밑줄로 표시합니다. role=group과 버튼 aria-pressed를 사용하며 별도 탭 패널이나 탭 화살표 탐색을 제공하지 않습니다. 관련 패널 전환에는 Tabs를 사용하세요. 선택값·합계·업무 동작은 호출자가 소유합니다. 아래 숫자와 선택 동작은 합성 예시입니다.",
+        component: "목록의 간단한 필터를 밑줄로 표시합니다. role=group과 버튼 aria-pressed를 사용하며 별도 탭 패널은 제공하지 않으며 UI SDK가 그룹 내 화살표 탐색과 단일 선택을 관리합니다. 관련 패널 전환에는 Tabs를 사용하세요. 선택값·합계·업무 동작은 호출자가 소유합니다. 아래 숫자와 선택 동작은 합성 예시입니다.",
       },
     },
   },
@@ -71,12 +71,42 @@ export const Default: Story = {
   },
 };
 export const Compact: Story = {
-  parameters: { docs: { description: { story: "순수 LineTabs API의 default 크기입니다. 합성 선택값·개수·비활성 항목을 유지합니다. role=group이므로 패널이나 화살표 탭 탐색을 제공하지 않습니다." } } },
+  parameters: { docs: { description: { story: "순수 LineTabs API의 default 크기입니다. 합성 선택값·개수·비활성 항목을 유지합니다. role=group과 aria-pressed를 유지하며 UI SDK가 화살표 탐색을 관리합니다." } } },
   args: { size: "default" },
   play: async ({ canvas }) => {
     const target = canvas.getByRole("button", { name: "대기 3" });
     await userEvent.click(target); await waitFor(() => expect(target).toHaveAttribute("aria-pressed", "true"));
     await expect(canvas.getByRole("button", { name: "전체 8" })).toHaveAttribute("aria-pressed", "false");
     await expect(canvas.getByRole("button", { name: "준비 중" })).toBeDisabled();
+    // Single-select filters must not clear on a repeated click.
+    await userEvent.click(target);
+    await expect(target).toHaveAttribute("aria-pressed", "true");
+    await userEvent.keyboard("{ArrowLeft}");
+    await expect(canvas.getByRole("button", { name: "전체 8" })).toHaveFocus();
+    await userEvent.keyboard(" ");
+    await expect(canvas.getByRole("button", { name: "전체 8" })).toHaveAttribute("aria-pressed", "true");
   },
 };
+
+export const DisabledSelection: Story = {
+  args: { value: "unavailable", size: "default" },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("button", { name: "준비 중" })).toBeDisabled();
+    await expect(canvas.getByRole("button", { name: "준비 중" })).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(canvas.getByRole("button", { name: "전체 8" }));
+    await expect(canvas.getByRole("button", { name: "전체 8" })).toHaveAttribute("aria-pressed", "true");
+  },
+};
+
+
+function ReselectLineTabsCaller() {
+  const [value, setValue] = useState("all"), [calls, setCalls] = useState(0);
+  return <><LineTabs aria-label="합성 라인 필터 재선택" items={items} value={value} onValueChange={(next) => { setValue(next); setCalls((count) => count + 1); }} /><output aria-label="합성 라인 활성화 횟수">{calls}</output></>;
+}
+export const ReselectActivation: Story = { render: () => <ReselectLineTabsCaller />, play: async ({ canvas }) => {
+  const selected = canvas.getByRole("button", { name: "전체 8" });
+  await userEvent.click(selected); await expect(canvas.getByLabelText("합성 라인 활성화 횟수")).toHaveTextContent("1");
+  selected.focus(); await userEvent.keyboard("{Enter}"); await expect(canvas.getByLabelText("합성 라인 활성화 횟수")).toHaveTextContent("2");
+  await userEvent.keyboard(" "); await expect(canvas.getByLabelText("합성 라인 활성화 횟수")).toHaveTextContent("3");
+  await userEvent.click(canvas.getByRole("button", { name: "대기 3" })); await expect(canvas.getByLabelText("합성 라인 활성화 횟수")).toHaveTextContent("4");
+} };

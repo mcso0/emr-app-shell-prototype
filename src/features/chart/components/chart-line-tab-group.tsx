@@ -1,4 +1,7 @@
-import { useCallback, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+"use client";
+
+import { Tabs, TabsList, TabsTab } from "@ui-sdk/react/tabs";
+import { useCallback, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -110,60 +113,44 @@ export function ChartLineTabGroup<TValue extends string>({
     revealTab(value);
   }, [revealTab, tabKey, value, hasOverflow, viewportWidth]);
 
-  const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
-    const targetIndex = event.key === "Home"
-      ? 0
-      : event.key === "End"
-        ? items.length - 1
-        : event.key === "ArrowRight"
-          ? (index + 1) % items.length
-          : event.key === "ArrowLeft"
-            ? (index + items.length - 1) % items.length
-            : null;
-    if (targetIndex === null) return;
-    event.preventDefault();
-    const next = items[targetIndex];
-    if (!next) return;
-    onValueChange(next.value);
-    requestAnimationFrame(() => tabRefs.current.get(next.value)?.focus({ preventScroll: true }));
-  };
-
   const hiddenItems = items.filter((item) => hiddenValues.includes(item.value));
 
   return (
-    <div ref={shellRef} className="flex min-w-0 flex-1 items-stretch gap-2">
+    <Tabs
+      ref={shellRef}
+      value={value}
+      onValueChange={(next) => {
+        if (next !== null) onValueChange(next);
+      }}
+      className="flex min-w-0 flex-1 items-stretch gap-2"
+    >
       <div className="relative min-w-0 flex-1">
         <div
           ref={viewportRef}
           className="h-full overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           onScroll={measureTabs}
         >
-          <div ref={trackRef} className="flex h-full min-w-max items-stretch gap-3" role="tablist" aria-label={ariaLabel}>
-            {items.map((item, index) => (
-              <button
+          <TabsList ref={trackRef} className="flex h-full min-w-max items-stretch gap-3" aria-label={ariaLabel}>
+            {items.map((item) => (
+              <TabsTab
                 key={item.value}
                 ref={(element) => {
                   if (element) tabRefs.current.set(item.value, element);
                   else tabRefs.current.delete(item.value);
                 }}
-                type="button"
-                role="tab"
+                value={item.value}
+                render={<button aria-controls="chart-soap-editor-panel" />}
                 data-soap-system-tab={item.value}
-                aria-selected={value === item.value}
-                aria-controls="chart-soap-editor-panel"
-                tabIndex={value === item.value ? 0 : -1}
                 className={tabClassName(value === item.value)}
-                onKeyDown={(event) => handleTabKeyDown(event, index)}
                 onClick={() => {
-                  onValueChange(item.value);
                   revealTab(item.value);
                 }}
               >
                 <span>{item.label}</span>
                 {typeof item.count === "number" ? <span className="ml-1 font-semibold tabular-nums">{item.count}</span> : null}
-              </button>
+              </TabsTab>
             ))}
-          </div>
+          </TabsList>
         </div>
         {hasLeftOverflow ? <span aria-hidden="true" className="pointer-events-none absolute top-0 bottom-0.5 left-0 z-10 w-5 bg-gradient-to-r from-[var(--emr-surface-panel)] to-transparent" /> : null}
         {hasRightOverflow ? <span aria-hidden="true" className="pointer-events-none absolute top-0 right-0 bottom-0.5 z-10 w-5 bg-gradient-to-l from-[var(--emr-surface-panel)] to-transparent" /> : null}
@@ -211,6 +198,6 @@ export function ChartLineTabGroup<TValue extends string>({
           </DropdownMenuContent>
         </DropdownMenu>
       ) : null}
-    </div>
+    </Tabs>
   );
 }

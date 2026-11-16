@@ -24,6 +24,8 @@ import {
   CdsNavigationChevronDownIcon,
 } from "@/components/cds-icons/navigation";
 import { BoneIcon, UserIcon } from "@/components/icons";
+import { Autocomplete, AutocompleteContent, AutocompleteInput, AutocompleteItem, AutocompleteList } from "@/components/ui/autocomplete";
+import { Combobox, ComboboxContent, ComboboxInput, ComboboxItem, ComboboxList } from "@/components/ui/combobox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -1024,7 +1026,6 @@ function BreedAutocomplete({
   value: string;
   onValueChange: (value: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
   const options = useMemo(() => {
     const query = value.trim().toLowerCase();
     const breeds = getBreedOptions(species);
@@ -1049,16 +1050,13 @@ function BreedAutocomplete({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        nativeButton={false}
-        render={<div className="relative" />}
-      >
+    <Autocomplete value={value} onValueChange={onValueChange} filter={false} openOnFocus announcement={(change) => change.type === "results" ? `품종 추천 ${change.count}건` : null}>
+      <div className="relative">
         <CdsActionsSearchIcon
           aria-hidden="true"
           className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--emr-text-tertiary)]"
         />
-        <Input
+        <AutocompleteInput
           id={id}
           aria-describedby={ariaDescribedBy}
           aria-invalid={ariaInvalid || undefined}
@@ -1066,48 +1064,31 @@ function BreedAutocomplete({
           autoComplete="off"
           className={cn(className, "pl-9")}
           placeholder={placeholder}
-          value={value}
-          onFocus={() => setOpen(true)}
-          onValueChange={(breed) => {
-            onValueChange(breed);
-            setOpen(true);
-          }}
         />
-      </PopoverTrigger>
-      <PopoverContent
-        align="start"
-        className="max-h-56 w-[var(--anchor-width)] gap-1 overflow-y-auto p-1.5"
-        initialFocus={false}
-      >
-        <div role="listbox" aria-label={`${ariaLabel} 추천`} className="grid gap-1">
+      </div>
+      <AutocompleteContent>
+        <AutocompleteList render={<div aria-label={`${ariaLabel} 추천`} aria-labelledby="" />} className="grid gap-1">
           {options.length ? (
             options.map((breed) => (
-              <button
+              <AutocompleteItem
                 key={breed}
-                type="button"
-                role="option"
-                aria-selected={value === breed}
+                value={breed}
                 className={cn(
                   "rounded-md px-2.5 py-2 text-left emr-text-dense font-medium text-[var(--emr-text-secondary)] transition-colors hover:bg-[var(--emr-state-hover)]",
                   value === breed && "bg-[var(--emr-state-selected)] text-[var(--emr-status-info-text)]"
                 )}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => {
-                  onValueChange(breed);
-                  setOpen(false);
-                }}
               >
                 {breed}
-              </button>
+              </AutocompleteItem>
             ))
           ) : (
             <div className="px-2.5 py-2 emr-text-metadata text-muted-foreground">
               직접 입력한 품종으로 저장합니다.
             </div>
           )}
-        </div>
-      </PopoverContent>
-    </Popover>
+        </AutocompleteList>
+      </AutocompleteContent>
+    </Autocomplete>
   );
 }
 
@@ -3779,45 +3760,55 @@ function PatientGuardianRegistrationButton({
                         label="보호자 검색"
                         required
                       >
-                        <Popover open={guardianPopoverOpen} onOpenChange={setGuardianPopoverOpen}>
-                          <PopoverTrigger
-                            nativeButton={false}
-                            render={<div className="relative" />}
-                          >
+                        <Combobox<string>
+                          open={guardianPopoverOpen}
+                          onOpenChange={setGuardianPopoverOpen}
+                          query={guardianQuery}
+                          value={selectedGuardianRecordId || null}
+                          filter={false}
+                          status={lookupStatus === "idle" || lookupStatus === "loading" ? "loading" : lookupStatus === "error" ? "error" : "idle"}
+                          itemToLabel={(id) => {
+                            const guardian = lookupGuardians.find((item) => item.id === id);
+                            return guardian ? getGuardianSearchDisplay(guardian, lookupPatients, lookupPatientGuardians) : id;
+                          }}
+                          announcement={(change) => change.type === "results" && !change.loading ? `일치하는 보호자 ${change.count}명` : null}
+                          onQueryChange={(query, details) => {
+                            if (details.reason !== "input-change") return;
+                            setGuardianQuery(query);
+                            setGuardianPopoverOpen(true);
+                            if (selectedGuardian && query !== selectedGuardianSearchDisplay) {
+                              setSelectedGuardianRecordId("");
+                              setPatientDraft((current) => ({ ...current, existingGuardianId: "", guardianMobilePhone: "", guardianName: "" }));
+                            }
+                          }}
+                          onValueChange={(id, details) => {
+                            if (details.reason !== "item-press") return;
+                            const guardian = guardianMatches.find((item) => item.id === id);
+                            if (!guardian) return;
+                            setGuardianQuery(getGuardianSearchDisplay(guardian, lookupPatients, lookupPatientGuardians));
+                            setSelectedGuardianRecordId(guardian.id);
+                            setPatientDraft((current) => ({ ...current, existingGuardianId: guardian.id, guardianMobilePhone: guardian.mobilePhone ?? "", guardianName: guardian.name }));
+                            setErrors((current) => ({ ...current, selectedGuardianId: undefined }));
+                            setGuardianPopoverOpen(false);
+                          }}
+                        >
+                          <div className="relative">
                             <CdsActionsSearchIcon
                               aria-hidden="true"
                               className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--emr-text-tertiary)]"
                             />
-                            <Input
+                            <ComboboxInput
                               id={selectedGuardianControlId}
                               aria-describedby={errors.selectedGuardianId ? `${selectedGuardianControlId}-error` : undefined}
                               aria-invalid={Boolean(errors.selectedGuardianId) || undefined}
                               aria-label="기존 보호자 검색"
                               className={cn(emrRegistrationControlClassName, "pl-9")}
                               placeholder="보호자명 또는 휴대전화 검색"
-                              value={guardianQuery}
                               onFocus={() => setGuardianPopoverOpen(true)}
-                              onValueChange={(query) => {
-                                setGuardianQuery(query);
-                                setGuardianPopoverOpen(true);
-                                if (selectedGuardian && query !== selectedGuardianSearchDisplay) {
-                                  setSelectedGuardianRecordId("");
-                                  setPatientDraft((current) => ({
-                                    ...current,
-                                    existingGuardianId: "",
-                                    guardianMobilePhone: "",
-                                    guardianName: "",
-                                  }));
-                                }
-                              }}
                             />
-                          </PopoverTrigger>
-                          <PopoverContent
-                            align="start"
-                            className="max-h-72 w-[var(--anchor-width)] gap-1 overflow-y-auto p-1.5"
-                            initialFocus={false}
-                          >
-                            <div role="listbox" aria-label="기존 보호자 목록" className="grid gap-1">
+                          </div>
+                          <ComboboxContent>
+                            <ComboboxList render={<div aria-label="기존 보호자 목록" aria-labelledby="" />} className="grid gap-1">
                               {lookupStatus === "idle" || lookupStatus === "loading" ? (
                                 <div className="px-2.5 py-2 emr-text-metadata text-muted-foreground">
                                   보호자 정보를 불러오는 중입니다.
@@ -3836,39 +3827,16 @@ function PatientGuardianRegistrationButton({
                                 </div>
                               ) : guardianMatches.length ? (
                                 guardianMatches.map((guardian) => {
-                                  const guardianDisplay = getGuardianSearchDisplay(
-                                    guardian,
-                                    lookupPatients,
-                                    lookupPatientGuardians
-                                  );
-
                                   return (
-                                    <button
+                                    <ComboboxItem
                                       key={guardian.id}
-                                      type="button"
-                                      role="option"
-                                      aria-selected={selectedGuardianRecordId === guardian.id}
+                                      value={guardian.id}
+                                      label={getGuardianSearchDisplay(guardian, lookupPatients, lookupPatientGuardians)}
                                       className={cn(
                                         "flex items-center justify-between gap-3 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-[var(--emr-state-hover)]",
                                         selectedGuardianRecordId === guardian.id &&
                                           "bg-[var(--emr-state-selected)] text-[var(--emr-status-info-text)]"
                                       )}
-                                      onMouseDown={(event) => event.preventDefault()}
-                                      onClick={() => {
-                                        setGuardianQuery(guardianDisplay);
-                                        setSelectedGuardianRecordId(guardian.id);
-                                        setPatientDraft((current) => ({
-                                          ...current,
-                                          existingGuardianId: guardian.id,
-                                          guardianMobilePhone: guardian.mobilePhone ?? "",
-                                          guardianName: guardian.name,
-                                        }));
-                                        setErrors((current) => ({
-                                          ...current,
-                                          selectedGuardianId: undefined,
-                                        }));
-                                        setGuardianPopoverOpen(false);
-                                      }}
                                     >
                                       <span className="min-w-0 truncate">
                                         <span className="emr-text-dense font-semibold">
@@ -3886,7 +3854,7 @@ function PatientGuardianRegistrationButton({
                                       <Badge variant={selectedGuardianRecordId === guardian.id ? "default" : "outline"}>
                                         {selectedGuardianRecordId === guardian.id ? "선택됨" : "기존 보호자"}
                                       </Badge>
-                                    </button>
+                                    </ComboboxItem>
                                   );
                                 })
                               ) : (
@@ -3894,9 +3862,9 @@ function PatientGuardianRegistrationButton({
                                   일치하는 보호자가 없습니다.
                                 </div>
                               )}
-                            </div>
-                          </PopoverContent>
-                        </Popover>
+                            </ComboboxList>
+                          </ComboboxContent>
+                        </Combobox>
                       </EmrRegistrationFieldRow>
                       {selectedGuardian ? (
                         <details className="group rounded-lg border bg-[var(--emr-surface-muted)] p-3" open>

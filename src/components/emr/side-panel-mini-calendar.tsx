@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { Calendar, CalendarDay, CalendarGrid, CalendarWeekday, CalendarWeekdays, CalendarWeeks } from "@ui-sdk/react/calendar";
 import {
   CdsNavigationChevronDownIcon,
   CdsNavigationChevronUpIcon,
@@ -10,7 +11,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import {
   addMonthsToIsoDate,
   formatKoreanOperatingDateLabel,
-  getIsoDateFromUtcDate,
   parseIsoDateParts,
 } from "@/lib/emr-domain/demo-date";
 import { cn } from "@/lib/utils";
@@ -26,32 +26,7 @@ type EmrSidePanelMiniCalendarProps = {
   rangeStartDate?: string;
 };
 
-type MiniCalendarCell = {
-  date: string;
-  day: string;
-  inMonth: boolean;
-};
-
 const sidePanelMiniCalendarWeekdays = ["일", "월", "화", "수", "목", "금", "토"];
-
-function getMiniCalendarCells(visibleMonthDate: string): MiniCalendarCell[] {
-  const parts = parseIsoDateParts(visibleMonthDate);
-  const monthStart = new Date(Date.UTC(parts.year, parts.month - 1, 1));
-  const firstCellDate = new Date(monthStart);
-  firstCellDate.setUTCDate(1 - monthStart.getUTCDay());
-
-  return Array.from({ length: 42 }, (_, index) => {
-    const cellDate = new Date(firstCellDate);
-    cellDate.setUTCDate(firstCellDate.getUTCDate() + index);
-    const date = getIsoDateFromUtcDate(cellDate);
-
-    return {
-      date,
-      day: String(cellDate.getUTCDate()),
-      inMonth: cellDate.getUTCMonth() === parts.month - 1,
-    };
-  });
-}
 
 function isDateInRange(date: string, startDate?: string, endDate?: string) {
   if (!startDate || !endDate) return false;
@@ -77,11 +52,6 @@ export function EmrSidePanelMiniCalendar({
       ? visibleMonthState.visibleMonthDate
       : selectedDate;
   const visibleMonthParts = parseIsoDateParts(visibleMonthDate);
-  const cells = useMemo(
-    () => getMiniCalendarCells(visibleMonthDate),
-    [visibleMonthDate],
-  );
-
   const navigateVisibleMonth = (direction: -1 | 1) => {
     setVisibleMonthState((current) => {
       const currentVisibleMonthDate =
@@ -108,7 +78,17 @@ export function EmrSidePanelMiniCalendar({
       data-testid="side-panel-mini-calendar"
       aria-label="접수/예약 간이 캘린더"
     >
-      <div className="mx-[6px] h-[219px]">
+      <Calendar
+        className="mx-[6px] h-[219px]"
+        value={selectedDate}
+        month={visibleMonthDate.slice(0, 7)}
+        today={todayDate}
+        locale="ko-KR"
+        weekStartsOn={0}
+        fixedWeeks
+        onValueChange={(date) => { if (typeof date === "string") onDateSelect(date); }}
+        onMonthChange={(month) => setVisibleMonthState({ selectedDate, visibleMonthDate: `${month}-01` })}
+      >
         <div
           className="flex h-[30px] items-center pl-3 pr-1.5"
           data-testid="side-panel-mini-calendar-header"
@@ -140,29 +120,24 @@ export function EmrSidePanelMiniCalendar({
             </MiniCalendarIconButton>
           </div>
         </div>
-        <div className="grid h-[189px] grid-cols-7 grid-rows-7 text-center">
-          {sidePanelMiniCalendarWeekdays.map((weekday) => (
-            <div
-              key={weekday}
-              className="flex h-[27px] items-center justify-center text-[11px] font-medium leading-[13px] text-[var(--emr-text-tertiary)]"
-            >
-              {weekday}
-            </div>
-          ))}
-          {cells.map((cell) => {
+        <CalendarGrid className="h-[189px] w-full table-fixed border-collapse text-center">
+          <CalendarWeekdays>
+            {(index) => <CalendarWeekday index={index} className="h-[27px] p-0 text-[11px] font-medium leading-[13px] text-[var(--emr-text-tertiary)]">{sidePanelMiniCalendarWeekdays[index]}</CalendarWeekday>}
+          </CalendarWeekdays>
+          <CalendarWeeks>
+          {(cell) => {
             const selected = cell.date === selectedDate;
             const today = cell.date === todayDate;
             const inRange = isDateInRange(cell.date, rangeStartDate, rangeEndDate);
 
             return (
-              <button
-                key={cell.date}
-                type="button"
+              <CalendarDay
+                value={cell.date}
                 className={cn(
-                  "group/date relative flex h-[27px] items-center justify-center outline-none",
+                  "group/date relative h-[27px] p-0 text-center align-middle outline-none",
                   "text-[12px] font-medium leading-4 tabular-nums",
                   "transition-[background-color,box-shadow,color,opacity] duration-150 ease-out",
-                  cell.inMonth
+                  !cell.outside
                     ? "text-[var(--emr-text-primary)]"
                     : "text-[var(--emr-text-disabled)]",
                   inRange &&
@@ -178,14 +153,12 @@ export function EmrSidePanelMiniCalendar({
                 ]
                   .filter(Boolean)
                   .join(" ")}
-                aria-pressed={selected}
                 data-date={cell.date}
                 data-testid={`side-panel-mini-calendar-day-${cell.date}`}
-                onClick={() => onDateSelect(cell.date)}
               >
                 <span
                   className={cn(
-                    "flex size-[23px] items-center justify-center rounded-[6px]",
+                    "mx-auto flex size-[23px] items-center justify-center rounded-[6px]",
                     "transition-[background-color,box-shadow,color,opacity] duration-150 ease-out",
                     "group-hover/date:bg-[var(--emr-state-hover)]",
                     today &&
@@ -195,13 +168,14 @@ export function EmrSidePanelMiniCalendar({
                       "bg-[var(--emr-state-hover)] shadow-[inset_0_0_0_1px_var(--emr-state-selected-border)] group-hover/date:bg-[var(--emr-state-hover)]",
                   )}
                 >
-                  {cell.day}
+                  {Number(cell.date.slice(-2))}
                 </span>
-              </button>
+              </CalendarDay>
             );
-          })}
-        </div>
-      </div>
+          }}
+          </CalendarWeeks>
+        </CalendarGrid>
+      </Calendar>
     </section>
   );
 }
