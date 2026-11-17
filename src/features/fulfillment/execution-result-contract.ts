@@ -55,6 +55,7 @@ export type ExecutionContext = {
   orderId: string; encounterId: string; clinicalOrderType: ExecutionResultType;
   workItemRevision: number; status: string; isCurrentAttempt: boolean;
   planSnapshot: Record<string, unknown>; planSha256: string;
+  priorTasks?: { taskId: string; attemptNo: number }[];
   resultRequired: boolean; canRecord: boolean; results: ExecutionResultVersion[];
 };
 export type ExecutionResultCommand = {
@@ -147,6 +148,8 @@ export function parseExecutionContext(value: unknown, workspaceId: string, workI
     || typeof value.canRecord !== "boolean" || typeof value.isCurrentAttempt !== "boolean"
     || typeof value.status !== "string" || !["requested", "pending", "in_progress", "paused", "completed", "complete", "returned", "cancelled"].includes(value.status)
     || !Array.isArray(value.results)) return null;
+  if (value.priorTasks !== undefined && (!Array.isArray(value.priorTasks) || !value.priorTasks.every(prior =>
+    isExecutionRecord(prior) && isExecutionUuid(prior.taskId) && integer(prior.attemptNo, 1) && Number(prior.attemptNo) < Number(value.attemptNo)))) return null;
   let previous: string | null = null;
   const ids = new Set<string>();
   for (let i = 0; i < value.results.length; i++) {

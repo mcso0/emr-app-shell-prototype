@@ -3,12 +3,12 @@
 import { usePageReadiness } from "@/components/emr/page-loading-boundary";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { instructionReviewListSchema, instructionReviewTargetId, type TaskInstructionReview } from "./task-instruction-review-contract";
+import { instructionReviewListSchema, instructionReviewTargetId, type InstructionOrderLabel, type TaskInstructionReview } from "./task-instruction-review-contract";
 
 type ReviewContinuation = {
   label: string;
   run: () => Promise<void>;
-  restartOrder?: "조제" | "처치";
+  restartOrder?: InstructionOrderLabel;
 };
 
 export function useTaskInstructionReview(workspaceId: string | undefined, taskIds: readonly string[], revisionKey?: string, targetKind: "task" | "order" = "task", contextId = "") {

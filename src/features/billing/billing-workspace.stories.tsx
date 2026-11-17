@@ -9,6 +9,13 @@ const meta = {
 } satisfies Meta<typeof BillingExample>;
 export default meta;
 type Story = StoryObj<typeof meta>;
+async function enterBilling(canvas: ReturnType<typeof within>, canvasElement: HTMLElement, owned = false) {
+  const label = owned ? "업무 시작하기" : "담당하기";
+  await userEvent.click(await canvas.findByRole("button", { name: label }));
+  const dialog = within(await within(canvasElement.ownerDocument.body).findByRole("dialog", { name: owned ? "업무를 시작할까요?" : "이 업무를 담당할까요?" }));
+  await userEvent.click(dialog.getByRole("button", { name: label }));
+  await canvas.findByRole("table", { name: "청구 항목 테이블" });
+}
 export const QueueSearchAndSelection: Story = { play: async ({ canvas }) => {
   const side = within(canvas.getByRole("complementary", { name: "수납 대기열" }));
   const card = await side.findByTestId(`billing-queue-item-${billingInvoiceId}`);
@@ -25,12 +32,12 @@ export const QueueSearchAndSelection: Story = { play: async ({ canvas }) => {
 } };
 export const InvoiceTableAndSummary: Story = {
   args: { scenario: "detail" }, parameters: { nextjs: { navigation: { query: { date: "2026-10-11", invoiceId: billingInvoiceId, encounterId: billingEncounterId } } } },
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
+    await enterBilling(canvas, canvasElement);
     const table = await canvas.findByRole("table", { name: "청구 항목 테이블" });
     await expect(within(table).getByText("합성 청구 항목 1")).toBeVisible();
     for (const name of ["항목", "출처 / 진행", "단가", "수량", "청구금액"]) await expect(within(table).getByRole("columnheader", { name })).toBeVisible();
     await expect(within(table).getByRole("spinbutton", { name: "합성 청구 항목 1 수량" })).toHaveValue(1);
-    await userEvent.click(canvas.getByRole("button", { name: "담당하기" }));
     await waitFor(() => expect(billingFixture.requests.some(request => request.method === "POST" && request.path.endsWith("/guardian-checkout"))).toBe(true));
     await waitFor(() => expect(canvas.queryByText("Checkout session을 준비하는 중입니다.")).not.toBeInTheDocument());
     await expect(canvas.getByTestId("billing-checkout-total")).toHaveTextContent("3,000");
@@ -56,11 +63,10 @@ export const FinancialDenialCleanup: Story = {
   args: { scenario: "detail" },
   parameters: {
     nextjs: { navigation: { query: { date: "2026-10-11", invoiceId: billingInvoiceId, encounterId: billingEncounterId } } },
-    docs: { description: { story: "실제 담당하기·수납 완료 확인을 사용하되 두 금융 요청 모두 로컬 403으로 거절합니다. 첫 응답을 보류한 상태에서 원본 화면을 해제하고, 원본이 이어서 보내는 fallback 요청까지 처리한 후 상태를 복원하는 종료 검사입니다. 검사 종료 후 작업대는 해제됩니다." } },
+    docs: { description: { story: "실제 담당하기·수납 완료 확인을 사용하되 금융 요청을 로컬 403으로 거절합니다. 응답을 보류한 상태에서 원본 화면을 해제하고, 권한 거절 뒤 추가 금융 요청이 없는지 확인합니다. 검사 종료 후 작업대는 해제됩니다." } },
   },
   play: async ({ canvas, canvasElement }) => {
-    await canvas.findByRole("table", { name: "청구 항목 테이블" });
-    await userEvent.click(canvas.getByRole("button", { name: "담당하기" }));
+    await enterBilling(canvas, canvasElement);
     const body = within(canvasElement.ownerDocument.body);
     const paid = await body.findByRole("button", { name: /^수납 완료$/ });
     await waitFor(() => expect(paid).toBeEnabled());
@@ -72,7 +78,6 @@ export const FinancialDenialCleanup: Story = {
     await billingFixture.finish();
     await expect(billingFixture.requests.filter(request => request.method === "PATCH" && !request.path.endsWith("/assignment")).map(request => request.path)).toEqual([
       `/api/workspaces/${billingWorkspaceId}/billing/guardian-checkout`,
-      `/api/workspaces/${billingWorkspaceId}/billing/payment-status`,
     ]);
     await expect(billingFixture.isRestored()).toBe(true);
     await expect(billingFixture.unhandled).toEqual([]);
@@ -83,66 +88,69 @@ export const FinancialDenialCleanup: Story = {
 export const CurrentOwnerInputs: Story = {
   args: { scenario: "detail" }, parameters: InvoiceTableAndSummary.parameters,
   play: async ({ canvas, canvasElement }) => {
-    await canvas.findByRole("spinbutton", { name: "합성 청구 항목 1 수량" });
-    const quantity = () => canvas.getByRole("spinbutton", { name: "합성 청구 항목 1 수량" });
-    const body = within(canvasElement.ownerDocument.body);
-    await body.findByRole("textbox", { name: "할인 또는 할증 사유" });
-    const reason = () => body.getByRole("textbox", { name: "할인 또는 할증 사유" });
-    await expect(quantity()).toBeDisabled(); await expect(reason()).toBeDisabled();
-    await expect(canvas.getByText("읽기 전용", { exact: true })).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "담당하기" }));
-    await waitFor(() => expect(quantity()).toBeEnabled()); await expect(reason()).toBeEnabled();
+    await canvas.findByTestId("billing-prework");
+    await expect(canvas.queryByRole("spinbutton", { name: "합성 청구 항목 1 수량" })).not.toBeInTheDocument();
+    await enterBilling(canvas, canvasElement);
+    await expect(canvas.getByRole("spinbutton", { name: "합성 청구 항목 1 수량" })).toBeEnabled();
     billingFixture.setAssignee("synthetic-other-user");
-    await waitFor(() => expect(quantity()).toBeDisabled()); await expect(reason()).toBeDisabled();
+    await canvas.findByTestId("billing-prework");
+    await expect(canvas.queryByRole("spinbutton", { name: "합성 청구 항목 1 수량" })).not.toBeInTheDocument();
     billingFixture.setAssignee(null);
-    await waitFor(() => expect(quantity()).toBeDisabled()); await expect(reason()).toBeDisabled();
     await waitFor(() => expect(canvas.getByTestId(`billing-queue-item-${billingInvoiceId}`)).toHaveTextContent("미지정"));
     await expect(billingFixture.requests.filter(request => request.method === "PATCH").every(request => request.path.endsWith("/assignment"))).toBe(true);
     await expect(billingFixture.unhandled).toEqual([]);
   },
 };
-
 export const CheckoutOwnershipFeedback: Story = {
   args: { scenario: "detail" }, parameters: InvoiceTableAndSummary.parameters,
-  play: async ({ canvas }) => {
-    await canvas.findByRole("spinbutton", { name: "합성 청구 항목 1 수량" });
-    const quantity = () => canvas.getByRole("spinbutton", { name: "합성 청구 항목 1 수량" });
+  play: async ({ canvas, canvasElement }) => {
     billingFixture.setPreparationDenied(true);
-    await userEvent.click(canvas.getByRole("button", { name: "담당하기" }));
+    await enterBilling(canvas, canvasElement);
     await canvas.findByText("Checkout 권한이 없습니다.");
-    // A real error must remain visible to the current owner.
-    await expect(quantity()).toBeEnabled();
+    await expect(canvas.getByRole("spinbutton", { name: "합성 청구 항목 1 수량" })).toBeEnabled();
     billingFixture.setAssignee("synthetic-other-user");
-    await waitFor(() => expect(quantity()).toBeDisabled());
-    await waitFor(() => expect(canvas.queryByText("Checkout 권한이 없습니다.")).not.toBeInTheDocument());
-    await expect(canvas.getByTestId(`billing-queue-item-${billingInvoiceId}`)).toHaveTextContent("다른 합성 담당자");
+    await canvas.findByTestId("billing-prework");
+    await expect(canvas.queryByText("Checkout 권한이 없습니다.")).not.toBeInTheDocument();
     billingFixture.setAssignee("synthetic-billing-user");
+    await enterBilling(canvas, canvasElement, true);
     await canvas.findByText("Checkout 권한이 없습니다.");
     billingFixture.setAssignee(null);
-    await waitFor(() => expect(quantity()).toBeDisabled());
-    await waitFor(() => expect(canvas.queryByText("Checkout 권한이 없습니다.")).not.toBeInTheDocument());
-    await expect(canvas.getByTestId(`billing-queue-item-${billingInvoiceId}`)).toHaveTextContent("미지정");
-    await expect(canvas.getByTestId("billing-checkout-total")).toHaveTextContent("3,000");
-    await expect(billingFixture.requests.filter(request => request.method === "PATCH").every(request => request.path.endsWith("/assignment"))).toBe(true);
+    await canvas.findByTestId("billing-prework");
+    await expect(canvas.queryByText("Checkout 권한이 없습니다.")).not.toBeInTheDocument();
     await expect(billingFixture.unhandled).toEqual([]);
   },
 };
-
 export const LateCheckoutDenialAfterTransfer: Story = {
   args: { scenario: "detail" }, parameters: InvoiceTableAndSummary.parameters,
-  play: async ({ canvas }) => {
-    await canvas.findByRole("spinbutton", { name: "합성 청구 항목 1 수량" });
-    const quantity = () => canvas.getByRole("spinbutton", { name: "합성 청구 항목 1 수량" });
-    billingFixture.setPreparationDenied(true);
-    billingFixture.holdPreparations();
-    await userEvent.click(canvas.getByRole("button", { name: "담당하기" }));
+  play: async ({ canvas, canvasElement }) => {
+    billingFixture.setPreparationDenied(true); billingFixture.holdPreparations();
+    await enterBilling(canvas, canvasElement);
     await waitFor(() => expect(billingFixture.requests.some(request => request.method === "POST" && request.path.endsWith("/guardian-checkout"))).toBe(true));
     billingFixture.setAssignee("synthetic-other-user");
-    await waitFor(() => expect(quantity()).toBeDisabled());
+    await canvas.findByTestId("billing-prework");
     billingFixture.releasePreparations();
     await waitFor(() => expect(billingFixture.writesSettled()).toBe(true));
     await expect(canvas.queryByText("Checkout 권한이 없습니다.")).not.toBeInTheDocument();
-    await expect(canvas.getByTestId("billing-checkout-total")).toHaveTextContent("3,000");
+    await expect(billingFixture.unhandled).toEqual([]);
+  },
+};
+export const OrderEditHoldAndRelease: Story = {
+  args: { scenario: "detail" }, parameters: InvoiceTableAndSummary.parameters,
+  play: async ({ canvas, canvasElement }) => {
+    await enterBilling(canvas, canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    const quantity = () => canvas.getByRole("spinbutton", { name: "합성 청구 항목 1 수량" });
+    await waitFor(() => expect(body.getByRole("button", { name: "수납 완료" })).toBeEnabled());
+    await userEvent.click(body.getByRole("button", { name: "수납 완료" }));
+    await body.findByRole("dialog", { name: "수납 완료 전 확인" });
+    billingFixture.setHeld(true);
+    await waitFor(() => expect(quantity()).toBeDisabled());
+    await waitFor(() => expect(body.queryByRole("dialog", { name: "수납 완료 전 확인" })).not.toBeInTheDocument());
+    const prepared = billingFixture.requests.filter(request => request.method === "POST").length;
+    billingFixture.setHeld(false);
+    await waitFor(() => expect(quantity()).toBeEnabled());
+    await waitFor(() => expect(billingFixture.requests.filter(request => request.method === "POST").length).toBeGreaterThan(prepared));
+    await expect(billingFixture.requests.filter(request => request.method === "PATCH").every(request => request.path.endsWith("/assignment"))).toBe(true);
     await expect(billingFixture.unhandled).toEqual([]);
   },
 };

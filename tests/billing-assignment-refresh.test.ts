@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+  cells: [] as unknown[], cursor: 0,
   effects: [] as Array<() => (() => void) | undefined>, ref: { current: null as unknown },
   state: { key: "", data: null as unknown }, callback: undefined as undefined | ((event: string, session: { user: { id: string } } | null) => void),
   unsubscribe: vi.fn(), assignInvoice: vi.fn(), clearInvoiceAssignee: vi.fn(),
@@ -9,7 +10,14 @@ vi.mock("react", async original => ({
   ...await original<typeof import("react")>(),
   useEffect: (effect: () => (() => void) | undefined) => { mocks.effects.push(effect); },
   useRef: () => mocks.ref,
-  useState: () => [mocks.state, (next: typeof mocks.state) => { mocks.state = next; }],
+  useState: (initial: unknown) => {
+    const index = mocks.cursor++;
+    if (!(index in mocks.cells)) mocks.cells[index] = typeof initial === "function" ? initial() : initial;
+    return [mocks.cells[index], (next: unknown) => {
+      mocks.cells[index] = typeof next === "function" ? next(mocks.cells[index]) : next;
+      if (index === 0) mocks.state = mocks.cells[index] as typeof mocks.state;
+    }];
+  },
   useCallback: (callback: unknown) => callback,
   useSyncExternalStore: (_subscribe: unknown, snapshot: () => unknown) => snapshot(),
 }));
@@ -31,9 +39,10 @@ const cleanups: Array<() => void> = [];
 const settle = () => vi.advanceTimersByTimeAsync(0);
 function auth(userId: string | null, event = "SIGNED_IN") { mocks.callback!(event, userId ? { user: { id: userId } } : null); }
 function AssignmentHook() { return useBillingAssignment("synthetic-workspace", "synthetic-invoice"); }
-function mount() { const hook = AssignmentHook(); mocks.effects.splice(0).forEach(effect => { const cleanup = effect(); if (cleanup) cleanups.push(cleanup); }); return hook; }
+function renderAssignmentHook() { mocks.cursor = 0; return AssignmentHook(); }
+function mount() { const hook = renderAssignmentHook(); mocks.effects.splice(0).forEach(effect => { const cleanup = effect(); if (cleanup) cleanups.push(cleanup); }); return hook; }
 beforeEach(async () => {
-  vi.useFakeTimers(); vi.clearAllMocks(); mocks.effects.length = 0; mocks.ref.current = null; mocks.state = { key: "", data: null };
+  vi.useFakeTimers(); vi.clearAllMocks(); mocks.cells = []; mocks.cursor = 0; mocks.effects.length = 0; mocks.ref.current = null; mocks.state = { key: "", data: null };
   browser = Object.assign(new EventTarget(), { setInterval, clearInterval, sessionStorage: { getItem: () => null }, localStorage: { getItem: () => null } });
   vi.stubGlobal("window", browser); vi.stubGlobal("document", Object.assign(new EventTarget(), { visibilityState: "visible" }));
   fetcher = vi.fn().mockImplementation(async (_url: string, options: RequestInit) => json(options.method === "PATCH" ? { ok: true } : { ok: true, assignment }));
@@ -44,7 +53,7 @@ afterEach(async () => { cleanups.splice(0).reverse().forEach(fn => fn()); await 
 
 it("actual hook uses one post-PATCH GET while an older GET is pending and shares its assignment event", async () => {
   mount(); await settle();
-  const hook = AssignmentHook();
+  const hook = renderAssignmentHook();
   const old = deferred<Response>(); fetcher.mockReturnValueOnce(old.promise);
   const automatic = hook.refresh(); await settle();
   expect(await hook.transition("assign", "synthetic-b")).toBe(true);
@@ -55,7 +64,7 @@ it("actual hook uses one post-PATCH GET while an older GET is pending and shares
 });
 
 it("each successive PATCH completion starts a newer GET and the oldest response cannot overwrite it", async () => {
-  mount(); await settle(); const hook = AssignmentHook();
+  mount(); await settle(); const hook = renderAssignmentHook();
   const firstRead = deferred<Response>();
   fetcher.mockImplementation(async (_url: string, options: RequestInit) => options.method === "PATCH" ? json({ ok: true }) : firstRead.promise);
   const first = hook.transition("assign", "synthetic-b"); await settle();
@@ -68,7 +77,7 @@ it("each successive PATCH completion starts a newer GET and the oldest response 
 });
 
 it.each(["switch", "logout"])("rejects late PATCH completion immediately after %s, before React cleanup", async mode => {
-  mount(); await settle(); const hook = AssignmentHook(); const patch = deferred<Response>(); fetcher.mockReturnValueOnce(patch.promise);
+  mount(); await settle(); const hook = renderAssignmentHook(); const patch = deferred<Response>(); fetcher.mockReturnValueOnce(patch.promise);
   const pending = hook.transition("assign", "synthetic-b"); await settle();
   if (mode === "switch") auth("synthetic-b"); else browser.dispatchEvent(new Event("clair:session-ended"));
   expect(mocks.state.data).toBeNull();
@@ -90,7 +99,7 @@ it("discards an old user's pending GET and a same-user logout creates a new auth
 });
 
 it("failed PATCH or failed post-PATCH GET clears authority and the next refresh retries", async () => {
-  mount(); await settle(); const hook = AssignmentHook();
+  mount(); await settle(); const hook = renderAssignmentHook();
   fetcher.mockResolvedValueOnce(json({ ok: false }, false)).mockRejectedValueOnce(new Error("synthetic read failure"));
   expect(await hook.transition("claim")).toBe(false); expect(mocks.state.data).toBeNull();
   await hook.refresh(); expect(mocks.state.data).toEqual(assignment);
@@ -103,10 +112,12 @@ it("waits for a live actor before reading and a switch isolates actual profile-h
   const old = deferred<Response>(); fetcher.mockReturnValueOnce(old.promise);
   const session = { provider: "supabase" as const, role: "supabase" as const, id: "supabase-session-synthetic-a", userId: "synthetic-a", email: null, roleLabel: "합성", storageMode: "cookie" as const, issuedAt: "2026-10-20" };
   mocks.effects.length = 0;
+  mocks.cells = []; mocks.cursor = 0;
   useCurrentPersonalProfile({ hydrated: true, session });
   mocks.effects.splice(0).forEach(effect => { const cleanup = effect(); if (cleanup) cleanups.push(cleanup); });
   await settle(); expect(fetcher).toHaveBeenCalledTimes(1);
   auth("synthetic-b");
+  mocks.cursor = 0;
   expect(useCurrentPersonalProfile({ hydrated: true, session })).toBeNull();
   old.resolve(json({ ok: true, profile: { sessionId: "synthetic-a", displayName: "stale", initials: "A" } })); await settle();
   expect((mocks.state as unknown as { profile: unknown }).profile).toBeNull();

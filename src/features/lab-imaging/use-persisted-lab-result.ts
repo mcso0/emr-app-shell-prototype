@@ -5,10 +5,10 @@ import type { LabResult } from "@/types/emr-domain";
 import { loadPersistedLabResult } from "./persisted-lab-result-client";
 import { getPersistedLabResultView, type PersistedLabResultState } from "./persisted-lab-result-state";
 
-export function usePersistedLabResult(workspaceId: string, workItemId: string | undefined, base: LabResult | undefined, enabled: boolean) {
+export function usePersistedLabResult(workspaceId: string, workItemId: string | undefined, base: LabResult | undefined, enabled: boolean, taskId?: string | null, taskAttemptNo?: number | null) {
   const orderId = base?.orderId;
   const encounterId = base?.encounterId;
-  const key = `${workspaceId}:${workItemId}:${orderId}:${encounterId}`;
+  const key = `${workspaceId}:${workItemId}:${taskId}:${taskAttemptNo}:${orderId}:${encounterId}`;
   const [reload, setReload] = useState(0);
   const [state, setState] = useState<PersistedLabResultState>({ key: "", status: "loading" });
   useEffect(() => {
@@ -29,5 +29,5 @@ export function usePersistedLabResult(workspaceId: string, workItemId: string | 
     return () => controller.abort();
   }, [workspaceId, workItemId, orderId, encounterId, enabled, key, reload]);
   const retry = useCallback(() => setReload(value => value + 1), []);
-  return { ...getPersistedLabResultView({ enabled, state, key, base, workspaceId, workItemId }), retry };
+  return { ...getPersistedLabResultView({ enabled, state, key, base, workspaceId, workItemId, taskId, taskAttemptNo }), retry };
 }

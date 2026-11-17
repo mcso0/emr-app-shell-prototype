@@ -1,11 +1,13 @@
 "use client";
 
+import { useRerequestReviewOnEntry } from "@/features/fulfillment/use-rerequest-review-on-entry";
+
 import { OralInstructionInfobar } from "./oral-instruction-infobar";
 import { TaskInstructionReview } from "@/features/fulfillment/components/task-instruction-review";
 import { EmrContentLoadingState } from "@/components/emr/empty-state";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { EmrSidePanelStateIcon } from "@/components/emr/side-panel-state-icon";
-import { useEffect, useEffectEvent, useId, useRef, useState } from "react";
+import { useId, useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup, ButtonGroupDivider, ButtonGroupIconButton, ButtonGroupPrimaryButton } from "@/components/ui/button-group";
@@ -133,13 +135,7 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
   const autoReviewKey = assignedRerequest && document?.canStart && !controller.loading
     ? document.items.filter(item => item.attemptNo > 1 && item.status === "requested").map(item => item.taskId).join(":")
     : "";
-  const openedReview = useRef("");
-  const openReviewOnEntry = useEffectEvent(() => controller.openRerequestReview?.(onChanged));
-  useEffect(() => {
-    if (!autoReviewKey || openedReview.current === autoReviewKey) return;
-    openedReview.current = autoReviewKey;
-    openReviewOnEntry();
-  }, [autoReviewKey]);
+  useRerequestReviewOnEntry(autoReviewKey, () => controller.openRerequestReview?.(onChanged));
 
   if (!document) return null;
   const busy = controller.busy || controller.loading;

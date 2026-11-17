@@ -15,10 +15,171 @@ source_docs:
 dependencies:
   - "CLINICAL-FULFILLMENT-PR-009"
   - "CLINICAL-MASTER-PR-023"
-updated: "2026-11-09"
+updated: "2026-11-17"
 ---
 
 # Plan/Order Work Lifecycle And RPC Boundary
+
+## Shared order workflow — 2026-11-16 local implementation scope
+
+승욱 approved local implementation and verification of the reviewed design from
+`origin/main` `d4179f4a`. Merge and deployment are explicitly prohibited. This
+approval covers local code/schema changes and disposable synthetic verification;
+it does not authorize remote DB writes, real records, or payment/provider effects.
+The implementation uses `codex/common-order-workflow` in the initially clean
+checkout. Existing dispensing/treatment behavior is the regression baseline.
+
+- Reuse the existing fulfillment flow for assignment/start, editing holds,
+  changed-order acknowledgement and explicit `업무 이어가기` in lab/imaging.
+- Preserve dispensing/treatment completion, assignment exceptions, set/item
+  semantics, instruction-review scope, expiry, history and notifications.
+- Re-requested examinations require new lab/imaging results. Preserve prior
+  records/history; do not implement result reuse or reuse approvals. Existing
+  lab profile, specimen, retest and imaging save/completion contracts remain.
+- Before payment, opening a relevant confirmed-order edit pauses the linked
+  billing. Cancel/no financial change releases the edit hold; a financial
+  proposal still requires the current assignee's `확인 후 금액 반영`.
+- Keep invoice/payment/unpaid states and pending/paid financial guards. Exclude
+  cross-work dependency holds, new collection tasks, refund/additional-charge
+  workflows, new permissions and external integrations.
+
+Completion requires focused UI/Storybook, server and isolated SQL coverage of
+normal execution, edit cancel/failure/expiry, re-request/restart, new-result
+completion, stale writes, assignment changes and edit/payment races. Run the
+applicable type/lint/build/docs checks. Record actual evidence and limitations
+here. The initial intake had no candidate evidence; the following record supersedes it.
+
+### Local implementation and verification — 2026-11-17
+
+Implemented the shared examination entry/re-request flow, per-attempt canonical
+lab results with read-only prior history, imaging draft reset by task, and
+independent unpaid-invoice editing leases. Existing dispensing/treatment rules
+remain the baseline. No remote DB mutation, merge, push or deployment occurred.
+The separately modified `AGENTS.md` is unrelated WIP and was not edited here.
+
+Verification uses synthetic HTTP fixtures or the owned `clair-common-order-workflow`
+PostgreSQL container with network disabled. No real patient/payment/provider data
+was used. Five rollback-only SQL suites pass, including existing dispensing/
+treatment editing and holds, shared clinical/external-lab/imaging attempts, and
+billing leases. Six two-connection races pass: existing financial proposal/payment
+races plus checkout-row-first overlap with edit begin and session-less save.
+Failed post-release validation restores the lease; prepared sessions stay expired.
+
+Focused checks cover 48 Playwright app/core/autosave cases, 10 Node server/client
+contracts, 8 assignment refresh cases and 81 Storybook interaction cases across
+seven affected files (run in focused batches). They include explicit first start,
+acknowledgement/restart, new empty results, old-write rejection, edit-hold recovery,
+stale confirmation invalidation, actor changes and previous unsaved draft recovery.
+Existing stories were aligned with the actual registry prework provider and explicit
+entry. A menu animation wait and the hook test's indexed state scheduler correct
+stale test assumptions without changing the application behavior they exercise.
+
+TypeScript, full lint, production build, documentation links, secret scan and UX
+copy checks pass. The build retains the existing docs-reader dynamic-path warnings.
+Local logs and the test adapter are in `.artifacts/common-order-workflow/`; SQL
+receipts and race outcomes are in `.artifacts/confirmed-order-edit/`. Both directories
+are excluded locally from Git. Storybook 10.6's router fixture lacks Next 16.4's
+render-tree cache field, so these browser tests use a test-only compatibility
+adapter with the real redirect boundary and explicit mock authentication. No
+application or default Storybook configuration was changed to hide that issue.
+
+Limits: the SQL setup restores an existing schema then applies subsequent migrations;
+it does not prove a full historical empty-database replay. Isolated PostgreSQL does
+not deliver Realtime broadcasts; RPC state and notification rows are verified.
+Browser fixtures verify actual components and API contracts, not authenticated
+hosted acceptance. Three new migrations and the app remain a local candidate.
+Human acceptance and any later remote/release work are separate.
+
+### Final review and PR-only authorization — 2026-11-17
+
+승욱 authorized final review, in-scope corrections, commit, push and a PR for this
+candidate. Merge, deployment and remote DB application remain prohibited. The
+branch still compares against `main` `d4179f4a`; the unrelated generated
+`AGENTS.md` change is excluded and preserved.
+
+Four read-only review scopes covered clinical SQL/API boundaries, billing
+transactions, examination result state, and existing dispensing/treatment entry
+behavior. Two findings were reproduced and corrected:
+
+- A brief edit hold during an in-flight lab save could clear the newer draft's
+  timer without resuming it. Resume now drains unblocked pending input after the
+  first response, retaining its returned revision and existing error/authority
+  guards. All 12 autosave regressions pass, including the new race.
+- Billing proposal reads could remain stale after a hold ended. A scoped refresh
+  now follows availability changes, deferring while approval is pending. Ordinary
+  failed approvals retain their error. Four focused review stories and the ten
+  actual billing-workspace stories pass without artificial focus/assignment events
+  in the new cases. Narrow re-review found no remaining defect in either fix.
+
+Review limits: the new examination SQL fixture uses V1 frozen definitions and
+authorized actors. V2 profiles and direct foreign-workspace, revoked-permission
+and wrong-actor denials on the new attempt/history paths still need hosted-release
+preparation coverage. The six concurrency cases use one invoice/encounter and do
+not cover renewal exactly at expiry. No hosted acceptance is claimed.
+
+Read-only Vercel inspection confirms that non-Production builds are skipped by
+the existing ignored-build command. This task does not enable Preview or change
+provider configuration. The automatic PR Release Check remains enabled; Ready
+Preview and migration/application rollout remain future release gates.
+
+Separate existing dependency finding: `npm audit` reports 36 findings (12 high,
+23 moderate, one low) with the unchanged lockfile. Next 16.4.2 is within
+[GHSA-mfr8-8qww-v76h](https://github.com/vercel/next.js/security/advisories/GHSA-mfr8-8qww-v76h)'s
+affected range; its affected nested cache pattern was not found in application
+source. This is not an exploitability assessment of all dependencies. Dependency
+remediation is outside this workflow PR. Local Next commands initially stopped
+with the existing upgrade advisory and were retried without changing dependencies.
+
+### Production release authorization and preparation — 2026-11-17
+
+승욱 subsequently authorized PR #1100 pre-deployment verification, its necessary
+DB migrations, protected `main` merge, Production deployment and post-deployment
+synthetic workflow checks once the gates pass. This supersedes the earlier
+no-merge/no-deployment restriction for this bounded PR. In-scope corrections
+require refreshed candidate evidence, not another release approval.
+
+Release preparation uses the isolated `pr1100-release` checkout and preserves the
+original checkout's generated `AGENTS.md` WIP. The initial candidate is
+`cb60cc00b8c8030a89b8b882c21b36b096b48bca`; current `main` and Ready Production
+both use `d4179f4a9db6c5b16d3c2de4e58be4b9272925b2`. Retain the prior Ready
+deployment and exact function/owner/grant backups before applying the three
+migrations in order. The result-attempt schema cannot be reversed by an app-only
+rollback after new attempt results exist; preserve data and prepare a forward fix
+if that boundary has been crossed.
+
+Preview and Production currently share the same Supabase database. Verification
+must use a newly isolated synthetic workspace and disposable synthetic editor and
+performer identities. Scope the fixtures to clinical/external-lab and imaging
+start, editing hold/cancel, re-request acknowledgement, new results and completion;
+dispensing/treatment regressions; and unpaid billing hold, prepared-checkout
+expiration, financial proposal approval and pending-payment denial. The pending
+payment state may be seeded only on a dedicated synthetic checkout. Do not call
+payment-provider or communication operations. Archive the fixture and disable its
+test sign-in after verification; keep its manifest and recovery evidence private.
+
+Before migration, require zero active edit leases and zero first-attempt result
+bindings with missing task IDs. Capture aggregate backfill targets and hashes of
+existing result records without exporting clinical content to public artifacts.
+Initial read-only preflight found zero in each of those four categories. Apply
+no unrelated historical migration. At cutover, temporarily revoke authenticated
+execution of the affected public mutation entrypoints, preserving their exact
+ACLs. Include the editor, examination, fulfillment and billing write wrappers;
+leave read-only RPCs available. Commit, record a fresh fence
+time and drain all pre-fence client transactions. Require zero active clinical
+holds before the migration. The table lock alone cannot stop an invocation that
+entered the old function before replacement. Keep the entrypoints closed through all three migrations, then restore their
+saved ACLs. Restore grants on the current public wrapper, never on a renamed base.
+If application fails, record which transactions committed before restoring access. Refresh the PostgREST schema cache afterwards.
+
+Pre-release corrections add V2 frozen-result checks and actor/workspace/assignee/
+revoked-permission denial assertions. Five two-connection hold races cover pending
+checkout, expired checkout, session-less save, shared checkout across two encounters
+and lease expiry while renewal waits. Candidate migrations replay successfully
+against the 30 captured current hosted function definitions. External lab work now
+joins the existing lab screen through two identically scoped RPC reads, preserving
+its persisted queue, clinical type and result identity. No permission-policy or
+new screen is introduced. Its list, transition, sync and history responses share
+the same UI queue mapping; either failed read fails the combined result.
 
 ## Single-entry response ordering — 2026-11-09
 
@@ -2451,3 +2612,39 @@ The inline frequency change badge uses 6px side padding, a 69px minimum width,
 and the existing 22px height. Local Chromium with synthetic responses verified
 live resize, keyboard adjustment and reset, table overflow, the narrower badge,
 and the existing clipped-name tooltip.
+
+### PR #1100 final candidate preparation — 2026-11-17
+
+The release checkout incorporated `0f6f8e36aaf1144c055dc95cce73ee7238c32798`
+after the independently released source-map-js update. Its prior Ready Production
+deployment is `dpl_6SB1smjEGFyJfNSBomBYMtUBpJx6`. The feature changes passed five
+SQL suites on a fresh replay of current hosted functions, five hold/checkout races,
+34 server/route contracts, 19 actual lab workspace stories, lint, TypeScript,
+production build, docs, secret and UX-copy checks. Prior broader regression evidence
+above remains applicable; the added external queue sort preserves update/id order.
+The final remote Release Check and Ready Preview must match the refreshed candidate.
+
+The pre-migration readback matched all 30 saved function definitions and ACLs, all
+three table structures, and hashes of all 71 existing result entries and 71 rows.
+The bounded cutover gate covers the 36 public mutation entrypoints discovered by
+following affected helper and trigger write paths. Its ACL snapshot and restoration
+SQL remain private alongside the data manifest and synthetic fixture credentials.
+
+### Populated migration correction — 2026-11-17
+
+The first hosted cutover applied shared_order_workflow. lab_result_attempts then
+failed atomically with PostgreSQL 55006: the first-attempt backfill queued the
+existing deferred canonical-definition trigger before index DDL. Its transaction
+rolled back completely; all 36 public mutation entrypoint grants were restored.
+The result task columns and billing-lease table remained absent, and the original
+71 entries and 71 rows remained present. No merge occurred at that point.
+
+The corrected migration flushes only the named canonical-definition constraint
+before index replacement, then restores its deferred mode before any later-attempt
+entry/row creation. scripts/test-lab-result-attempt-migration.mjs reproduces the
+original failure and verifies the fix using populated V1 and V2 legacy results:
+existing entry, row and overall-finding hashes stay unchanged; the first attempt
+binds correctly; an already re-requested external exam keeps its previous result
+unbound and receives one blank current result. The script removes its owned clone.
+The runtime release outcome and exact deployment evidence are recorded in the
+[PR #1100 release report](https://github.com/mcso0/emr-app-shell-prototype/pull/1100).

@@ -14,14 +14,15 @@ export function useBillingAssignment(workspaceId: string | undefined, requestedI
   const actorScope = useSharedReadActorScope(session);
   const key = workspaceId && invoiceId && actorScope ? getBillingAssignmentScope(workspaceId, invoiceId, session, actorScope) : "";
   const subscription = useRef<ReturnType<typeof subscribeBillingAssignment> & { key: string } | null>(null);
-  const [state, setState] = useState<{ key: string; data: BillingAssignment | null }>({ key: "", data: null });
+  const [state, setState] = useState<{ key: string; data: BillingAssignment | null; availabilityRevision: number }>({ key: "", data: null, availabilityRevision: 0 });
   const [finishedKey, setFinishedKey] = useState<string | null>(null);
   const refresh = useCallback(async () => {
     if (subscription.current?.key === key) await subscription.current.resource.refresh();
   }, [key]);
   useEffect(() => {
     if (!workspaceId || !invoiceId || !actorScope) return;
-    const active = { ...subscribeBillingAssignment({ workspaceId, invoiceId, session, actorScope, listener: data => setState({ key, data }) }), key };
+    const active = { ...subscribeBillingAssignment({ workspaceId, invoiceId, session, actorScope, listener: data => setState(previous => ({ key, data, availabilityRevision: previous.key === key
+      ? previous.availabilityRevision + (previous.data?.pauseReason !== data?.pauseReason ? 1 : 0) : 0 })) }), key };
     subscription.current = active;
     void active.resource.refresh().then(() => { if (subscription.current === active) setFinishedKey(key); });
     return () => {
@@ -56,5 +57,5 @@ export function useBillingAssignment(workspaceId: string | undefined, requestedI
       return false;
     }
   };
-  return { data, loading: Boolean(key && finishedKey !== key), canExecute: Boolean(data?.canManage && data.assignedToUserId), transition, refresh };
+  return { data, availabilityRevision: state.key === key ? state.availabilityRevision : 0, loading: Boolean(key && finishedKey !== key), canExecute: Boolean(data?.canManage && data.assignedToUserId && !data.pauseReason), transition, refresh };
 }

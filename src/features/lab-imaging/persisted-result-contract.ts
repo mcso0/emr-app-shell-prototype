@@ -6,10 +6,14 @@ const optionalText = (v: unknown) => typeof v === "string" ? v : undefined;
 
 // All selectors must match. The requested work item is not a patient-result ID.
 export function parsePersistedLabResult(value: unknown, expected: {
-  workspaceId: string; orderId: string; workItemId: string; encounterId: string;
+  workspaceId: string; orderId: string; workItemId?: string; encounterId: string;
+  taskId?: string | null; taskAttemptNo?: number | null; resultId?: string;
 }, base: LabResult): LabResult | null {
   if (!record(value) || value.ok !== true || value.workspaceId !== expected.workspaceId
-    || value.orderId !== expected.orderId || value.workItemId !== expected.workItemId || value.encounterId !== expected.encounterId
+    || value.orderId !== expected.orderId || (expected.workItemId !== undefined && value.workItemId !== expected.workItemId) || value.encounterId !== expected.encounterId
+    || (expected.taskId !== undefined && value.taskId !== expected.taskId)
+    || (expected.taskAttemptNo !== undefined && value.taskAttemptNo !== expected.taskAttemptNo)
+    || (expected.resultId !== undefined && value.resultId !== expected.resultId)
     || typeof value.resultId !== "string" || !value.resultId || !Number.isSafeInteger(value.entryWriteRevision)
     || Number(value.entryWriteRevision) < 0 || !Array.isArray(value.rows) || value.rows.length === 0
     || !record(value.resultDefinitionSnapshot) || ![1, 2].includes(Number(value.resultDefinitionSnapshot.schemaVersion))) return null;
@@ -46,9 +50,30 @@ export function parsePersistedLabResult(value: unknown, expected: {
   const profile = value.resultDefinitionSnapshot.resultProfile;
   if (v2 && (!record(profile) || !record(profile.device) || typeof profile.profileKey !== "string"
     || profile.clinicalUseAllowed !== false || profile.integrationStatus !== "not_integrated")) return null;
+  const priorResults = parsePriorLabResults(value.priorResults);
+  if (!priorResults) return null;
   return { ...base, id: value.resultId, rows, entryWriteRevision: Number(value.entryWriteRevision),
+    taskId: typeof value.taskId === "string" ? value.taskId : null,
+    taskAttemptNo: typeof value.taskAttemptNo === "number" ? value.taskAttemptNo : null, priorResults,
+    performedByUserId: optionalText(value.actorUserId),
     resultDefinitionOrigin: "canonical", resultDefinitionSnapshotSha256: optionalText(value.resultDefinitionSnapshotSha256),
     resultProfileLabel: v2 && record(profile) && record(profile.device)
       ? `${profile.profileKey} r${profile.revision}${record(profile.workspaceOverride) ? ` · 병원 정상범위 v${profile.workspaceOverride.revision}` : ""} · ${profile.device.name} · 수동 입력 / 장비 미연동 / 합성 테스트용` : undefined,
   };
+}
+
+export function parsePriorLabResults(value: unknown): NonNullable<LabResult["priorResults"]> | null {
+  const priorResults: NonNullable<LabResult["priorResults"]> = [];
+  if (value !== undefined) {
+    if (!Array.isArray(value)) return null;
+    for (const prior of value) {
+      if (!record(prior) || typeof prior.resultId !== "string" || !prior.resultId
+        || !(prior.taskId === null || typeof prior.taskId === "string")
+        || !(prior.taskAttemptNo === null || Number.isSafeInteger(prior.taskAttemptNo) && Number(prior.taskAttemptNo) > 0)
+        || typeof prior.createdAt !== "string") return null;
+      priorResults.push({ resultId: prior.resultId, taskId: prior.taskId as string | null,
+        taskAttemptNo: prior.taskAttemptNo as number | null, createdAt: prior.createdAt });
+    }
+  }
+  return priorResults;
 }

@@ -77,3 +77,77 @@ test("lab autosave flushes on unmount and drains edits after the in-flight reque
   calls[1].resolve({ ok: true, revision: 2 }); await tick();
   expect(states).toHaveLength(count); expect(coordinator.hasUnsavedChanges()).toBe(false);
 });
+
+test("temporary edit hold retains the same draft and resumes with its original revision", async () => {
+  const { coordinator, calls, states } = fixture();
+  const request = (value: string, requestId: string, revision: number) => new Promise<LabAutosaveOutcome>(resolve => calls.push({ value, requestId, revision, resolve }));
+  coordinator.change("unsaved before hold");
+  coordinator.configure(request, 0, true);
+  coordinator.flush(); await tick();
+  expect(calls).toHaveLength(0); expect(states.at(-1)?.value).toBe("held");
+  coordinator.configure(request, 99, false); await tick();
+  expect(calls[0]).toMatchObject({ value: "unsaved before hold", revision: 0 });
+  calls[0].resolve({ ok: true, revision: 1 }); await tick();
+  expect(coordinator.hasUnsavedChanges()).toBe(false);
+});
+
+test("server hold is retryable and never becomes a permanent permission failure", async () => {
+  const { coordinator, calls } = fixture();
+  coordinator.change("first"); await tick();
+  calls[0].resolve({ ok: false, reason: "held", message: "오더 수정 중", retryable: true }); await tick();
+  coordinator.retry(); await tick();
+  expect(calls[1]).toMatchObject({ value: "first", requestId: calls[0].requestId, revision: 0 });
+  calls[1].resolve({ ok: true, revision: 1 }); await tick();
+  expect(coordinator.hasUnsavedChanges()).toBe(false);
+});
+
+test("a short hold during an in-flight save drains the newer draft after resume", async () => {
+  const { coordinator, calls } = fixture();
+  const request = (value: string, requestId: string, revision: number) => new Promise<LabAutosaveOutcome>(resolve => calls.push({ value, requestId, revision, resolve }));
+  coordinator.change("first"); coordinator.flush();
+  coordinator.change("second");
+  coordinator.configure(request, 0, true);
+  coordinator.configure(request, 99, false);
+  expect(calls).toHaveLength(1);
+  calls[0].resolve({ ok: true, revision: 1 }); await tick();
+  expect(calls[1]).toMatchObject({ value: "second", revision: 1 });
+  calls[1].resolve({ ok: true, revision: 2 }); await tick();
+  expect(coordinator.hasUnsavedChanges()).toBe(false);
+});
+
+test("superseded draft stays readable until discard and never drains into a new attempt", async () => {
+  const { coordinator, calls } = fixture();
+  coordinator.change("first"); await tick(); coordinator.change("latest old input");
+  coordinator.supersede(); coordinator.dispose();
+  calls[0].resolve({ ok: true, revision: 1 }); await tick();
+  coordinator.retry(); coordinator.flush(); await tick();
+  expect(calls).toHaveLength(1);
+  expect(coordinator.getState().draft).toBe("latest old input");
+  expect(coordinator.hasUnsavedChanges()).toBe(true);
+  expect(coordinator.discard()).toBe(true);
+  expect(coordinator.hasUnsavedChanges()).toBe(false);
+  expect(coordinator.getState().draft).toBeUndefined();
+});
+
+test("a superseded request that already committed leaves no phantom unsaved draft", async () => {
+  const { coordinator, calls } = fixture();
+  coordinator.change("committed before edit"); await tick(); coordinator.supersede();
+  expect(coordinator.discard()).toBe(false);
+  calls[0].resolve({ ok: true, revision: 1 }); await tick();
+  expect(coordinator.hasUnsavedChanges()).toBe(false);
+  expect(coordinator.getState().draft).toBeUndefined();
+});
+
+test("actor loss stops detached follow-up writes and clears the old actor draft", async () => {
+  let authorized = true;
+  const calls: Array<{ value: string; resolve: (outcome: LabAutosaveOutcome) => void }> = [];
+  const coordinator = new LabAutosaveCoordinator<string>(value => new Promise(resolve => calls.push({ value, resolve })), 0, () => {}, undefined, 0, undefined, undefined, () => authorized);
+  coordinator.change("actor A first"); await tick();
+  coordinator.change("actor A second");
+  authorized = false; coordinator.dispose();
+  calls[0].resolve({ ok: true, revision: 1 }); await tick();
+  coordinator.retry(); coordinator.flush();
+  expect(calls).toHaveLength(1);
+  expect(coordinator.hasUnsavedChanges()).toBe(false);
+  expect(coordinator.getState().draft).toBeUndefined();
+});

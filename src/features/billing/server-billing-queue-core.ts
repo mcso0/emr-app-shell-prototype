@@ -14,6 +14,7 @@ function record(value: unknown): Record<string, unknown> | undefined {
 export function parseBillingQueueItem(value: unknown, workspaceId: string): BillingQueueItem | null {
   const row = record(value), invoice = record(row?.invoice);
   if (!row || !invoice || invoice.workspaceId !== workspaceId ||
+    (row.pauseReason !== undefined && row.pauseReason !== null && row.pauseReason !== "order_edit") ||
     ![invoice.id, invoice.encounterId, invoice.invoiceNo, invoice.createdAt].every(v => typeof v === "string" && v.length > 0) ||
     !Number.isFinite(Date.parse(String(invoice.createdAt))) ||
     !["draft", "issued", "paid", "refund_requested", "refunded", "voided"].includes(String(invoice.status)) ||
@@ -31,6 +32,7 @@ export function parseBillingQueueItem(value: unknown, workspaceId: string): Bill
     encounter: { receptionType: encounter?.receptionType as BillingQueueItem["encounter"]["receptionType"] },
     patient: typeof patient?.name === "string" ? { name: patient.name } : undefined,
     guardian: typeof guardian?.name === "string" ? { name: guardian.name } : undefined,
+    pauseReason: row.pauseReason === "order_edit" ? "order_edit" : null,
     lineCount: row.lineCount, lineSummary: row.lineSummary, requestedByName: typeof row.requestedByName === "string" ? row.requestedByName : "미지정",
   };
 }

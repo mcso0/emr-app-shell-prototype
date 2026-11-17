@@ -3,7 +3,7 @@
 import { Toggle, ToggleGroup } from "@ui-sdk/react/toggle";
 
 import { usePageReadiness } from "@/components/emr/page-loading-boundary";
-import type { ConfirmedOrderContext } from "./confirmed-order-edit-contract";
+import { supportsConfirmedOrderEdit, type ConfirmedOrderContext } from "./confirmed-order-edit-contract";
 import { ConfirmedOrderEditDialog } from "@/features/chart/components/confirmed-order-edit-dialog";
 import { formatDispenseRequestQuantity, updateDispensingPrescriptionWithUnits, getDispenseRequestCourseQuantity, getDispenseRequestDisplayPrecision } from "@/features/chart/dispense-request-quantity";
 import { canonicalDispensingUnit } from "./dispensing-unit-conversion";
@@ -8417,7 +8417,7 @@ function ChartOrderTable({
   ): "amend" | "re_request" | null => {
     if (
       orderRow.runtimeRow?.rowType === "set" ||
-      (orderRow.runtimeRow?.rowType === "set_child" && !["dispensing", "treatment"].includes(getChartOrderClinicalType(orderRow)))
+      (orderRow.runtimeRow?.rowType === "set_child" && !supportsConfirmedOrderEdit(getChartOrderClinicalType(orderRow)))
     ) {
       return null;
     }
@@ -9794,11 +9794,13 @@ function ChartOrderTable({
               );
             }
 
-            const editReason = setChild && !["dispensing", "treatment"].includes(getChartOrderClinicalType(orderRow))
+            const usesConfirmedEditor = supportsConfirmedOrderEdit(getChartOrderClinicalType(orderRow)) &&
+              (["dispensing", "treatment"].includes(getChartOrderClinicalType(orderRow)) || latestTaskByOrderId.get(order.id)?.status !== "returned");
+            const editReason = setChild && !supportsConfirmedOrderEdit(getChartOrderClinicalType(orderRow))
               ? "세트 자식은 개별 수정할 수 없습니다."
               : setParent
                 ? "세트 오더는 더보기에서 재요청할 수 있습니다."
-                : writeDisabled && !["dispensing", "treatment"].includes(getChartOrderClinicalType(orderRow))
+                : writeDisabled && !usesConfirmedEditor
                   ? "오더 수정 권한이 없습니다."
                   : !primaryEditAction
                     ? "현재 상태에서는 수정할 수 없습니다."
@@ -9820,7 +9822,7 @@ function ChartOrderTable({
                     disabled={Boolean(editReason)}
                     onClick={() =>
                       primaryEditAction &&
-                      onOpenMutation(order.id, ["dispensing", "treatment"].includes(getChartOrderClinicalType(orderRow)) ? "edit" : primaryEditAction)
+                      onOpenMutation(order.id, usesConfirmedEditor ? "edit" : primaryEditAction)
                     }
                     type="button"
                   >
@@ -9932,7 +9934,7 @@ function ChartOrderTable({
                     {!hasMixedSelection ? (
                       <>
                         <ChartOrderDisabledAction reason={selectedConfirmedRows.length !== 1 ? "한 번에 한 오더를 선택해 주세요." : undefined}>
-                          <Button variant="outline" disabled={selectedConfirmedRows.length !== 1 || !["dispensing", "treatment"].includes(getChartOrderClinicalType(selectedConfirmedRows[0])) || selectedConfirmedRows[0]?.runtimeRow?.rowType === "set"}
+                          <Button variant="outline" disabled={selectedConfirmedRows.length !== 1 || !supportsConfirmedOrderEdit(getChartOrderClinicalType(selectedConfirmedRows[0])) || selectedConfirmedRows[0]?.runtimeRow?.rowType === "set"}
                             onClick={() => onOpenMutation(selectedConfirmedRows[0].order.id, "edit")}>수정</Button>
                         </ChartOrderDisabledAction>
                         <Button
@@ -15447,6 +15449,7 @@ const OrderArea = memo(function OrderArea({
           const row = draftRows.find(row => row.order.id === confirmedEditId);
           if (!row) return null;
           const clinicalType = getChartOrderClinicalType(row);
+          if (!supportsConfirmedOrderEdit(clinicalType)) return null;
           const dispensing = clinicalType === "dispensing";
           const dispensingAuthority = dispensing ? getChartOrderAuthority(row) : null;
           const contract = getClinicalOrderFieldSchema(clinicalType, row.detailSchemaVersion);
@@ -15459,7 +15462,7 @@ const OrderArea = memo(function OrderArea({
           const dispenseMemos = editableFields.filter(isDispenseMemo);
           const clinicalFields = editableFields.filter(field => field !== dispenseUnit && !isDispenseMemo(field));
           return <ConfirmedOrderEditDialog key={`${mutationChartId}:${confirmedEditId}`} workspaceId={bundle.encounter.workspaceId}
-            chartId={mutationChartId} orderId={confirmedEditId} clinicalType={dispensing ? "dispensing" : "treatment"}
+            chartId={mutationChartId} orderId={confirmedEditId} clinicalType={clinicalType}
             dispensingAuthority={dispensingAuthority} name={row.order.displayName}
             fieldLabels={Object.fromEntries(contract?.fields.map(field => [field.key, field.label]) ?? [])} onClose={() => setConfirmedEditId(null)}
             renderClinical={(inputs, change, disabled) => {

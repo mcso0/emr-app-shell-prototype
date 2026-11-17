@@ -10,7 +10,7 @@ import { CdsUtilitiesHistoryIcon } from "@/components/cds-icons/utilities-and-mi
 import { OverallInstructionsHistoryDialog } from "@/features/chart/overall-instructions-history-dialog";
 import { createOverallInstructionsClient, InstructionRequestError } from "@/features/chart/overall-instructions-client";
 import { instructionScopeLabels, type OverallInstructions } from "@/features/chart/overall-instructions-contract";
-import type { OrderRerequestChange, EffectiveInstructions } from "../task-instruction-review-contract";
+import type { OrderRerequestChange, EffectiveInstructions, InstructionOrderLabel } from "../task-instruction-review-contract";
 import styles from "./task-instruction-callout.module.css";
 
 function TaskInstructionHistory({ workspaceId, chartId, onClose, onReview }: { workspaceId: string; chartId: string; onClose: () => void; onReview: () => void }) {
@@ -74,7 +74,7 @@ function InstructionEntry({ item, showScope }: { item: EffectiveInstructions["en
 export function TaskInstructionCallout({ document, workspaceId, onReview, orderChange, orderType = "조제" }: {
   document: EffectiveInstructions; workspaceId?: string; onReview: () => void;
   orderChange?: OrderRerequestChange;
-  orderType?: "조제" | "처치";
+  orderType?: InstructionOrderLabel;
 }) {
   const [hidden, setHidden] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);

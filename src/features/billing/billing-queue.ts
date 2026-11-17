@@ -6,6 +6,7 @@ export type BillingQueueItem = {
   encounter: Pick<Encounter, "receptionType">;
   patient?: { name: string };
   guardian?: { name: string };
+  pauseReason?: "order_edit" | null;
   lineCount: number;
   lineSummary: string;
   requestedByName: string;

@@ -37,7 +37,9 @@ export async function PUT(request: Request, { params }: RouteContext) {
     p_finding: body.finding,
   });
   if (error) {
-    const conflict = error.code === "40001" || error.message?.includes("finding_revision_conflict");
+    const workflowError = ["lab_result_attempt_changed", "lab_result_read_only", "order_work_on_hold"].find(code => error.message?.includes(code));
+    if (workflowError) return Response.json({ ok: false, error: workflowError }, { status: 409 });
+    const conflict = error.code === "40001" || ["finding_revision_conflict", "lab_result_attempt_changed", "lab_result_read_only", "order_work_on_hold"].some(code => error.message?.includes(code));
     return Response.json({ ok: false, error: conflict ? "revision_conflict" : "finding_save_failed" }, { status: conflict ? 409 : error.code === "42501" ? 403 : 500 });
   }
   return Response.json({ ok: true, data }, { headers: { "Cache-Control": "private, no-store" } });

@@ -10,7 +10,7 @@ import type { Invoice, InvoiceLine, PaymentMethod } from "@/types/emr-domain";
 import { buildBillingContractInvoiceSnapshot } from "./billing-data-contract";
 import type { BillingQueueItem } from "./billing-queue";
 import type { GuardianCheckoutSessionPayload } from "./server-guardian-checkout-core";
-import { BillingSidePanel, BillingSlotAvailabilityProvider } from "./module";
+import { BillingSidePanel } from "./module";
 import { useBillingStore } from "./store";
 
 export type BillingScenario = "queue" | "detail" | "empty" | "error" | "denied";
@@ -19,7 +19,7 @@ export const billingInvoiceId = "99500000-0000-4000-8000-000000000001";
 export const billingEncounterId = "99500000-0000-4000-8000-000000000002";
 const now = "2026-10-11T00:00:00Z";
 function createFixture(scenario: BillingScenario) {
-  const invoice: Invoice = { id: billingInvoiceId, workspaceId: billingWorkspaceId, encounterId: billingEncounterId, guardianId: "synthetic-billing-guardian", invoiceNo: "SYN-BILL-01", status: "issued", paymentState: "none", subtotalAmount: 3000, discountAmount: 0, taxAmount: 0, totalAmount: 3000, issuedAt: now, createdAt: now };
+  const invoice: Invoice = { id: billingInvoiceId, workspaceId: billingWorkspaceId, encounterId: billingEncounterId, guardianId: "synthetic-billing-guardian", invoiceNo: "SYN-BILL-01", status: "issued", paymentState: "none", subtotalAmount: 3000, discountAmount: 0, taxAmount: 0, totalAmount: 3000, issuedAt: now, createdAt: now, updatedAt: now };
   const lines: InvoiceLine[] = [1, 2].map(n => ({ id: `synthetic-billing-line-${n}`, invoiceId: invoice.id, description: `합성 청구 항목 ${n}`, quantity: 1, unitPrice: n * 1000, lineTotal: n * 1000 }));
   const rows: BillingQueueItem[] = scenario === "empty" ? [] : [{ invoice, encounter: { receptionType: "walk_in" }, patient: { name: "합성 수납 환자" }, guardian: { name: "합성 수납 보호자" }, lineCount: lines.length, lineSummary: "합성 청구 항목", requestedByName: "합성 수의사" }];
   const summary = createMockChartOrderBillingSummaryFromMutationRows({ encounterId: billingEncounterId, workspaceId: billingWorkspaceId, etag: '"synthetic-billing-summary"', generatedAt: now, rows: [] });
@@ -28,8 +28,8 @@ function createFixture(scenario: BillingScenario) {
   const snapshot = buildBillingContractInvoiceSnapshot({ invoice, payments: [] });
   const checkout: GuardianCheckoutSessionPayload = { checkoutSession: { id: "synthetic-checkout-preview", status: "prepared", workspaceId: billingWorkspaceId, guardianId: invoice.guardianId, payerSnapshot: { name: "합성 수납 보호자" }, selectedInvoiceIds: [invoice.id], payableAmount: snapshot.payableAmount, excludedAmount: 0, excludedCount: 0, paymentMethod: "card", preparedAt: now }, invoiceSnapshots: [snapshot] };
   const requests: Array<{ method: string; path: string; body?: unknown }> = [], unhandled: string[] = [];
-  let assignedToUserId: string | null = null, assignmentRevision = 1;
-  const assignment = () => ({ assignedToUserId, assignedToDisplayName: assignedToUserId === "synthetic-billing-user" ? "합성 접수" : assignedToUserId ? "다른 합성 담당자" : null, canManage: !assignedToUserId || assignedToUserId === "synthetic-billing-user", revision: assignmentRevision, assignees: [{ userId: "synthetic-billing-user", displayName: "합성 접수" }, { userId: "synthetic-other-user", displayName: "다른 합성 담당자" }] });
+  let assignedToUserId: string | null = null, assignmentRevision = 1, held = false;
+  const assignment = () => ({ pauseReason: held ? "order_edit" : null, assignedToUserId, assignedToDisplayName: assignedToUserId === "synthetic-billing-user" ? "합성 접수" : assignedToUserId ? "다른 합성 담당자" : null, canManage: !assignedToUserId || assignedToUserId === "synthetic-billing-user", revision: assignmentRevision, assignees: [{ userId: "synthetic-billing-user", displayName: "합성 접수" }, { userId: "synthetic-other-user", displayName: "다른 합성 담당자" }] });
   let preparationDenied = false, preparationGate: Promise<void> | undefined, releasePreparations: (() => void) | undefined;
   const pendingWriteBodies = new Set<symbol>();
   let healthy = scenario !== "error", unmount: (() => void) | undefined;
@@ -63,6 +63,8 @@ function createFixture(scenario: BillingScenario) {
       const body: unknown = init?.body ? JSON.parse(String(init.body)) : undefined;
       requests.push({ method, path: url.pathname + url.search, body });
       const base = `/api/workspaces/${billingWorkspaceId}`;
+      if (method === "GET" && url.pathname === `${base}/billing/order-changes`) return Response.json({ ok: true, changes: [] });
+      if (method === "GET" && (url.pathname.startsWith(`${base}/customer/`) || url.pathname === `${base}/vital-settings` || url.pathname.startsWith(`${base}/patient-vitals/`))) return Response.json({ ok: false, status: 403 }, { status: 403 });
       if (url.pathname === `${base}/billing/assignment`) {
         if (method === "GET") return Response.json({ ok: true, assignment: assignment() });
         if (method === "PATCH") {
@@ -118,14 +120,16 @@ function createFixture(scenario: BillingScenario) {
     holdPreparations: () => { preparationGate = new Promise<void>(resolve => { releasePreparations = resolve; }); },
     releasePreparations: () => { releasePreparations?.(); preparationGate = undefined; },
     writesSettled: () => pendingWriteBodies.size === 0,
+    setHeld: (value: boolean) => { held = value; if (rows[0]) rows[0].pauseReason = value ? "order_edit" : null; window.dispatchEvent(new Event("clair-billing-assignment")); window.dispatchEvent(new Event("focus")); },
     setAssignee: (id: string | null) => { assignedToUserId = id; assignmentRevision += 1; window.dispatchEvent(new Event("clair-billing-assignment")); }, install, recover: () => { healthy = true; }, setUnmount: (callback: () => void) => { unmount = callback; }, holdNextTransition: () => { holdTransition = true; }, finish: () => cleanup?.(), isRestored: () => restored };
 }
 export let billingFixture: ReturnType<typeof createFixture>;
 export function prepareBillingFixture(scenario: BillingScenario) { billingFixture = createFixture(scenario); return billingFixture.install(); }
+const BillingStorySlots = getModule("billing").slotAvailabilityProvider!;
 export function BillingExample(args: { scenario: BillingScenario }) {
   void args;
   const instance = billingFixture, [mounted, setMounted] = useState(true), [route, setRoute] = useState("");
   useEffect(() => { instance.setUnmount(() => flushSync(() => setMounted(false))); }, [instance]);
   const props = { workspaceId: billingWorkspaceId, moduleId: "billing", moduleLabel: "수납", onNavigateWorkspaceSurface: (href: string) => setRoute(href) };
-  return <div className="flex h-[900px] w-[1650px] max-w-full flex-col"><div className="flex min-h-0 flex-1">{mounted ? <><aside aria-label="수납 대기열" className="w-[300px] shrink-0"><BillingSidePanel {...props} /></aside><main className="min-w-0 flex-1"><BillingSlotAvailabilityProvider {...props}>{availability => <WorkspaceDocumentLayout moduleDefinition={getModule("billing")} slotProps={{ ...props, ...availability }} />}</BillingSlotAvailabilityProvider></main></> : null}</div><output aria-label="합성 수납 이동 경로">{route || "미선택"}</output></div>;
+  return <div className="flex h-[900px] w-[1650px] max-w-full flex-col"><div className="flex min-h-0 flex-1">{mounted ? <><aside aria-label="수납 대기열" className="w-[300px] shrink-0"><BillingSidePanel {...props} /></aside><main className="min-w-0 flex-1"><BillingStorySlots {...props}>{availability => <WorkspaceDocumentLayout moduleDefinition={getModule("billing")} slotProps={{ ...props, ...availability }} />}</BillingStorySlots></main></> : null}</div><output aria-label="합성 수납 이동 경로">{route || "미선택"}</output></div>;
 }

@@ -11,9 +11,15 @@ const baseContext: ExecutionContext = { workspaceId, workItemId, taskId: "910000
 let writes: Array<Record<string, unknown>> = [];
 let reads = 0;
 let releaseSave: (() => void) | undefined;
-type Scenario = "ready" | "readonly" | "requested" | "load-error" | "save-error" | "amendment" | "pending-refresh";
+type Scenario = "ready" | "readonly" | "requested" | "load-error" | "save-error" | "amendment" | "pending-refresh" | "imaging-attempt";
 function Example(_args: { scenario: Scenario }) {
   const [ownershipRevision, setOwnershipRevision] = useState(1);
+  const [taskId, setTaskId] = useState(baseContext.taskId);
+  useEffect(() => {
+    const replace = () => setTaskId("91000000-0000-4000-8000-000000000006");
+    window.addEventListener("synthetic:execution-new-attempt", replace);
+    return () => window.removeEventListener("synthetic:execution-new-attempt", replace);
+  }, []);
   useEffect(() => {
     if (_args.scenario !== "pending-refresh") return;
     const refresh = () => setOwnershipRevision(value => value + 1);
@@ -21,7 +27,7 @@ function Example(_args: { scenario: Scenario }) {
     return () => window.removeEventListener("synthetic:execution-authority-refresh", refresh);
   }, [_args.scenario]);
   const [open, setOpen] = useState(true);const [saved, setSaved] = useState(0);
-  return <><button type="button" onClick={() => setOpen(true)}>수행기록 열기</button><output aria-label="합성 수행 저장 횟수">{saved}</output><ExecutionResultDialog workspaceId={workspaceId} workItemId={workItemId} ownershipKey={String(ownershipRevision)} open={open} onOpenChange={setOpen} onSaved={async () => setSaved((count) => count + 1)} /></>;
+  return <><button type="button" onClick={() => setOpen(true)}>수행기록 열기</button><output aria-label="합성 수행 저장 횟수">{saved}</output><ExecutionResultDialog workspaceId={workspaceId} workItemId={workItemId} taskId={_args.scenario === "imaging-attempt" ? taskId : undefined} ownershipKey={String(ownershipRevision)} open={open} onOpenChange={setOpen} onSaved={async () => setSaved((count) => count + 1)} /></>;
 }
 const meta = {
   title: "Features/Fulfillment/Execution Result", component: Example, tags: ["autodocs"], args: { scenario: "ready" as Scenario }, argTypes: { scenario: { control: false } },
@@ -30,6 +36,9 @@ const meta = {
     const original = globalThis.fetch;writes = [];reads = 0;releaseSave = undefined;
     const context = structuredClone(baseContext);
     let failRead = args.scenario === "load-error";let failSave = args.scenario === "save-error";
+    if (args.scenario === "imaging-attempt") { context.clinicalOrderType = "imaging"; context.planSnapshot = { detailInputs: { bodyRegion: "합성 부위", views: ["합성 뷰"] } }; }
+    const replaceAttempt = () => { context.taskId = "91000000-0000-4000-8000-000000000006"; context.attemptNo = 2; context.workItemRevision++; context.results = []; };
+    window.addEventListener("synthetic:execution-new-attempt", replaceAttempt);
     if (args.scenario === "readonly") context.canRecord = false;
     if (args.scenario === "requested") context.status = "requested";
     if (args.scenario === "amendment") {
@@ -58,7 +67,7 @@ const meta = {
       if (!parseExecutionContext(context, workspaceId, workItemId)) throw new Error("Invalid synthetic saved execution context");
       return Response.json({ ok: true, context });
     };
-    return () => { releaseSave?.(); globalThis.fetch = original; };
+    return () => { window.removeEventListener("synthetic:execution-new-attempt", replaceAttempt); releaseSave?.(); globalThis.fetch = original; };
   },
 } satisfies Meta<typeof Example>;
 export default meta;
@@ -104,3 +113,15 @@ export const PendingSaveAuthorityRefresh: Story = {
     await expect(writes).toHaveLength(1);
   },
 };
+
+export const ImagingAttemptClearsPreviousInput: Story = { args: { scenario: "imaging-attempt" }, play: async ({ canvasElement }) => {
+  const body = within(canvasElement.ownerDocument.body);
+  await userEvent.type(await body.findByLabelText("영상 소견 *"), "이전 회차 합성 소견");
+  await userEvent.type(body.getByLabelText("판독 결과 *"), "이전 회차 합성 판독");
+  window.dispatchEvent(new Event("synthetic:execution-new-attempt"));
+  await body.findByText("확정 계획 · 2회차");
+  await expect(body.getByLabelText("영상 소견 *")).toHaveValue("");
+  await expect(body.getByLabelText("판독 결과 *")).toHaveValue("");
+  await expect(body.getByRole("button", { name: "수행기록 저장 및 완료" })).toBeDisabled();
+  await expect(writes).toHaveLength(0);
+} };

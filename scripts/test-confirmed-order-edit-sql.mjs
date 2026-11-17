@@ -16,6 +16,8 @@ for (const [name, sql] of [
   ["sql", baseSql],
   ["selected-billing-prepayment", followup("selected-billing-prepayment")],
   ["work-hold", followup("confirmed-order-work-hold")],
+  ["shared-examination", followup("shared-examination-workflow")],
+  ["billing-edit-hold", followup("billing-order-edit-hold")],
 ]) {
 const result = spawnSync("docker", ["exec", "-i", container, "psql", "-X", "-U", "supabase_admin", "-d", database, "-v", "ON_ERROR_STOP=1"], {
   input: sql, encoding: "utf8", maxBuffer: 4 * 1024 * 1024,

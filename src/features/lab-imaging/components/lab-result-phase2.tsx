@@ -542,8 +542,9 @@ function uploadProgressLabel(task: UploadTask) {
   return task.progress === undefined ? "—%" : `${task.progress}%`;
 }
 
-export function LabOverallFinding({ result, phase2, readStatus, refresh }: { result: LabResult; phase2: LabResultPhase2Data | null; readStatus?: AttachmentCollectionStatus; refresh: () => void }) {
+export function LabOverallFinding({ result, phase2, readStatus, refresh, paused = false }: { paused?: boolean; result: LabResult; phase2: LabResultPhase2Data | null; readStatus?: AttachmentCollectionStatus; refresh: () => void }) {
   const autosave = useLabAutosave<string>(`${result.workspaceId}:${result.id}:overall`, async (finding, _requestId, expectedRevision) => {
+    if (paused) return { ok: false, reason: "held", message: "오더 수정 중입니다. 입력은 이 화면에 보관됩니다.", retryable: true };
     if (!phase2?.canEdit) return { ok: false, reason: "permission_denied", message: "현재 담당자만 수정할 수 있습니다.", retryable: false };
     const endpoint = `/api/workspaces/${encodeURIComponent(result.workspaceId)}/lab-imaging/result-phase2`;
     const response = await fetch(endpoint, {
@@ -555,6 +556,8 @@ export function LabOverallFinding({ result, phase2, readStatus, refresh }: { res
       refresh();
       return { ok: true, revision: body.data.revision };
     }
+    if (body.error === "order_work_on_hold") return { ok: false, reason: "held", retryable: true, message: "오더 수정 중입니다. 수정이 끝난 뒤 다시 저장해 주세요." };
+    if (body.error === "lab_result_attempt_changed") return { ok: false, reason: "superseded", retryable: false, message: "오더가 재요청되었습니다. 이전 검사 결과에서 미저장 입력을 확인해 주세요." };
     if (response.status === 409) {
       // The previous response may have been lost after committing. Only accept
       // readback that matches this exact finding and the next revision.
@@ -571,7 +574,7 @@ export function LabOverallFinding({ result, phase2, readStatus, refresh }: { res
     return { ok: false, reason: response.status === 401 || response.status === 403 ? "permission_denied" : "error",
       retryable: response.status >= 500 || response.status === 429,
       message: response.status === 401 || response.status === 403 ? "저장 권한이 없습니다." : "종합소견을 저장하지 못했습니다." };
-  }, phase2?.overallRevision ?? 0);
+  }, phase2?.overallRevision ?? 0, undefined, paused);
   const value = autosave.state.draft ?? phase2?.overallFinding ?? "";
   return <section className="rounded-lg border bg-card p-4" data-testid="lab-overall-finding" onBlurCapture={autosave.flush}>
     <div className="mb-3 flex items-center justify-between gap-2"><h2 className="emr-text-body font-semibold">검사결과 종합소견</h2>

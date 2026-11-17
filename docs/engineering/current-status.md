@@ -1,5 +1,16 @@
 # MVP Current Status
 
+The 2026-11-17 local shared-workflow candidate connects clinical-lab, external-lab,
+imaging and unpaid billing to the dispensing/treatment editing and re-request
+flow. Examinations require a new result per attempt; billing pauses at edit begin
+and retains current-owner amount approval. Three schema changes are verified in
+an owned isolated synthetic DB only. PR #1100 is now authorized for guarded
+pre-deployment verification, its three DB migrations, main/Production delivery
+and isolated synthetic post-deployment checks. Follow the exact runtime outcome
+in the PR release report and the work item. See
+[CLINICAL-FULFILLMENT-PR-010](../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#shared-order-workflow--2026-11-16-local-implementation-scope)
+for exact local evidence and limits.
+
 Overall instructions connects chart authoring, atomic scoped revisions, performer acknowledgement, immutable task snapshots and persisted in-app change notifications. Immediate and direct completion paths enforce the same actor/version review. Local contract, component, concurrent SQL and build checks pass. [PR #1033](https://github.com/mcso0/emr-app-shell-prototype/pull/1033) records the exact release candidate, remote migration and Preview/Production results; [CLINICAL-FULFILLMENT-PR-012](../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-012-overall-instructions.md) defines verification limits. Synthetic checks do not establish hospital-user acceptance.
 
 Prework assignment (2026-11-02) adds requested-only 조제/처치 patient context,

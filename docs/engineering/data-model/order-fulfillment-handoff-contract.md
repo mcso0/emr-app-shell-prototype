@@ -21,7 +21,7 @@ related_work:
   - DEN-349
 supersedes: []
 superseded_by: []
-last_updated: 2026-11-03
+last_updated: 2026-11-17
 ---
 
 # Order Fulfillment Handoff Engineering Contract
@@ -29,6 +29,50 @@ last_updated: 2026-11-03
 This document defines the engineering contract for Project 08, `Clinical Order Fulfillment Handoff Persistence`. It bridges existing chart/order/billing persistence with downstream lab, imaging, dispensing, and treatment queue persistence.
 
 `DEN-235` defined the contract. `DEN-236` adds the initial local-first route/core/gateway and migration contract. `DEN-237` connects chart order confirmation to fulfillment sync. `DEN-238` connects lab and imaging screens to fulfillment queue read/status mutation. `DEN-239` connects dispensing and treatment screens to fulfillment queue read/status mutation. `DEN-240` syncs fulfillment status changes back to order lifecycle and billing candidates. `DEN-241` adds end-to-end replay coverage. `DEN-242` closes out the project and records staging readiness boundaries. Remote staging migration remains gated by dry-run and explicit approval.
+
+## Shared examination and billing workflow — local candidate, 2026-11-17
+
+Migrations `20261116110000_shared_order_workflow`,
+`20261116110100_lab_result_attempts`, and
+`20261116110200_billing_order_edit_hold` extend the released dispensing/treatment
+flow. They have been applied only to an owned, network-isolated synthetic DB.
+This section supersedes the historical examination-entry behavior below for this
+local candidate; it does not describe a hosted release.
+
+- Confirmed clinical-lab, external-lab and imaging orders use the existing chart
+  editor, clinical revision, assignment, edit lease and re-request boundaries.
+  Examination claim assigns and starts atomically. An already assigned first
+  request starts through the entry confirmation. Opening an assigned re-request
+  shows the existing review; only explicit `업무 시작하기` resumes it. Same-actor
+  claim retains an identical acknowledged document; another actor must review it.
+- Dispensing/treatment completion exceptions, set/item semantics, notifications,
+  edit-hold conditions and lease timing stay unchanged. Common presentation
+  helpers replace duplicated re-request detection and entry-review triggering.
+- Lab results bind to a workspace, execution task and attempt. A new attempt
+  copies its frozen result definition, never results, findings or attachments.
+  Current reads and completion select the current canonical attempt. Previous
+  attempts remain readable and reject row/finding/attachment writes. Existing
+  first-attempt canonical entries bind only where unambiguous; uncertain older
+  records remain historical and are not guessed into a later attempt.
+- Lab autosave pauses during an edit and resumes after same-attempt authority is
+  reloaded. Superseded unsaved input stays separate in the previous-result view
+  until discarded. It cannot enter the new result. Draft queues are actor-scoped;
+  account changes retire old writes and remove their pending values. Imaging
+  dialogs reset their draft by task and retain the existing save-and-complete RPC.
+- The editor's independent billing leases pause linked unpaid invoices even when
+  clinical work is complete. Cancel/no-change save releases the lease; a failed
+  save rolls the release back. All leases must end before the invoice is usable.
+  Pending/paid invoices retain their existing financial lock. Assignment transfer
+  remains available, but financial actions require the current owner after release.
+- Edit begin expires prepared checkout sessions. A cancelled/expired edit never
+  revives them. Session and invoice locks use a consistent order for begin and
+  session-less saves; invoice timestamps, totals and payment state are not changed
+  by the pause. A financial proposal still requires `확인 후 금액 반영` before payment.
+
+No result reuse, cross-work automatic holds, new role policy, collection workflow,
+provider side effect or remote migration belongs to this change. Evidence and
+verification limits are in
+[CLINICAL-FULFILLMENT-PR-010](../../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#shared-order-workflow--2026-11-16-local-implementation-scope).
 
 ## Confirmed order editing — local candidate, 2026-11-03
 
