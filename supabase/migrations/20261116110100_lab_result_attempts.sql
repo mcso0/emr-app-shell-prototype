@@ -21,6 +21,10 @@ alter table public.lab_result_entries add constraint lab_result_entries_task_pai
 update public.lab_result_entries e set task_id=w.task_id,task_attempt_no=w.task_attempt_no
 from public.order_fulfillment_work_items w where w.workspace_id=e.workspace_id
   and w.id=e.work_item_id and w.order_id=e.order_id and w.queue_type in ('lab','external_lab') and w.task_attempt_no=1;
+-- Backfill updates queue the existing deferred canonical-definition trigger.
+-- Validate them before index DDL, then retain deferred entry-before-rows creation.
+set constraints public.lab_result_entries_canonical_definition_deferred immediate;
+set constraints public.lab_result_entries_canonical_definition_deferred deferred;
 drop index public.lab_result_entries_canonical_order_unique;
 create unique index lab_result_entries_canonical_attempt_unique on public.lab_result_entries(workspace_id,order_id,task_attempt_no) nulls not distinct
   where result_definition_origin='canonical';

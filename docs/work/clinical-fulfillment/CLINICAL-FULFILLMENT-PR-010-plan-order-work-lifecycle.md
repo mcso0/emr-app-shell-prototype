@@ -2629,3 +2629,22 @@ three table structures, and hashes of all 71 existing result entries and 71 rows
 The bounded cutover gate covers the 36 public mutation entrypoints discovered by
 following affected helper and trigger write paths. Its ACL snapshot and restoration
 SQL remain private alongside the data manifest and synthetic fixture credentials.
+
+### Populated migration correction — 2026-11-17
+
+The first hosted cutover applied shared_order_workflow. lab_result_attempts then
+failed atomically with PostgreSQL 55006: the first-attempt backfill queued the
+existing deferred canonical-definition trigger before index DDL. Its transaction
+rolled back completely; all 36 public mutation entrypoint grants were restored.
+The result task columns and billing-lease table remained absent, and the original
+71 entries and 71 rows remained present. No merge occurred at that point.
+
+The corrected migration flushes only the named canonical-definition constraint
+before index replacement, then restores its deferred mode before any later-attempt
+entry/row creation. scripts/test-lab-result-attempt-migration.mjs reproduces the
+original failure and verifies the fix using populated V1 and V2 legacy results:
+existing entry, row and overall-finding hashes stay unchanged; the first attempt
+binds correctly; an already re-requested external exam keeps its previous result
+unbound and receives one blank current result. The script removes its owned clone.
+The runtime release outcome and exact deployment evidence are recorded in the
+[PR #1100 release report](https://github.com/mcso0/emr-app-shell-prototype/pull/1100).
