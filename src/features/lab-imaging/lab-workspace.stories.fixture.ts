@@ -5,7 +5,7 @@ import { evaluateLabProfileValue, type LabProfileRule } from "./result-profile-c
 import { parsePersistedLabResult } from "./persisted-result-contract";
 import { parseLabProfileConfiguration } from "./server-result-profile-core";
 
-export type LabWorkspaceScenario = "ready" | "readonly" | "queue-error" | "queue-denied" | "empty" | "entries-error" | "row-save-error" | "numeric-no-interval" | "assigned-request" | "rerequest";
+export type LabWorkspaceScenario = "ready" | "readonly" | "queue-error" | "queue-denied" | "empty" | "entries-error" | "row-save-error" | "numeric-no-interval" | "assigned-request" | "external-request" | "rerequest";
 const workItemId = "97000000-0000-4000-8000-000000000001";
 const pendingWorkItemId = "97000000-0000-4000-8000-000000000002";
 const numeric: LabProfileRule = { testMasterKey: "synthetic-numeric", code: "SYN-N", resultValueKind: "numeric", unit: "synthetic-unit", decimalScale: 1, supported: true, numericMin: 0, numericMax: 100, referenceInterval: { low: 1, high: 5, lowInclusive: true, highInclusive: true }, displayRange: { low: 0, high: 20 }, codes: [], referenceStatus: "synthetic_functional_fixture", provenance: {}, allowedQualifiers: ["exact", "less_than", "greater_than"] };
@@ -22,7 +22,7 @@ export function createLabWorkspaceFixture(scenario: LabWorkspaceScenario) {
   const copied: string[] = [];
   let queueReads = 0, entryReads = 0, acknowledgements = 0;
   let held = false;
-  const hasTask = ["assigned-request", "rerequest"].includes(scenario);
+  const hasTask = ["assigned-request", "external-request", "rerequest"].includes(scenario);
   const instance = createPhase2Fixture(scenario === "readonly" ? "readonly" : "ready", { workspaceId, handleAdditionalRequest: async (url, method, body) => {
     const queuePath = `/api/workspaces/${workspaceId}/fulfillment/work-items`;
     const entriesPath = `/api/workspaces/${workspaceId}/lab-imaging/result-entries`;
@@ -98,7 +98,7 @@ export function createLabWorkspaceFixture(scenario: LabWorkspaceScenario) {
   ];
   instance.result.rows = initialRows.map(row => evaluated(scenario === "rerequest" ? { ...row, value: undefined, note: undefined } : row));
   if (scenario === "rerequest") { instance.state.overallFinding = ""; instance.state.attachments = []; }
-  const baseItem: FulfillmentWorkItem = { id: workItemId, workspaceId, orderId: instance.result.orderId!, encounterId: instance.result.encounterId, patientId: instance.result.patientId, patientName: "합성 환자 A", guardianName: "합성 보호자 A", queueType: "lab", orderType: "lab", priority: "normal", status: hasTask ? "requested" : "in_progress", canManage: true, ...(hasTask ? { taskId: "97000000-0000-4000-8007-000000000001", taskAttemptNo: scenario === "rerequest" ? 2 : 1 } : {}), assignedToUserId: "user-tech", requestedByUserId: "synthetic-vet", requesterName: "합성 수의사", requestCycle: 1, rowRevision: 2, createdAt: "2026-10-11T00:00:00Z", updatedAt: "2026-10-11T00:00:00Z", sourceSnapshot: { billingReflectionEnabled: false, orderDisplayName: instance.result.resultName, instruction: "합성 직원 전달 사항", detail: { breed: "합성 품종", age: "합성 나이" } } };
+  const baseItem: FulfillmentWorkItem = { id: workItemId, workspaceId, orderId: instance.result.orderId!, encounterId: instance.result.encounterId, patientId: instance.result.patientId, patientName: "합성 환자 A", guardianName: "합성 보호자 A", queueType: "lab", orderType: "lab", clinicalOrderType: scenario === "external-request" ? "external_lab" : "clinical_lab", destinationModule: scenario === "external-request" ? "external_lab" : "lab", priority: "normal", status: hasTask ? "requested" : "in_progress", canManage: true, ...(hasTask ? { taskId: "97000000-0000-4000-8007-000000000001", taskAttemptNo: scenario === "rerequest" ? 2 : 1 } : {}), assignedToUserId: "user-tech", requestedByUserId: "synthetic-vet", requesterName: "합성 수의사", requestCycle: 1, rowRevision: 2, createdAt: "2026-10-11T00:00:00Z", updatedAt: "2026-10-11T00:00:00Z", sourceSnapshot: { billingReflectionEnabled: false, orderDisplayName: instance.result.resultName, instruction: "합성 직원 전달 사항", detail: { breed: "합성 품종", age: "합성 나이" } } };
   const workItems: FulfillmentWorkItem[] = [baseItem, { ...baseItem, id: pendingWorkItemId, orderId: "97000000-0000-4000-8004-000000000002", patientId: "97000000-0000-4000-8002-000000000002", patientName: "합성 환자 B", guardianName: "합성 보호자 B", status: "requested", assignedToUserId: null }];
   function evaluated(row: LabResultRow): LabResultRow {
     const evaluation = evaluateLabProfileValue(row.interpretationRule!, { value: row.value ?? null, qualifier: row.qualifier, deviceFlag: row.deviceFlag, resultState: row.resultPresence });

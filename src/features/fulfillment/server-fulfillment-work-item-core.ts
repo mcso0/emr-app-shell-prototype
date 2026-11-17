@@ -1339,7 +1339,7 @@ export type SupabaseFulfillmentWorkItemRpcClient = {
     functionName: "clair_list_fulfillment_work_items_v2",
     args: {
       p_workspace_id: string;
-      p_queue_type: FulfillmentQueueType;
+      p_queue_type: FulfillmentQueueType | "external_lab";
       p_encounter_id?: string;
       p_order_id?: string;
       p_status?: FulfillmentWorkItemStatus;
@@ -1412,11 +1412,15 @@ export function createSupabaseFulfillmentWorkItemGateway(
       status,
       workspaceId,
     }) {
-      const { data, error } = await client.rpc(
+      // External examinations share the lab workspace and existing lab permissions.
+      // Preserve database identity and clinical metadata at this UI queue boundary.
+      const queues: Array<FulfillmentQueueType | "external_lab"> =
+        queueType === "lab" ? ["lab", "external_lab"] : [queueType];
+      const responses = await Promise.all(queues.map((queue) => client.rpc(
         "clair_list_fulfillment_work_items_v2",
         {
           p_workspace_id: workspaceId,
-          p_queue_type: queueType,
+          p_queue_type: queue,
           p_encounter_id: normalizeUuidForRpc(encounterId),
           p_order_id: normalizeUuidForRpc(orderId),
           p_status: status,
@@ -1424,11 +1428,18 @@ export function createSupabaseFulfillmentWorkItemGateway(
           p_patient_id: normalizeUuidForRpc(patientId),
           p_work_item_id: normalizeUuidForRpc(workItemId),
         },
-      );
-      if (error) return mapGatewayError(error.message, "db_read_failed");
+      )));
+      const failed = responses.find((response) => response.error);
+      if (failed?.error) return mapGatewayError(failed.error.message, "db_read_failed");
+      const uniqueItems = new Map(responses.flatMap(({ data }) =>
+        mapWorkItemRows(data)).map((item) => [item.id, item]));
+      const workItems = [...uniqueItems.values()];
+      if (queueType === "lab") {
+        workItems.sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt) || a.id.localeCompare(b.id));
+      }
       return {
         ok: true,
-        workItems: mapWorkItemRows(data).filter(
+        workItems: workItems.filter(
           (item) => !date || getFulfillmentWorkItemOperatingDate(item) === date,
         ),
       };
@@ -3022,7 +3033,8 @@ function mapWorkItemHistorySnapshot(
   value: unknown,
 ): FulfillmentWorkItemHistorySnapshot | null {
   if (!value || typeof value !== "object") return null;
-  const row = value as Partial<FulfillmentWorkItemHistorySnapshot>;
+  const raw = value as Record<string, unknown>;
+  const row = { ...raw, queueType: raw.queueType === "external_lab" ? "lab" : raw.queueType } as Partial<FulfillmentWorkItemHistorySnapshot>;
   if (
     typeof row.workspaceId !== "string" ||
     typeof row.workItemId !== "string" ||
@@ -3094,7 +3106,8 @@ function mapWorkItemHistoryEvent(
 
 function mapWorkItemRow(value: unknown): FulfillmentWorkItem | null {
   if (!value || typeof value !== "object") return null;
-  const row = value as Partial<FulfillmentWorkItem>;
+  const raw = value as Record<string, unknown>;
+  const row = { ...raw, queueType: raw.queueType === "external_lab" ? "lab" : raw.queueType } as Partial<FulfillmentWorkItem>;
   if (
     typeof row.id !== "string" ||
     typeof row.workspaceId !== "string" ||

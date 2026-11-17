@@ -130,6 +130,55 @@ source. This is not an exploitability assessment of all dependencies. Dependency
 remediation is outside this workflow PR. Local Next commands initially stopped
 with the existing upgrade advisory and were retried without changing dependencies.
 
+### Production release authorization and preparation — 2026-11-17
+
+승욱 subsequently authorized PR #1100 pre-deployment verification, its necessary
+DB migrations, protected `main` merge, Production deployment and post-deployment
+synthetic workflow checks once the gates pass. This supersedes the earlier
+no-merge/no-deployment restriction for this bounded PR. In-scope corrections
+require refreshed candidate evidence, not another release approval.
+
+Release preparation uses the isolated `pr1100-release` checkout and preserves the
+original checkout's generated `AGENTS.md` WIP. The initial candidate is
+`cb60cc00b8c8030a89b8b882c21b36b096b48bca`; current `main` and Ready Production
+both use `d4179f4a9db6c5b16d3c2de4e58be4b9272925b2`. Retain the prior Ready
+deployment and exact function/owner/grant backups before applying the three
+migrations in order. The result-attempt schema cannot be reversed by an app-only
+rollback after new attempt results exist; preserve data and prepare a forward fix
+if that boundary has been crossed.
+
+Preview and Production currently share the same Supabase database. Verification
+must use a newly isolated synthetic workspace and disposable synthetic editor and
+performer identities. Scope the fixtures to clinical/external-lab and imaging
+start, editing hold/cancel, re-request acknowledgement, new results and completion;
+dispensing/treatment regressions; and unpaid billing hold, prepared-checkout
+expiration, financial proposal approval and pending-payment denial. The pending
+payment state may be seeded only on a dedicated synthetic checkout. Do not call
+payment-provider or communication operations. Archive the fixture and disable its
+test sign-in after verification; keep its manifest and recovery evidence private.
+
+Before migration, require zero active edit leases and zero first-attempt result
+bindings with missing task IDs. Capture aggregate backfill targets and hashes of
+existing result records without exporting clinical content to public artifacts.
+Initial read-only preflight found zero in each of those four categories. Apply
+no unrelated historical migration. At cutover, temporarily revoke authenticated
+execution of the confirmed-order edit-session RPC, commit, record a fresh fence
+time and drain all pre-fence client transactions. Require zero active clinical
+holds before the migration. The table lock alone cannot stop an invocation that
+entered the old function before replacement. The final migration restores the
+public wrapper grant; on failure restore the saved ACL on the current public
+wrapper, never on a renamed base. Refresh the PostgREST schema cache afterwards.
+
+Pre-release corrections add V2 frozen-result checks and actor/workspace/assignee/
+revoked-permission denial assertions. Five two-connection hold races cover pending
+checkout, expired checkout, session-less save, shared checkout across two encounters
+and lease expiry while renewal waits. Candidate migrations replay successfully
+against the 30 captured current hosted function definitions. External lab work now
+joins the existing lab screen through two identically scoped RPC reads, preserving
+its persisted queue, clinical type and result identity. No permission-policy or
+new screen is introduced. Its list, transition, sync and history responses share
+the same UI queue mapping; either failed read fails the combined result.
+
 ## Single-entry response ordering — 2026-11-09
 
 Local fix from `origin/main` `34379835ae7ac449988f749da8b2dc8e0ff381a7`.

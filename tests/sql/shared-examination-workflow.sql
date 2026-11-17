@@ -1,5 +1,5 @@
 -- Extends the disposable confirmed-order fixture. Frozen synthetic V1 result
--- definitions avoid an unrelated master-publication dependency.
+-- definitions cover legacy V1 and frozen V2 interpretation without full catalog adoption.
 update public.workspace_permission_roles set permissions='{"allowed":["chart:view","dispensing:view","dispensing:complete","lab:view","lab:complete","imaging:view","imaging:complete"]}'
 where id='80000000-0000-4000-8000-000000000003';
 insert into public.orders(id,workspace_id,encounter_id,origin_chart_id,order_type,clinical_order_type,execution_mode,destination_module,display_name,status,order_confirmation_status,detail_schema_version,detail_inputs,billing_reflection_enabled,requested_by_user_id)
@@ -22,9 +22,23 @@ from public.order_tasks t where workspace_id='synthetic-order-edit' and t.id::te
 insert into public.lab_test_categories(id,workspace_id,category_name) values('synthetic-cat','synthetic-order-edit','Synthetic');
 insert into public.lab_test_items(id,workspace_id,category_id,test_item_name,result_input_type,result_value_kind)
 values('synthetic-item','synthetic-order-edit','synthetic-cat','Synthetic','number','numeric');
+insert into master.master_releases(id,record_count,source_fingerprint,status,published_by_label,published_at)
+values('99000000-0000-4000-8000-000000000011',1,repeat('c',64),'published','Synthetic PR1100',now());
+insert into master.master_records(id,master_key,record_type,lifecycle_status,current_revision,current_release_id,published_at)
+values('99000000-0000-4000-8000-000000000012','synthetic.pr1100.numeric','lab_test','published',1,'99000000-0000-4000-8000-000000000011',now());
+insert into master.master_record_versions(master_record_id,revision,release_id,snapshot,authored_by_label)
+values('99000000-0000-4000-8000-000000000012',1,'99000000-0000-4000-8000-000000000011','{"masterKey":"synthetic.pr1100.numeric","recordType":"lab_test","detail":{"testCode":"SYN1100","decimalScale":1}}','Synthetic PR1100');
+insert into public.workspace_lab_devices(id,workspace_id,name,manufacturer,model,kind,created_by_user_id)
+values('99000000-0000-4000-8000-000000000013','synthetic-order-edit','합성 수동 검사','Synthetic','Manual','manual','81000000-0000-4000-8000-000000000001');
 do $$
 declare row_definition jsonb; snapshot jsonb; entry_id uuid; wi public.order_fulfillment_work_items;
+ rule jsonb; profile jsonb; frozen_profile jsonb; current_row jsonb; current_snapshot jsonb;
 begin
+ rule:='{"testMasterKey":"synthetic.pr1100.numeric","code":"SYN1100","resultValueKind":"numeric","unit":"synthetic-unit","decimalScale":1,"supported":true,"numericMin":0,"numericMax":100,"referenceInterval":{"low":1,"high":5,"lowInclusive":true,"highInclusive":true},"displayRange":{"low":0,"high":100},"codes":[],"referenceStatus":"synthetic_functional_fixture","provenance":{},"allowedQualifiers":["exact","less_than","greater_than"]}'::jsonb;
+ profile:=jsonb_build_object('id','99000000-0000-4000-8000-000000000014','profileKey','synthetic-pr1100','revision',1,'schemaVersion',1,'name','Synthetic PR1100','species','dog','specimenMasterKey','synthetic.blood','method','Synthetic manual','device',jsonb_build_object('manufacturer','Synthetic','model','Manual','kind','manual'),'dataOrigin','synthetic_functional_fixture','provenance','{}'::jsonb,'entryMode','manual_entry','integrationStatus','not_integrated','clinicalUseAllowed',false,'clinicalValidation','not_clinically_validated','rules',jsonb_build_array(rule));
+ insert into master.lab_result_profile_versions(id,profile_key,revision,release_id,definition,definition_sha256)
+ values((profile->>'id')::uuid,profile->>'profileKey',1,'99000000-0000-4000-8000-000000000011',profile,private.clinical_master_sha256(profile));
+ frozen_profile:=(profile-'id'-'name'-'schemaVersion'-'rules'-'provenance')||jsonb_build_object('versionId',profile->>'id','definitionSha256',private.clinical_master_sha256(profile),'device',profile->'device'||jsonb_build_object('id','99000000-0000-4000-8000-000000000013','name','합성 수동 검사'));
  row_definition:=jsonb_build_object('rowId',repeat('a',64),'rowDefinitionOrigin','workspace_custom','ordinal',1,'labTestItemId','synthetic-item',
   'sourceMasterTestRecordId',null,'ownerPinnedSourceTestRevision',null,'itemVersionSourceMasterRecordId',null,'itemVersionSourceTestRevision',null,
   'workspaceResultRevision',1,'sourceOrdinal',null,'effectiveSortOrder',1,'analyteName','Synthetic','resultValueKind','numeric','resultInputType','number',
@@ -34,13 +48,18 @@ begin
   'targetType','panel','labPanelRecordId','99000000-0000-4000-8000-000000000002','labPanelRevision',1,'labTestRecordId',null,'labTestRevision',null,'specimenTypeRecordId',null,'specimenTypeRevision',null)),
   'rows',jsonb_build_array(row_definition));
  for wi in select * from public.order_fulfillment_work_items where workspace_id='synthetic-order-edit' and queue_type in ('lab','external_lab') loop
+  current_row:=row_definition; current_snapshot:=snapshot;
+  if wi.queue_type='lab' then
+   current_row:=row_definition||jsonb_build_object('rowDefinitionOrigin','clair_master','sourceMasterTestRecordId','99000000-0000-4000-8000-000000000012','ownerPinnedSourceTestRevision',1,'sourceOrdinal',1,'unit','synthetic-unit','decimalScale',1,'referenceRange','1–5','interpretationRule',rule);
+   current_snapshot:=snapshot||jsonb_build_object('schemaVersion',2,'resultProfile',frozen_profile,'rows',jsonb_build_array(current_row));
+  end if;
   insert into public.lab_result_entries(workspace_id,result_id,encounter_id,order_id,work_item_id,task_id,task_attempt_no,result_status,
    source_workspace_catalog_item_id,source_workspace_catalog_revision,source_master_order_record_id,source_master_order_revision,
    source_master_panel_record_id,source_master_panel_revision,result_definition_snapshot,result_definition_snapshot_sha256,result_definition_origin)
   values(wi.workspace_id,'lab-order:'||wi.order_id,wi.encounter_id,wi.order_id,wi.id,wi.task_id,1,'received','synthetic-catalog',1,
-   '99000000-0000-4000-8000-000000000001',1,'99000000-0000-4000-8000-000000000002',1,snapshot,private.clinical_master_sha256(snapshot),'canonical') returning id into entry_id;
-  insert into public.lab_result_entry_rows(workspace_id,lab_result_entry_id,row_id,lab_test_item_id,analyte_name,sort_order,row_definition_origin,workspace_result_revision,result_value_kind,result_input_type,effective_sort_order,required)
-  values(wi.workspace_id,entry_id,repeat('a',64),'synthetic-item','Synthetic',1,'workspace_custom',1,'numeric','number',1,true);
+   '99000000-0000-4000-8000-000000000001',1,'99000000-0000-4000-8000-000000000002',1,current_snapshot,private.clinical_master_sha256(current_snapshot),'canonical') returning id into entry_id;
+  insert into public.lab_result_entry_rows(workspace_id,lab_result_entry_id,row_id,lab_test_item_id,analyte_name,sort_order,row_definition_origin,workspace_result_revision,result_value_kind,result_input_type,effective_sort_order,required,source_master_test_record_id,owner_pinned_source_test_revision,source_ordinal,result_unit,decimal_scale,reference_range)
+  values(wi.workspace_id,entry_id,repeat('a',64),'synthetic-item','Synthetic',1,current_row->>'rowDefinitionOrigin',1,'numeric','number',1,true,(current_row->>'sourceMasterTestRecordId')::uuid,(current_row->>'ownerPinnedSourceTestRevision')::integer,(current_row->>'sourceOrdinal')::integer,current_row->>'unit',(current_row->>'decimalScale')::integer,current_row->>'referenceRange');
   perform private.clair_assert_lab_result_definition_snapshot(wi.workspace_id,entry_id);
  end loop;
 end $$;
@@ -83,6 +102,8 @@ begin
   perform public.clair_edit_confirmed_order(w,chart,wi.order_id,command);
   select * into current_entry from public.lab_result_entries where workspace_id=w and order_id=wi.order_id and task_attempt_no=2;
   perform pg_temp.assert_true(current_entry.id is not null and current_entry.id<>original.id and current_entry.entry_write_revision=0,'new attempt gets independent blank result');
+  perform pg_temp.assert_true(current_entry.result_definition_snapshot=original.result_definition_snapshot and current_entry.result_definition_snapshot_sha256=original.result_definition_snapshot_sha256,'new attempt retains exact frozen definition and profile');
+  perform private.clair_assert_lab_result_definition_snapshot(w,current_entry.id);
   perform pg_temp.assert_true((select bool_and(result_value is null and note is null) from public.lab_result_entry_rows where lab_result_entry_id=current_entry.id),'old values and notes are not copied');
   perform pg_temp.assert_true(not exists(select 1 from public.lab_result_overall_findings where lab_result_entry_id=current_entry.id) and not exists(select 1 from public.lab_result_attachments where lab_result_entry_id=current_entry.id),'overall and attachments are not copied');
   perform pg_temp.assert_true((select to_jsonb(e)=old_entry from public.lab_result_entries e where id=original.id) and (select jsonb_agg(to_jsonb(r) order by r.id)=old_rows from public.lab_result_entry_rows r where lab_result_entry_id=original.id),'previous result records unchanged');
@@ -113,6 +134,10 @@ begin
   exception when raise_exception then if sqlerrm<>'lab_result_attempt_changed' then raise; end if; end;
   perform set_config('request.jwt.claim.role','authenticated',true);
   perform public.clair_save_lab_result_entry_v2(w,actor,current_entry.result_id,wi.encounter_id,wi.order_id,wi.id,0,gen_random_uuid(),jsonb_build_array(jsonb_build_object('rowId',repeat('a',64),'value','8','note','Synthetic current note')));
+  if wi.queue_type='lab' then
+   perform pg_temp.assert_true((select result_state='recorded' and judgment='high' and result_unit='synthetic-unit' and decimal_scale=1 and reference_range='1–5' from public.lab_result_entry_rows where lab_result_entry_id=current_entry.id),'V2 evaluates frozen numeric rule');
+   perform pg_temp.assert_true((public.clair_get_lab_result_entry(w,actor,original.result_id,wi.id,wi.order_id)#>>'{rows,0,judgment}')='high','historical V2 retains interpretation');
+  end if;
   perform pg_temp.exam_action(wi.id,'complete');
   perform pg_temp.assert_true((select status='completed' from public.order_fulfillment_work_items where id=wi.id),'new attempt completes only with new results');
   raise notice 'PASS % new attempt, previous results, hold, acknowledgement, fresh completion, stale writers',wi.queue_type;
@@ -171,6 +196,65 @@ begin
  r:=public.clair_get_lab_result_entry(w,actor,null,wi,o);
  perform public.clair_save_lab_result_entry_v2(w,actor,r->>'resultId','84000000-0000-4000-8000-000000000001',o,wi,0,gen_random_uuid(),jsonb_build_array(jsonb_build_object('rowId',repeat('a',64),'value','9','note',null)));
  raise notice 'PASS unassigned re-request acknowledgement, atomic claim/start and immediate fresh save';
+end $$;
+
+-- Public RPC denial paths must preserve current and historical clinical data.
+create function pg_temp.expect_denied(statement text, expected text) returns void language plpgsql as $$
+begin
+ begin execute statement;
+ exception when others then
+  if sqlerrm=expected then return; end if;
+  raise exception 'Expected %, got %',expected,sqlerrm;
+ end;
+ raise exception 'Expected denial %',expected;
+end $$;
+create function pg_temp.lab_state() returns jsonb language sql as $$
+ select jsonb_build_object(
+ 'entries',(select jsonb_agg(to_jsonb(t) order by id) from public.lab_result_entries t where workspace_id='synthetic-order-edit'),
+ 'rows',(select jsonb_agg(to_jsonb(t) order by id) from public.lab_result_entry_rows t where workspace_id='synthetic-order-edit'),
+ 'overall',(select jsonb_agg(to_jsonb(t) order by lab_result_entry_id) from public.lab_result_overall_findings t where workspace_id='synthetic-order-edit'),
+ 'attachments',(select jsonb_agg(to_jsonb(t) order by id) from public.lab_result_attachments t where workspace_id='synthetic-order-edit'))
+$$;
+do $$
+declare w text:='synthetic-order-edit'; actor uuid:='81000000-0000-4000-8000-000000000003'; other_actor uuid:='81000000-0000-4000-8000-000000000004';
+ wi uuid:='88000000-0000-4000-8000-000000000005'; o uuid:='86000000-0000-4000-8000-000000000005';
+ current_result public.lab_result_entries; prior_result text; before_state jsonb; old_permissions jsonb;
+ read_sql text; write_sql text; overall_sql text; upload_sql text;
+begin
+ select * into current_result from public.lab_result_entries where work_item_id=wi and task_attempt_no=3;
+ select result_id into prior_result from public.lab_result_entries where work_item_id=wi and task_attempt_no=1;
+ before_state:=pg_temp.lab_state();
+ read_sql:=format('select public.clair_get_lab_result_entry(%L,%L,null,%L,%L)',w,actor,wi,o);
+ write_sql:=format('select public.clair_save_lab_result_entry_v2(%L,auth.uid(),%L,%L,%L,%L,%s,gen_random_uuid(),%L::jsonb)',w,current_result.result_id,current_result.encounter_id,o,wi,current_result.entry_write_revision,'[{"rowId":"'||repeat('a',64)||'","value":"77","note":null}]');
+ overall_sql:=format('select public.clair_save_lab_result_overall_finding(%L,%L,0,%L)',w,current_result.result_id,'must not save');
+ upload_sql:=format('select public.clair_prepare_lab_result_attachment(%L,%L,null,gen_random_uuid(),%L,%L,1)',w,current_result.result_id,'denied.txt','text/plain');
+ perform set_config('request.jwt.claim.sub',actor::text,true);
+ perform pg_temp.expect_denied(format('select public.clair_get_lab_result_entry(%L,%L,null,%L,%L)',w,other_actor,wi,o),'actor_mismatch');
+ perform pg_temp.expect_denied(format('select public.clair_get_lab_result_entry(%L,%L,null,%L,%L)','synthetic-edit-other',actor,wi,o),'workspace_membership_missing');
+ perform pg_temp.expect_denied(format('select public.clair_get_lab_result_entry(%L,%L,%L,%L,%L)','synthetic-edit-other',actor,prior_result,wi,o),'workspace_membership_missing');
+ perform set_config('request.jwt.claim.sub',other_actor::text,true);
+ perform public.clair_get_lab_result_entry(w,other_actor,prior_result,wi,o);
+ perform pg_temp.expect_denied(write_sql,'current_assignee_required');
+ perform pg_temp.expect_denied(overall_sql,'current_assignee_required');
+ perform pg_temp.expect_denied(upload_sql,'current_assignee_required');
+ select permissions into old_permissions from public.workspace_permission_roles where id='80000000-0000-4000-8000-000000000003';
+ update public.workspace_permission_roles set permissions='{"allowed":["lab:view"]}' where id='80000000-0000-4000-8000-000000000003';
+ perform set_config('request.jwt.claim.sub',actor::text,true);
+ execute read_sql;
+ perform public.clair_get_lab_result_entry(w,actor,prior_result,wi,o);
+ perform pg_temp.expect_denied(write_sql,'permission_missing');
+ perform pg_temp.expect_denied(overall_sql,'permission_missing');
+ perform pg_temp.expect_denied(upload_sql,'permission_missing');
+ perform set_config('request.jwt.claim.sub',other_actor::text,true);
+ update public.workspace_permission_roles set permissions='{"allowed":[]}' where id='80000000-0000-4000-8000-000000000003';
+ perform set_config('request.jwt.claim.sub',actor::text,true);
+ perform pg_temp.expect_denied(read_sql,'permission_missing');
+ perform pg_temp.expect_denied(format('select public.clair_get_lab_result_entry(%L,%L,%L,%L,%L)',w,actor,prior_result,wi,o),'permission_missing');
+ perform pg_temp.expect_denied(format('select public.clair_get_lab_result_phase2(%L,%L)',w,prior_result),'permission_missing');
+ perform set_config('request.jwt.claim.sub',other_actor::text,true);
+ update public.workspace_permission_roles set permissions=old_permissions where id='80000000-0000-4000-8000-000000000003';
+ perform pg_temp.assert_true(pg_temp.lab_state()=before_state,'actor/workspace/assignee/revoked-permission denials preserve clinical data');
+ raise notice 'PASS actor mismatch, foreign workspace, non-assignee and revoked result permissions';
 end $$;
 
 set constraints all immediate;

@@ -4,8 +4,9 @@ The 2026-11-17 local shared-workflow candidate connects clinical-lab, external-l
 imaging and unpaid billing to the dispensing/treatment editing and re-request
 flow. Examinations require a new result per attempt; billing pauses at edit begin
 and retains current-owner amount approval. Three schema changes are verified in
-an owned isolated synthetic DB only. Merge, remote DB apply and deployment remain
-unperformed and are prohibited by the current task instruction. See
+an owned isolated synthetic DB only. PR #1100 is now authorized for guarded
+pre-deployment verification, its three DB migrations, main/Production delivery
+and isolated synthetic post-deployment checks. Those remote actions remain pending. See
 [CLINICAL-FULFILLMENT-PR-010](../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#shared-order-workflow--2026-11-16-local-implementation-scope)
 for exact local evidence and limits.
 

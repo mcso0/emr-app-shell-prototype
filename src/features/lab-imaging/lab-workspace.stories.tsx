@@ -303,3 +303,8 @@ export const DraftResumesAfterEditHold: Story = { args: { view: "content" }, pla
   fixture.setHeld(false); await waitFor(() => expect(canvas.getByRole("textbox", { name: "검사결과 종합소견" })).toBeEnabled());
   await waitFor(() => expect(fixture.state.overallFinding).toBe("합성 중지 후 소견"));
 } };
+
+export const ExternalLabRequestStarts: Story = {
+  ...AssignedFirstRequestStarts,
+  args: { scenario: "external-request", view: "content" },
+};

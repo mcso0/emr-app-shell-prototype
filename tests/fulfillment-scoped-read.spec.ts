@@ -31,10 +31,10 @@ test("each queue passes operating date and patient scope to the DB and preserves
     } });
     const result = await readFulfillmentWorkItems({ actorUserId: "user-tech", workspaceId: "clair-demo",
       filters: { queueType, date: "2026-10-03", patientId }, gateway });
-    expect(calls).toEqual([{ name: "clair_list_fulfillment_work_items_v2", args: {
-      p_workspace_id: "clair-demo", p_queue_type: queueType, p_date: "2026-10-03", p_patient_id: patientId,
+    expect(calls).toEqual((queueType === "lab" ? ["lab", "external_lab"] : [queueType]).map(queue => ({ name: "clair_list_fulfillment_work_items_v2", args: {
+      p_workspace_id: "clair-demo", p_queue_type: queue, p_date: "2026-10-03", p_patient_id: patientId,
       p_encounter_id: undefined, p_order_id: undefined, p_status: undefined, p_work_item_id: undefined,
-    } }]);
+    } })));
     expect(result.ok && result.summary).toMatchObject({ totalCount: 6, activeCount: 4,
       statusCounts: { requested: 1, in_progress: 1, paused: 1, completed: 1, cancelled: 1, returned: 1 } });
     expect(result.ok && result.workItems.map(item => item.sourceSnapshot)).toEqual(data.map(item => item.sourceSnapshot));
@@ -52,7 +52,7 @@ test("Seoul midnight is half-open and dueAt precedes createdAt; undated history 
   ];
   const gateway = createSupabaseFulfillmentWorkItemGateway({ async rpc() { return { data, error: null }; } });
   const selected = await gateway.listWorkItems({ workspaceId: "clair-demo", queueType: "lab", date: "2026-10-03" });
-  expect(selected.ok && selected.workItems.map(item => item.id)).toEqual(["start", "end", "due"]);
+  expect(selected.ok && selected.workItems.map(item => item.id)).toEqual(["end", "start", "due"]);
   const history = await gateway.listWorkItems({ workspaceId: "clair-demo", queueType: "lab", patientId });
   expect(history.ok && history.workItems).toHaveLength(6);
 });
@@ -63,7 +63,7 @@ test("exact work item lookup passes id without date and missing v2 fails without
     calls.push(args); return { data: null, error: { message: "Could not find the function" } };
   } });
   expect(await gateway.listWorkItems({ workspaceId: "clair-demo", queueType: "lab", workItemId })).toEqual({ ok: false, status: 500, error: "db_read_failed" });
-  expect(calls).toHaveLength(1);
+  expect(calls).toHaveLength(2);
   expect(calls[0]).toMatchObject({ p_work_item_id: workItemId, p_date: undefined });
 });
 
@@ -73,7 +73,7 @@ test("origin projection remains nullable and does not replace immutable snapshot
   const result = await gateway.listWorkItems({ workspaceId: "clair-demo", queueType: "lab" });
   expect(result.ok).toBe(true);
   if (!result.ok) return;
-  expect(result.workItems.map(item => [item.originChartId, item.originChartCreatedAt])).toEqual([[null,null], ["99300000-0000-4000-8000-000000000055", "2026-10-02T01:00:00Z"], [null,null]]);
+  expect(result.workItems.map(item => [item.originChartId, item.originChartCreatedAt])).toEqual([[null,null], [null,null], ["99300000-0000-4000-8000-000000000055", "2026-10-02T01:00:00Z"]]);
   expect(result.workItems.map(item => item.sourceSnapshot)).toEqual(data.map(item => item.sourceSnapshot));
 });
 
@@ -84,11 +84,51 @@ test("selected item filter reaches the RPC through the permission-checked reader
   } });
   const result = await readFulfillmentWorkItems({ actorUserId: "user-tech", workspaceId: "clair-demo", filters: { queueType: "lab", workItemId }, gateway });
   expect(result.ok).toBe(true);
-  expect(calls).toHaveLength(1);
+  expect(calls).toHaveLength(2);
   expect(calls[0]).toMatchObject({ p_work_item_id: workItemId, p_date: undefined, p_workspace_id: "clair-demo" });
   for (const invalid of ["", "not-an-id"]) {
     const denied = await readFulfillmentWorkItems({ actorUserId: "user-tech", workspaceId: "clair-demo", filters: { queueType: "lab", workItemId: invalid }, gateway });
     expect(denied).toMatchObject({ ok: false, status: 400, fieldErrors: { workItemId: "invalid_work_item_id" } });
   }
-  expect(calls).toHaveLength(1);
+  expect(calls).toHaveLength(2);
+});
+
+
+test("external lab keeps its identity through list, mutation, sync and history", async () => {
+  const external = { ...row(workItemId, "2026-10-03T01:00Z", null), queueType: "external_lab", clinicalOrderType: "external_lab", destinationModule: "external_lab", taskId: "99300000-0000-4000-8000-000000000042", taskAttemptNo: 2 };
+  const gateway = createSupabaseFulfillmentWorkItemGateway({ async rpc(name, args) {
+    if (name === "clair_list_fulfillment_work_item_history_v2") return { data: { workspaceId: "clair-demo", workItemId, orderId: external.orderId, queueType: "external_lab", events: [], hasMore: false, nextCursor: null }, error: null };
+    if (name === "clair_list_fulfillment_work_items_v2" && "p_queue_type" in args && args.p_queue_type === "lab") return { data: [], error: null };
+    return { data: [external], error: null };
+  } });
+  const expected = { ...external, queueType: "lab" };
+  const listed = await gateway.listWorkItems({ workspaceId: "clair-demo", queueType: "lab", workItemId });
+  expect(listed.ok && listed.workItems[0]).toMatchObject(expected);
+  const changed = await gateway.updateWorkItem({ workspaceId: "clair-demo", workItemId, actorUserId: "user-tech", action: "start", expectedRevision: 1, commandId: crypto.randomUUID() });
+  expect(changed.ok && changed.workItems[0]).toMatchObject(expected);
+  const synced = await gateway.syncFromOrders({ workspaceId: "clair-demo", actorUserId: "user-tech", encounterId: external.encounterId, orderIds: [external.orderId] });
+  expect(synced.ok && synced.workItems[0]).toMatchObject(expected);
+  const history = await gateway.listWorkItemHistory({ workspaceId: "clair-demo", workItemId });
+  expect(history.ok && history.history.queueType).toBe("lab");
+});
+
+test("lab aggregation fails when external read fails instead of returning partial work", async () => {
+  const gateway = createSupabaseFulfillmentWorkItemGateway({ async rpc(_name, args) {
+    return "p_queue_type" in args && args.p_queue_type === "external_lab"
+      ? { data: null, error: { message: "permission_missing" } }
+      : { data: [row(workItemId, "2026-10-03T01:00Z", null)], error: null };
+  } });
+  expect(await gateway.listWorkItems({ workspaceId: "clair-demo", queueType: "lab" })).toMatchObject({ ok: false });
+});
+
+
+test("combined lab queue retains newest update first with stable id ties", async () => {
+  const gateway = createSupabaseFulfillmentWorkItemGateway({ async rpc(_name, args) {
+    const data = "p_queue_type" in args && args.p_queue_type === "external_lab"
+      ? [{ ...row("b", "2026-10-03T10:00Z", null), queueType: "external_lab" }]
+      : [row("a", "2026-10-03T10:00Z", null), row("c", "2026-10-03T09:00Z", null)];
+    return { data, error: null };
+  } });
+  const result = await gateway.listWorkItems({ workspaceId: "clair-demo", queueType: "lab" });
+  expect(result.ok && result.workItems.map(item => item.id)).toEqual(["a", "b", "c"]);
 });

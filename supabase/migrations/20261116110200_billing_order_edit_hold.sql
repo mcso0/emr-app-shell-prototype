@@ -3,6 +3,15 @@
 begin;
 set local lock_timeout='5s';
 set local statement_timeout='120s';
+-- Older editor sessions have no billing lease. Do not cut over while they can
+-- renew. The release procedure must first revoke RPC admission and drain old
+-- transactions; this lock then protects the zero-holds check through replacement.
+lock table private.order_work_holds in share row exclusive mode;
+do $$ begin
+ if exists(select 1 from private.order_work_holds where expires_at>clock_timestamp()) then
+  raise exception 'active_order_edit_sessions_before_billing_cutover';
+ end if;
+end $$;
 create function pg_temp.patch_billing_hold(signature text, old text, replacement text)
 returns void language plpgsql as $$
 declare definition text:=pg_get_functiondef(signature::regprocedure);
