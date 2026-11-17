@@ -162,12 +162,14 @@ bindings with missing task IDs. Capture aggregate backfill targets and hashes of
 existing result records without exporting clinical content to public artifacts.
 Initial read-only preflight found zero in each of those four categories. Apply
 no unrelated historical migration. At cutover, temporarily revoke authenticated
-execution of the confirmed-order edit-session RPC, commit, record a fresh fence
+execution of the affected public mutation entrypoints, preserving their exact
+ACLs. Include the editor, examination, fulfillment and billing write wrappers;
+leave read-only RPCs available. Commit, record a fresh fence
 time and drain all pre-fence client transactions. Require zero active clinical
 holds before the migration. The table lock alone cannot stop an invocation that
-entered the old function before replacement. The final migration restores the
-public wrapper grant; on failure restore the saved ACL on the current public
-wrapper, never on a renamed base. Refresh the PostgREST schema cache afterwards.
+entered the old function before replacement. Keep the entrypoints closed through all three migrations, then restore their
+saved ACLs. Restore grants on the current public wrapper, never on a renamed base.
+If application fails, record which transactions committed before restoring access. Refresh the PostgREST schema cache afterwards.
 
 Pre-release corrections add V2 frozen-result checks and actor/workspace/assignee/
 revoked-permission denial assertions. Five two-connection hold races cover pending
@@ -2610,3 +2612,20 @@ The inline frequency change badge uses 6px side padding, a 69px minimum width,
 and the existing 22px height. Local Chromium with synthetic responses verified
 live resize, keyboard adjustment and reset, table overflow, the narrower badge,
 and the existing clipped-name tooltip.
+
+### PR #1100 final candidate preparation — 2026-11-17
+
+The release checkout incorporated `0f6f8e36aaf1144c055dc95cce73ee7238c32798`
+after the independently released source-map-js update. Its prior Ready Production
+deployment is `dpl_6SB1smjEGFyJfNSBomBYMtUBpJx6`. The feature changes passed five
+SQL suites on a fresh replay of current hosted functions, five hold/checkout races,
+34 server/route contracts, 19 actual lab workspace stories, lint, TypeScript,
+production build, docs, secret and UX-copy checks. Prior broader regression evidence
+above remains applicable; the added external queue sort preserves update/id order.
+The final remote Release Check and Ready Preview must match the refreshed candidate.
+
+The pre-migration readback matched all 30 saved function definitions and ACLs, all
+three table structures, and hashes of all 71 existing result entries and 71 rows.
+The bounded cutover gate covers the 36 public mutation entrypoints discovered by
+following affected helper and trigger write paths. Its ACL snapshot and restoration
+SQL remain private alongside the data manifest and synthetic fixture credentials.
