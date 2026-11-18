@@ -186,3 +186,10 @@ Verification and PR evidence will be recorded below before handoff.
 - Synthetic login suite: 15/16 passed. The password-login navigation test fails its 5-second URL expectation, also reproduced alone. The synthetic token endpoint and destination RSC request returned 200, but this does not establish completed navigation/session acceptance. The unchanged main comparison cannot start because Next 16.4.2 stops with its security advisory; the warning was not bypassed. Regression attribution remains unresolved; do not label the login suite passed.
 - Native filesystem watcher limits and Chromium sandbox restrictions initially prevented test startup. Process-local webpack polling plus approved local Chromium execution resolved those environment issues without app or system-security configuration changes.
 - Exact-head hosted CI and Ready Preview remain pending. No merge or Production deployment has been performed.
+
+### Production-mode synthetic login follow-up
+
+- Rebuilt the same Next 16.4.6 candidate with loopback-only synthetic Supabase configuration, then ran the existing 16 login integration cases using `next start` instead of the webpack development server. No test expectations or application source were changed.
+- **16/16 passed**, including password login destination, session cookie persistence after reload, expired-session proxy refresh, OTP/recovery, retry/duplicate prevention, and 320/390px layouts. This resolves the production-mode login acceptance gap; the development-server-only 5-second navigation failure remains documented and is not called fixed.
+- The temporary test runner override was kept outside tracked source. No fixture, real provider, DB, deployment protection, or build-security settings changed.
+- Draft PR #1103 remains unmerged pending its latest automatic CI and normal Ready Preview. Hosted login and Production deployment are not claimed.
