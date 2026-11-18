@@ -163,3 +163,26 @@ The user then authorized the root application's PostCSS override remediation.
 - Preview and Production smoke: unauthenticated `/login`, registered `/docs?doc=study-emr-domain-basics`, and the published diagram asset. Do not log in, send email, inspect clinical records, or mutate the shared demo database.
 - Previous Ready Production and rollback candidate: `dpl_H3t59E8FyYiJJvPbxSRUVAcfg9Va`, sourced from the main SHA above. Stop for failed/unknown checks, unexpected source changes, failed smoke, or a missing Ready Preview. No automatic rollback mutation is included.
 - Integrated local candidate verification passed: 72 Node tests, 41 browser story tests (including the latest confirmed-order dialog), full lint, explicit `tsc --noEmit`, Next app build, Storybook static build, secrets, docs links, and diff checks. Root audit remains 0 critical with 45 other findings. Hosted Preview/Production verification is recorded on the PR after these local results.
+
+## Approved security follow-up — 2026-11-18
+
+- Baseline: `origin/main` at `c69c4ee54b3c6cffdbdc5a8953ea5e99a8213c1b`.
+- Scope: pin `next@16.4.6` and its matching Next env/SWC lock entries. Preserve React, sharp, eslint-config-next, undici, application code, security settings, and DB/provider contracts. This change is independent of PRs #1027 and #1102.
+- Security evidence: [GHSA-mfr8-8qww-v76h](https://github.com/advisories/GHSA-mfr8-8qww-v76h) and [GHSA-vc7v-qv4w-wrv8](https://github.com/advisories/GHSA-vc7v-qv4w-wrv8) affect installed Next 16.4.2; both list 16.4.5 as patched. [16.4.6](https://github.com/vercel/next.js/releases/tag/v16.4.6) is the current stable patch with additional backported fixes, including route-response compression.
+- Reproduction: isolated baseline and baseline plus PR #1027 both completed compilation/page generation but exited 1 with Next `SecurityFatalError`. No security reminder configuration was disabled and no retry was used to dismiss the warning.
+- Narrow source inspection found no `use cache`, `unstable_cache`, `cacheComponents`, or root-param usage in app source/Next config. This is not proof of exploitability or absence of every vulnerable path.
+- Success criteria: clean install, no direct Next audit finding, local release checks, synthetic login/session/proxy and image optimizer coverage, latest automatic PR CI, and exact-candidate Ready Preview before any merge.
+- Preview remains a release gate. Investigation confirmed the existing ignore rule skips Preview. No one-off exception, protection reduction, new project, or deployment-setting bypass is authorized by this document. Do not merge without resolving the gate through an approved normal path.
+- Remote database operations, real authentication/provider transactions, paid changes, and unrelated dependency fixes are excluded. Existing Production `c69c4ee` remains the rollback baseline; this patch includes no schema changes.
+
+Verification and PR evidence will be recorded below before handoff.
+
+### 2026-11-18 local verification
+
+- Next 16.4.6 production build passed on the first attempt without disabling/dismissing security assessment. Full lint, typecheck, secret scan, docs links, UX copy, and whitespace checks passed.
+- Narrow lock review confirms only the root Next pin and Next env/SWC packages changed. Historical eslint-config-next 16.2.6, React, sharp, and undici remain unchanged.
+- npm audit has no direct Next finding. Other dependencies still total 52 findings (1 low, 18 moderate, 33 high); no broad audit fix was attempted.
+- Production-mode loopback login returned HTTP 200. Eleven login contract, avatar/logo normalization, and Next image optimizer tests passed against the local production server.
+- Synthetic login suite: 15/16 passed. The password-login navigation test fails its 5-second URL expectation, also reproduced alone. The synthetic token endpoint and destination RSC request returned 200, but this does not establish completed navigation/session acceptance. Baseline comparison is pending; do not label the login suite passed.
+- Native filesystem watcher limits and Chromium sandbox restrictions initially prevented test startup. Process-local webpack polling plus approved local Chromium execution resolved those environment issues without app or system-security configuration changes.
+- Exact-head hosted CI and Ready Preview remain pending. No merge or Production deployment has been performed.
