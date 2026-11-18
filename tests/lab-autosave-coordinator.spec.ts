@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { LabAutosaveCoordinator, type LabAutosaveOutcome, type LabAutosaveState } from "../src/features/lab-imaging/lab-autosave";
+import { LabAutosaveCoordinator, LabCompletionGate, type LabAutosaveOutcome, type LabAutosaveState } from "../src/features/lab-imaging/lab-autosave";
 
 const tick = () => new Promise(resolve => setTimeout(resolve, 5));
 function fixture(validate?: (value: string) => string | null) {
@@ -150,4 +150,61 @@ test("actor loss stops detached follow-up writes and clears the old actor draft"
   expect(calls).toHaveLength(1);
   expect(coordinator.hasUnsavedChanges()).toBe(false);
   expect(coordinator.getState().draft).toBeUndefined();
+});
+
+test("completion waits for the pending write and its newest queued revision", async () => {
+  const { coordinator, calls } = fixture();
+  coordinator.change("first"); coordinator.flush();
+  coordinator.change("correction");
+  let settled = false;
+  const completion = coordinator.flushForCompletion().then(saved => { settled = true; return saved; });
+  expect(settled).toBe(false);
+  calls[0].resolve({ ok: true, revision: 1 }); await tick();
+  expect(calls[1]).toMatchObject({ value: "correction", revision: 1 });
+  expect(settled).toBe(false);
+  calls[1].resolve({ ok: true, revision: 2 });
+  expect(await completion).toBe(true);
+  expect(coordinator.hasUnsavedChanges()).toBe(false);
+});
+
+test("completion never retries or discards invalid, failed or stale edits", async () => {
+  for (const reason of ["conflict", "held", "error", "superseded", "permission_denied"] as const) {
+    const { coordinator, calls } = fixture();
+    coordinator.change("keep correction");
+    const completion = coordinator.flushForCompletion();
+    calls[0].resolve({ ok: false, reason, message: "Synthetic", retryable: reason === "error" });
+    expect(await completion).toBe(false);
+    expect(await coordinator.flushForCompletion()).toBe(false);
+    expect(calls).toHaveLength(1);
+    expect(coordinator.getState().draft).toBe("keep correction");
+  }
+  const invalid = fixture(() => "Synthetic invalid");
+  invalid.coordinator.change("bad");
+  expect(await invalid.coordinator.flushForCompletion()).toBe(false);
+  expect(invalid.calls).toHaveLength(0);
+  expect(invalid.coordinator.getState().draft).toBe("bad");
+});
+
+test("completion is single-flight; a failed completion PATCH leaves it retryable", async () => {
+  const gate = new LabCompletionGate();
+  let resolvePatch!: (value: boolean) => void;
+  const patch = new Promise<boolean>(resolve => { resolvePatch = resolve; });
+  const states: boolean[] = [];
+  let calls = 0;
+  const attempt = () => gate.run(async () => true, () => { calls++; return patch; }, value => states.push(value));
+  const first = attempt(); expect(await attempt()).toBe(false);
+  expect(calls).toBe(1);
+  resolvePatch(false); expect(await first).toBe(false); expect(states).toEqual([true, false]);
+  expect(await gate.run(async () => true, async () => true, () => {})).toBe(true);
+});
+
+test("leaving during a save cancels the old completion without blocking the new scope", async () => {
+  const source = new LabCompletionGate(), destination = new LabCompletionGate();
+  let release!: (value: boolean) => void; const saved = new Promise<boolean>(resolve => { release = resolve; });
+  const oldCalls: string[] = [];
+  const old = source.run(() => saved, async () => { oldCalls.push("patch"); return true; }, p => oldCalls.push(String(p)));
+  source.leave();
+  expect(await destination.run(async () => true, async () => true, () => {})).toBe(true);
+  release(true); expect(await old).toBe(false);
+  expect(oldCalls).toEqual(["true"]); // No stale PATCH or state update, even after navigating back.
 });

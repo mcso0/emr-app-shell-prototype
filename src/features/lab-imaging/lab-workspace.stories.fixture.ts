@@ -5,7 +5,7 @@ import { evaluateLabProfileValue, type LabProfileRule } from "./result-profile-c
 import { parsePersistedLabResult } from "./persisted-result-contract";
 import { parseLabProfileConfiguration } from "./server-result-profile-core";
 
-export type LabWorkspaceScenario = "ready" | "readonly" | "queue-error" | "queue-denied" | "empty" | "entries-error" | "row-save-error" | "numeric-no-interval" | "assigned-request" | "external-request" | "rerequest";
+export type LabWorkspaceScenario = "ready" | "readonly" | "queue-error" | "queue-denied" | "empty" | "entries-error" | "row-save-error" | "overall-save-error" | "numeric-no-interval" | "assigned-request" | "external-request" | "rerequest";
 const workItemId = "97000000-0000-4000-8000-000000000001";
 const pendingWorkItemId = "97000000-0000-4000-8000-000000000002";
 const numeric: LabProfileRule = { testMasterKey: "synthetic-numeric", code: "SYN-N", resultValueKind: "numeric", unit: "synthetic-unit", decimalScale: 1, supported: true, numericMin: 0, numericMax: 100, referenceInterval: { low: 1, high: 5, lowInclusive: true, highInclusive: true }, displayRange: { low: 0, high: 20 }, codes: [], referenceStatus: "synthetic_functional_fixture", provenance: {}, allowedQualifiers: ["exact", "less_than", "greater_than"] };
@@ -22,10 +22,18 @@ export function createLabWorkspaceFixture(scenario: LabWorkspaceScenario) {
   const copied: string[] = [];
   let queueReads = 0, entryReads = 0, acknowledgements = 0;
   let held = false;
+  const saveDelays = new Map<"rows" | "overall", Promise<void>>();
+  function delaySave(kind: "rows" | "overall") {
+    let release!: () => void;
+    saveDelays.set(kind, new Promise(resolve => { release = resolve; }));
+    return () => { saveDelays.delete(kind); release(); };
+  }
   const hasTask = ["assigned-request", "external-request", "rerequest"].includes(scenario);
-  const instance = createPhase2Fixture(scenario === "readonly" ? "readonly" : "ready", { workspaceId, handleAdditionalRequest: async (url, method, body) => {
+  const instance = createPhase2Fixture(scenario === "readonly" ? "readonly" : scenario === "overall-save-error" ? "save-error" : "ready", { workspaceId, handleAdditionalRequest: async (url, method, body) => {
     const queuePath = `/api/workspaces/${workspaceId}/fulfillment/work-items`;
     const entriesPath = `/api/workspaces/${workspaceId}/lab-imaging/result-entries`;
+    if (url.pathname === entriesPath && method === "POST") await saveDelays.get("rows");
+    if (url.pathname.endsWith("/lab-imaging/result-phase2") && method === "PUT") await saveDelays.get("overall");
     if (url.pathname === queuePath && method === "GET") {
       queueReads++;
       if (url.searchParams.get("queueType") !== "lab") return Response.json({ ok: true, workItems: [], summary: { totalCount: 0 } });
@@ -110,6 +118,6 @@ export function createLabWorkspaceFixture(scenario: LabWorkspaceScenario) {
     if (!parsePersistedLabResult(value, { workspaceId, workItemId, orderId: instance.result.orderId!, encounterId: instance.result.encounterId }, instance.result)) throw new Error("Invalid synthetic canonical readback");
     return value;
   }
-  return { ...instance, workItems, writes, lifecycle, copied, get acknowledgements() { return acknowledgements; },
+  return { ...instance, workItems, writes, lifecycle, copied, delaySave, get acknowledgements() { return acknowledgements; },
     setHeld: (value: boolean) => { held = value; baseItem.pauseReason = value ? "order_edit" : null; baseItem.status = value ? "paused" : "in_progress"; baseItem.rowRevision++; instance.state.canEdit = !value; window.dispatchEvent(new Event("focus")); }, get queueReads() { return queueReads; }, get entryReads() { return entryReads; }, selectedLabResultId: `live-lab-${workItemId}`, recoverQueue: () => { queueHealthy = true; }, recoverEntries: () => { entriesHealthy = true; } };
 }

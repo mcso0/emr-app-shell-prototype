@@ -11,7 +11,7 @@ import { TaskInstructionReview } from "@/features/fulfillment/components/task-in
 
 import { useModuleSidePanel, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   getCoreRowModel,
   useReactTable,
@@ -110,7 +110,7 @@ import {
 } from "@/features/lab-imaging/data";
 import { LabImagingStatusAction } from "@/features/lab-imaging/components/status-action";
 import { LabOverallFinding, LabResultHistoryDialog, LabResultRowDetail } from "@/features/lab-imaging/components/lab-result-phase2";
-import { useLabAutosave } from "@/features/lab-imaging/lab-autosave";
+import { flushLabResultForCompletion, LabCompletionGate, useLabAutosave, useLabAutosaveActorScope } from "@/features/lab-imaging/lab-autosave";
 import { useLabResultPhase2, type LabResultPhase2Data } from "@/features/lab-imaging/use-lab-result-phase2";
 import {
   FulfillmentWorkLifecycleAction,
@@ -3426,7 +3426,43 @@ export function LabContent({
       ),
     [detail?.order?.id, fulfillmentQueue.workItems],
   );
-  const workflow = useExaminationWorkflow(workspaceId, fulfillmentWorkItem, !allowDemoContent, fulfillmentQueue.status === "loading", fulfillmentQueue.updateStatus);
+  const catalogRowsState = useLabResultSheetCatalogRows({
+    result: allowDemoContent ? detail?.result : undefined,
+    workItem: fulfillmentWorkItem,
+    workspaceId,
+  });
+  const persistedResult = usePersistedLabResult(workspaceId, fulfillmentWorkItem?.id, detail?.result, !allowDemoContent, fulfillmentWorkItem?.taskId, fulfillmentWorkItem?.taskAttemptNo);
+  const actor = useLabAutosaveActorScope();
+  const resultId = persistedResult.result?.id;
+  const completionScope = JSON.stringify([actor, workspaceId, resultId, fulfillmentWorkItem?.id,
+    fulfillmentWorkItem?.taskId, fulfillmentWorkItem?.taskAttemptNo, fulfillmentWorkItem?.rowRevision,
+    fulfillmentWorkItem?.assignedToUserId, fulfillmentWorkItem?.canManage, fulfillmentWorkItem?.pauseReason]);
+  const scopeToken = useMemo(() => ({ key: completionScope }), [completionScope]);
+  const currentScope = useRef<{ token: typeof scopeToken; gate: LabCompletionGate } | null>(null);
+  useLayoutEffect(() => {
+    const gate = new LabCompletionGate();
+    currentScope.current = { token: scopeToken, gate };
+    return () => { gate.leave(); currentScope.current = null; };
+  }, [scopeToken]);
+  const [pendingToken, setPendingToken] = useState<typeof scopeToken | null>(null);
+  const completing = pendingToken === scopeToken;
+  // Run after instruction review and immediately before the completion PATCH.
+  const updateLabStatus: typeof fulfillmentQueue.updateStatus = async (id, transitions, onError) => {
+    if (allowDemoContent || !transitions.some(command => (typeof command === "string" ? command : command.action) === "complete"))
+      return fulfillmentQueue.updateStatus(id, transitions, onError);
+    const authority = currentScope.current;
+    if (!authority || authority.token !== scopeToken || !actor) return false;
+    return authority.gate.run(async () => {
+      // Confirmed empty legacy results keep their existing server-side completion rules.
+      const saved = resultId ? await flushLabResultForCompletion(actor, workspaceId, resultId) : persistedResult.status === "empty";
+      if (!saved && currentScope.current === authority)
+        toast.error("검사값과 종합소견의 저장 상태를 확인한 뒤 다시 완료해 주세요.");
+      return saved;
+    }, () => fulfillmentQueue.updateStatus(id, transitions, onError), pending => {
+      setPendingToken(pending ? scopeToken : null);
+    });
+  };
+  const workflow = useExaminationWorkflow(workspaceId, fulfillmentWorkItem, !allowDemoContent, fulfillmentQueue.status === "loading", updateLabStatus);
   const instructionReview = workflow.review;
   const entry = useOrderPrework({
     scopeKey: `${workspaceId}:${fulfillmentWorkItem?.id ?? ""}:${fulfillmentWorkItem?.taskId}:${fulfillmentWorkItem?.taskAttemptNo}`,
@@ -3434,12 +3470,6 @@ export function LabContent({
     ownsWork: Boolean(fulfillmentWorkItem?.canManage && fulfillmentWorkItem.assignedToUserId),
     pending: !allowDemoContent && fulfillmentQueue.status === "loading" && !fulfillmentWorkItem,
   });
-  const catalogRowsState = useLabResultSheetCatalogRows({
-    result: allowDemoContent ? detail?.result : undefined,
-    workItem: fulfillmentWorkItem,
-    workspaceId,
-  });
-  const persistedResult = usePersistedLabResult(workspaceId, fulfillmentWorkItem?.id, detail?.result, !allowDemoContent, fulfillmentWorkItem?.taskId, fulfillmentWorkItem?.taskAttemptNo);
   const reloadPersistedResult = persistedResult.retry;
   const effectiveDetail = useMemo(() => {
     if (!detail) return null;
@@ -3760,6 +3790,7 @@ export function LabContent({
                 {fulfillmentWorkItem?.pauseReason ? <Button disabled size="sm" variant="outline">오더 수정 중</Button> : workflow.assignedRerequest ?
                   <Button size="sm" disabled={!fulfillmentWorkItem?.canManage} onClick={workflow.openRerequestReview}>업무 이어가기</Button> : fulfillmentWorkItem ? (
                   <FulfillmentWorkLifecycleAction
+                    key={JSON.stringify([actor, fulfillmentWorkItem.id, fulfillmentWorkItem.taskId, fulfillmentWorkItem.taskAttemptNo])}
                     activityLabel="검사"
                     assignedToUserId={fulfillmentWorkItem.assignedToUserId}
                     assignedToDisplayName={fulfillmentWorkItem.assignedToDisplayName}
@@ -3882,32 +3913,34 @@ export function LabContent({
           {phase2.status === "ready" && !resultPhase2?.canEdit ? <div role="status" className="rounded-lg border border-border bg-card px-4 py-3 emr-text-dense text-muted-foreground">
             {fulfillmentWorkItem?.pauseReason ? "오더 수정 중입니다." : workflow.assignedRerequest ? "변경 내용을 확인하고 업무를 이어가 주세요." : !fulfillmentWorkItem?.assignedToUserId ? "담당하기 후 결과·소견·첨부자료를 입력할 수 있습니다." : "현재 담당자만 결과·소견·첨부자료를 수정할 수 있습니다."}
           </div> : null}
-          <LabResultInputSection
-            key={`${workspaceId}:${displayDetail.result.id}:rows`}
-            routeResultId={detail?.result.id ?? selectedLabResultId ?? displayDetail.result.id}
-            assigneeName={
-              allowDemoContent
-                ? assignment.assigneeName
-              : fulfillmentWorkItem?.assignedToUserId ? fulfillmentWorkItem.assignedToDisplayName ?? "담당자 지정됨" : "미지정"
-            }
-            search={routeSearch}
-            staffInstruction={displayDetail.order?.instruction}
-            catalogStatus={
-              !allowDemoContent ? persistedResult.status : detail?.result.rows.length === 0
-                ? catalogRowsState.status
-                : "idle"
-            }
-            emptyRowsKind={fulfillmentWorkItem ? "upstream-pending" : "no-data"}
-            result={effectiveDetail.result}
-            onCatalogRetry={allowDemoContent ? catalogRowsState.retry : persistedResult.retry}
-            onSave={saveResultRows}
-            paused={Boolean(fulfillmentWorkItem?.pauseReason) || phase2.status === "loading"}
-            phase2={resultPhase2}
-            phase2Status={phase2.status}
-            onPhase2Refresh={phase2.refresh}
-          />
-          <PriorLabResults key={`${workspaceId}:${displayDetail.result.id}:prior`} result={displayDetail.result} />
-          <LabOverallFinding key={`${workspaceId}:${displayDetail.result.id}:overall`} result={displayDetail.result} paused={Boolean(fulfillmentWorkItem?.pauseReason) || phase2.status === "loading"} phase2={resultPhase2} readStatus={phase2.status} refresh={phase2.refresh} />
+          <div className="contents" inert={completing} aria-busy={completing}>
+            <LabResultInputSection
+              key={`${workspaceId}:${displayDetail.result.id}:rows`}
+              routeResultId={detail?.result.id ?? selectedLabResultId ?? displayDetail.result.id}
+              assigneeName={
+                allowDemoContent
+                  ? assignment.assigneeName
+                : fulfillmentWorkItem?.assignedToUserId ? fulfillmentWorkItem.assignedToDisplayName ?? "담당자 지정됨" : "미지정"
+              }
+              search={routeSearch}
+              staffInstruction={displayDetail.order?.instruction}
+              catalogStatus={
+                !allowDemoContent ? persistedResult.status : detail?.result.rows.length === 0
+                  ? catalogRowsState.status
+                  : "idle"
+              }
+              emptyRowsKind={fulfillmentWorkItem ? "upstream-pending" : "no-data"}
+              result={effectiveDetail.result}
+              onCatalogRetry={allowDemoContent ? catalogRowsState.retry : persistedResult.retry}
+              onSave={saveResultRows}
+              paused={Boolean(fulfillmentWorkItem?.pauseReason) || phase2.status === "loading"}
+              phase2={resultPhase2}
+              phase2Status={phase2.status}
+              onPhase2Refresh={phase2.refresh}
+            />
+            <PriorLabResults key={`${workspaceId}:${displayDetail.result.id}:prior`} result={displayDetail.result} />
+            <LabOverallFinding key={`${workspaceId}:${displayDetail.result.id}:overall`} result={displayDetail.result} paused={Boolean(fulfillmentWorkItem?.pauseReason) || phase2.status === "loading"} phase2={resultPhase2} readStatus={phase2.status} refresh={phase2.refresh} />
+          </div>
           {displayDetail.attachments.length || allowDemoContent ? <AttachmentStrip
             allowDemoContent={allowDemoContent} attachments={displayDetail.attachments}
             showImageExample title="공통 첨부자료"
