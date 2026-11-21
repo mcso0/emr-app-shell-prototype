@@ -3,8 +3,9 @@ id: DESIGN-SYSTEM-PR-111
 status: human_review
 area: design-system
 priority: P1
-target_pr: "Approved reservation calendar/filter PR/main/Production delivery after gates"
+target_pr: "UI SDK rollout and follow-ups delivered in #1096–#1098"
 created: 2026-11-16
+last_updated: 2026-11-18
 source_docs:
   - docs/design/system/DESIGN.md
   - docs/engineering/current-status.md
@@ -12,6 +13,26 @@ dependencies: []
 ---
 
 # UI SDK Behavior Adoption
+
+## Current Status — 2026-11-18
+
+PRs #1096–#1098 were merged on November 16. Their squash commits are ancestors
+of the fetched `origin/main` at `c69c4ee54b3c6cffdbdc5a8953ea5e99a8213c1b`.
+Each historical release had a Ready exact-head Preview, a successful PR Release
+Check and a successful Release Check on the resulting main commit. This is not
+a claim that those SHAs currently serve the Production alias.
+
+| Change | Main SHA | Release evidence |
+| --- | --- | --- |
+| [#1096](https://github.com/mcso0/emr-app-shell-prototype/pull/1096): shared UI SDK adoption | `70704694` | [PR check and Preview](https://github.com/mcso0/emr-app-shell-prototype/pull/1096#issuecomment-6911239734), [main check and Production](https://github.com/mcso0/emr-app-shell-prototype/pull/1096#issuecomment-6911450882). Public login passed; later authenticated smoke found the layered Escape regression. |
+| [#1097](https://github.com/mcso0/emr-app-shell-prototype/pull/1097): layered Escape correction | `23405610` | [PR check and Preview](https://github.com/mcso0/emr-app-shell-prototype/pull/1097#issuecomment-6915918410), [main check, Production and authenticated smoke](https://github.com/mcso0/emr-app-shell-prototype/pull/1097#issuecomment-6916094520). Guardian and breed suggestions dismissed before their parent dialog, retaining draft text and focus. |
+| [#1098](https://github.com/mcso0/emr-app-shell-prototype/pull/1098): reservation month ends and keyboard Plan/Order filters | `7f7e9b9a` | [PR check, Preview and pre-deploy baseline](https://github.com/mcso0/emr-app-shell-prototype/pull/1098#issuecomment-6916780375), [successful main check](https://github.com/mcso0/emr-app-shell-prototype/actions/runs/43869436499) and [successful Production deployment](https://api.github.com/repos/mcso0/emr-app-shell-prototype/deployments/7824400384/statuses). See the separate smoke record below. |
+
+Keep **Human Review**: bounded release delivery is complete, but owner acceptance,
+exhaustive accessibility/cross-browser coverage and before/after performance
+improvements are not established. Preview login is not authenticated in-app
+Preview coverage. Local synthetic results are not evidence of live data writes.
+The sections below preserve implementation and release history.
 
 ## Goal And Boundaries
 
@@ -21,11 +42,12 @@ validation, permissions, server enforcement, existing workflows and static UI.
 This is not a wholesale library replacement or a claim that every control now
 uses UI SDK.
 
-Work starts in an isolated worktree at `c9754c4`. The primary checkout's WIP is
-untouched. Local implementation, synthetic fixtures and verification are in
-scope. Remote data/migrations, provider calls, merge, deploy and release
-configuration changes are excluded. Reconcile the latest main before handing
-off the candidate; upstream progressed through `ca3222a8` and `2cb16b4d` to `185f9013` during implementation.
+Initial implementation started in an isolated worktree at `c9754c4`; the
+primary checkout's WIP was untouched. That phase covered local implementation,
+synthetic fixtures and verification. Upstream progressed through `ca3222a8`
+and `2cb16b4d` to `185f9013` during implementation. Later release approval
+was bounded to the individual changes below. It did not extend to remote
+data/migrations, provider calls or release configuration changes.
 
 ## Foundation And Sources
 
@@ -98,7 +120,7 @@ changed-file lint, full typecheck, production build, visual geometry review,
 doc links, clean diff and latest-main reconciliation. Do not mark full rollout
 complete merely because the first adapters compile.
 
-Observed so far:
+Observed during local rollout preparation:
 
 - Focused shared/feature stories cover keyboard selection, disabled options,
   native disabled filters, query retention/clear, loading/error, page-hidden
@@ -208,8 +230,8 @@ checks continue to verify reception's separate URL/read contract.
   that no non-generated instructions changed. Primary-checkout WIP and its
   Storybook on 6006 remain outside this work. Local preview stays on 6007.
 
-Ready for **Human Review** of the authorized local implementation, not `Done`.
-No push, PR, merge, deployment, remote-data change or human acceptance is claimed.
+At this local checkpoint, the implementation was ready for **Human Review**,
+not `Done`. No release action or human acceptance had occurred yet.
 
 ## Authorized Release Follow-Up — 2026-11-16
 
@@ -299,11 +321,11 @@ Only one SOAP tab existed, so multi-tab live testing was not performed. No
 authenticated old-version visual/performance baseline was captured; earlier
 public login network timings cannot establish SDK-caused speed or INP changes.
 
-PR/check/Preview/merge/Production and final smoke evidence will be recorded in
-the correction PR. Human acceptance and exhaustive browser/accessibility
-coverage are not claimed by automated checks.
+The correction PR later recorded [the release packet](https://github.com/mcso0/emr-app-shell-prototype/pull/1097#issuecomment-6915918410)
+and [the Production smoke results](https://github.com/mcso0/emr-app-shell-prototype/pull/1097#issuecomment-6916094520).
+Those focused checks do not establish human acceptance or exhaustive coverage.
 
-## Pending Reservation And Plan/Order Preparation — 2026-11-16
+## Reservation And Plan/Order Local Preparation — 2026-11-16
 
 The Escape-only correction was delivered by
 [PR #1097](https://github.com/mcso0/emr-app-shell-prototype/pull/1097) at
@@ -312,10 +334,9 @@ Escape smoke passed; [delivery evidence](https://github.com/mcso0/emr-app-shell-
 records the checks and limits. That correction is not duplicated here.
 
 The owner then requested finishing the pending work and being notified when
-deployment is needed. This candidate is **local preparation only**. Do not push,
-open a PR, merge, deploy, change release settings or mutate remote records until
-the owner separately authorizes that next step. The old local checkpoints and
-primary checkout WIP remain preserved.
+deployment was needed. This checkpoint was **local preparation only** pending
+the separate approval recorded below. Old checkpoints and primary checkout WIP
+remained preserved.
 
 ### Isolated Scope And User Benefit
 
@@ -345,9 +366,9 @@ and latest main. Broader pre-existing router/fixture failures are not silently
 fixed or counted as passing; focused readiness is not exhaustive suite/a11y
 or production acceptance.
 
-After local checks/review, report what is ready and wait for deployment approval.
-Remote Release Check, Ready Preview, exact-head merge and post-deploy smoke are
-future release gates, not steps already performed for this candidate.
+At this checkpoint, local verification came before owner approval and the
+remote Release Check, Ready Preview, exact-head merge and post-deploy smoke
+gates.
 
 ### Local Result And Deployment Notice
 
@@ -372,12 +393,8 @@ future release gates, not steps already performed for this candidate.
   were not modified or rerun as a full suite here; exhaustive a11y/browser and
   Production acceptance are not claimed.
 
-Local implementation is ready for human review and deployment preparation is
-complete. **Deployment approval is the remaining gate.** Before any delivery,
-notify the owner of this scope; obtain approval, then refresh latest-main and
-candidate checks, create the PR, verify required remote CI/Ready Preview and
-perform the separately approved release/smoke. No remote delivery step has been
-performed for this local candidate.
+Local implementation and deployment preparation were ready for human review
+at this checkpoint. No remote delivery step had taken place yet.
 
 [Local filter keyboard review](http://localhost:6008/?path=/story/features-chart-actual-workspace--order-filter-keyboard)
 
@@ -397,10 +414,41 @@ Preview, alter protection/plans, or mutate remote records. A one-off exact-head
 Preview may use the already established release path if the ignore policy
 cancels automatic non-Production builds.
 
-Before merge, record exact head/base, successful required PR check with tested
-merge provenance, Ready Preview, local/focused evidence, expected-head merge
-and rollback reference. After deployment, verify source/alias, public login and
-non-submitting synthetic reservation-date/filter behavior, retaining #1097.
-Do not create appointments or submit registration, clinical/order, email or
-payment writes. Stop on changed scope/head, failed gates, wrong deployment
-source or failed smoke. Final release evidence belongs to the PR conversation.
+The [exact-candidate packet](https://github.com/mcso0/emr-app-shell-prototype/pull/1098#issuecomment-6916780375)
+records PR head `1c43e8a4e46e8940e38f5f964a1cf76df4ec4b2a`, base
+`23405610`, successful required PR check, Ready exact-head Preview, focused
+synthetic evidence and the rollback reference. The scope did not include
+creating appointments or submitting registration, clinical/order, email or
+payment writes.
+
+### Calendar/Filter Delivery And Verification Record
+
+- GitHub records [#1098](https://github.com/mcso0/emr-app-shell-prototype/pull/1098)
+  merged at 12:45 UTC to `7f7e9b9afc33165e36f6f86634e9c83482d0c5c3`.
+  The [push Release Check](https://github.com/mcso0/emr-app-shell-prototype/actions/runs/43869436499)
+  succeeded for that SHA. Vercel's [GitHub Production deployment record](https://api.github.com/repos/mcso0/emr-app-shell-prototype/deployments/7824400384)
+  names the same SHA; [deployment status](https://api.github.com/repos/mcso0/emr-app-shell-prototype/deployments/7824400384/statuses)
+  was successful at 12:47 UTC.
+- The PR packet records the **authenticated pre-deploy baseline**: January 31
+  and May 30/31, 2027 were missing from the 35-cell picker, and the Plan/Order
+  filter had nine tab stops without arrow-key focus movement.
+- The contemporaneous **post-deploy operator report** at 12:53 UTC records that
+  those dates were visible and selectable, only months needing six weeks gained a
+  row, the filter had one tab stop with arrow navigation and Enter/Space
+  selection, and the Escape fix held. No console errors or appointment/order
+  submissions were reported. This is a scoped historical smoke report, not an
+  independent browser rerun, a network-write audit or proof from deployment
+  metadata alone.
+- No separate post-deploy alias/public-login capture for #1098 was found in
+  the PR record. A viewport change prevented full-page pixel comparison.
+  Performance/INP, authenticated in-app Preview coverage, exhaustive
+  accessibility and cross-browser coverage remain unverified.
+
+
+## Local Storybook Follow-Up — 2026-11-18
+
+`src/components/emr/storybook-form-save-recovery.stories.tsx` adds one synthetic
+composition of existing Field, Input, Button and EmrInlineAlert. It shows a
+definite save failure that retains the draft, guards against duplicate pending
+submissions, and retries the same draft successfully. It does not change
+production forms, persistence, or server-side idempotency.
