@@ -101,6 +101,39 @@ async function install(page: Page, category: "lab" | "imaging" | "billing", init
   return { entry, commands, errors, setPendingChange: (next: boolean) => { pendingChange = next; }, prepares: () => prepares, setOwner: (next: Owner) => { owner = next; revision++; } };
 }
 
+for (const { category, linkParam } of [
+  { category: "lab", linkParam: "labResultId" },
+  { category: "imaging", linkParam: "imagingStudyId" },
+] as const) {
+  for (const owner of ["none", "mine"] as const) {
+    test(`${category} ${owner} prework menu copies the selected order link`, async ({ page, context }) => {
+      const { entry, commands } = await install(page, category, owner);
+      await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(page.url()).origin });
+      const group = entry.getByRole("group", { name: "업무 액션", exact: true });
+      const action = group.getByRole("button", { name: owner === "mine" ? "업무 시작하기" : "담당하기", exact: true });
+      const arrow = group.getByRole("button", { name: "오더 메뉴 열기", exact: true });
+      await expect(action).toHaveCSS("height", "32px");
+      await expect(arrow).toHaveCSS("width", "32px");
+      await expect(arrow).toHaveCSS("height", "32px");
+
+      await arrow.press("Enter");
+      const menu = page.getByRole("menu");
+      await expect(menu.getByRole("menuitem")).toHaveCount(1);
+      await menu.getByRole("menuitem", { name: "오더 링크 복사", exact: true }).click();
+      await expect(menu).toBeHidden();
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+
+      const link = new URL(await page.evaluate(() => navigator.clipboard.readText()));
+      expect(link.pathname).toBe(`/w/${workspaceId}/${category}`);
+      expect(link.searchParams.get(linkParam)).toBe(`live-${category}-${id}`);
+      expect(link.searchParams.get("date")).toBe("2026-11-03");
+      await page.goto(link.href);
+      await expect(entry).toBeVisible();
+      expect(commands).toEqual([]);
+    });
+  }
+}
+
 for (const category of ["lab", "imaging", "billing"] as const) {
   for (const owner of ["none", "mine", "other"] as const) {
     test(`${category} ${owner} uses common entry and preserves command semantics`, async ({ page }) => {
