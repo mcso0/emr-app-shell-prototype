@@ -145,6 +145,53 @@ begin
 end $restricted$;
 rollback to savepoint without_catalog;
 
+-- A parks a selection. Only A and the currently assigned editor may resume it.
+savepoint attending_handoff;
+insert into public.workspace_membership_permission_role_assignments(workspace_id,membership_id,permission_role_id)
+select workspace_id,id,'afd26200-0000-4000-8000-000000000003' from public.user_memberships
+where workspace_id='synthetic-advanced-chart-copy-qa' and user_id='afd26000-0000-4000-8000-000000000009'
+on conflict(membership_id) do update set permission_role_id=excluded.permission_role_id;
+set local role authenticated;
+do $handoff$
+declare w constant text:='synthetic-advanced-chart-copy-qa'; a constant text:='afd26000-0000-4000-8000-000000000003';
+  parked jsonb:=current_setting('qa.parked')::jsonb; target_id uuid; cmd jsonb;
+begin
+  target_id:=(public.clair_ensure_encounter_first_chart(w,a,(parked->>'encounterId')::uuid)->>'id')::uuid;
+  cmd:=parked||jsonb_build_object('requestId',gen_random_uuid(),'pendingId',parked->>'requestId','targetId',target_id,'targetVersion',pg_temp.qa_get(target_id)->>'version');
+  perform set_config('qa.handoff',cmd::text,true);
+  assert public.clair_advanced_chart_transfer(w,'pending',cmd)->>'canDiscard'='true';
+  perform set_config('request.jwt.claim.sub','afd26000-0000-4000-8000-000000000009',true);
+  assert public.clair_advanced_chart_transfer(w,'pending',cmd)='null'::jsonb;
+  begin
+    perform public.clair_advanced_chart_transfer(w,'apply',cmd);
+    raise exception 'unexpected handoff without assignment';
+  exception when raise_exception then if sqlerrm<>'invalid_resume' then raise; end if; end;
+end $handoff$;
+reset role;
+update public.encounters set primary_veterinarian_id='afd26000-0000-4000-8000-000000000009'
+where workspace_id='synthetic-advanced-chart-copy-qa' and id='afd26300-0000-4000-8000-000000000004';
+set local role authenticated;
+do $attending$
+declare w constant text:='synthetic-advanced-chart-copy-qa'; cmd jsonb:=current_setting('qa.handoff')::jsonb;
+  record jsonb; result jsonb;
+begin
+  cmd:=cmd||jsonb_build_object('targetVersion',pg_temp.qa_get((cmd->>'targetId')::uuid)->>'version');
+  assert public.clair_advanced_chart_transfer(w,'pending',cmd)->>'canDiscard'='false';
+  perform public.clair_advanced_chart_transfer(w,'discard',jsonb_build_object('id',cmd->>'pendingId'));
+  result:=public.clair_advanced_chart_transfer(w,'apply',cmd);
+  assert public.clair_advanced_chart_transfer(w,'apply',cmd)=result;
+  record:=public.clair_advanced_chart_copy_history(w,(cmd->>'targetId')::uuid)->0;
+  assert record->>'selectedBy'='QA synthetic' and record->>'actor'='Synthetic colleague';
+  perform set_config('request.jwt.claim.sub','afd26000-0000-4000-8000-000000000003',true);
+  assert public.clair_advanced_chart_transfer(w,'pending',cmd)='null'::jsonb;
+  begin
+    perform public.clair_advanced_chart_transfer(w,'apply',cmd||jsonb_build_object('requestId',gen_random_uuid()));
+    raise exception 'double consumption';
+  exception when raise_exception then if sqlerrm<>'invalid_resume' then raise; end if; end;
+  raise notice 'PASS attending handoff, original-only cancel, two-person history and single consumption';
+end $attending$;
+rollback to savepoint attending_handoff;
+
 savepoint target_archival;
 insert into public.encounters(id,workspace_id,patient_id,primary_veterinarian_id,encounter_no,reception_type,status)
 values ('afd26300-0000-4000-8000-000000000095','synthetic-advanced-chart-copy-qa','afd26300-0000-4000-8000-000000000099',

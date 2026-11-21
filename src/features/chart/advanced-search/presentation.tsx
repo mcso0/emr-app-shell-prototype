@@ -223,6 +223,9 @@ export function ChartRow({
 }) {
   const matches = evidence(chart, searchWords(query)).matches;
   const hit = matches[0];
+  const diagnoses = hit?.label === "진단"
+    ? [...chart.diagnoses].sort((a, b) => Number(b.name === hit.text) - Number(a.name === hit.text))
+    : chart.diagnoses;
   const generic =
     !chart.purpose.trim() ||
     /^(현장 접수|방문|내원|진료|재진|초진)$/.test(chart.purpose.trim());
@@ -293,7 +296,7 @@ export function ChartRow({
         </span>
         <span className={styles.chips}>
           {[
-            ...chart.diagnoses.map((d) =>
+            ...diagnoses.map((d) =>
               [diagnosisLabels[d.kind], d.name].filter(Boolean).join(" · "),
             ),
             ...chart.orders.map((o) => o.name),
@@ -523,7 +526,7 @@ export function CopyHistory({
           records.map((r) => (
             <div className={styles.line} key={r.id}>
               <b>
-                {when(r.at)} · {r.actor} 적용
+                {when(r.at)} · 선택 {r.selectedBy} · 적용 {r.actor}
               </b>
               <p>
                 원본　{r.source} · {r.sourceId}

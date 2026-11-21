@@ -39,7 +39,7 @@ export const chartSearchApi = (workspace: string) => ({
   park: (input: CopyIntent) =>
     chartRequest<{ id: string }>(workspace, "park", input),
   pending: (
-    input: { targetId: string; encounterId: string; patientId: string },
+    input: { targetId: string; encounterId: string; patientId: string; pendingId?: string },
     signal?: AbortSignal,
   ) => chartRequest<PendingCopy | null>(workspace, "pending", input, signal),
   discard: (id: string) => chartRequest<object>(workspace, "discard", { id }),
@@ -55,6 +55,8 @@ export function errorMessage(error: unknown) {
     return orderCopyPermissionMessage;
   if (key === "permission_missing" || key === "unauthenticated")
     return "차트를 열거나 수정할 권한을 확인해 주세요.";
+  if (key === "invalid_resume")
+    return "이 복사 대기를 이어갈 수 없습니다. 첫 차트를 다시 열어 적용 이력과 현재 담당자를 확인해 주세요.";
   if (key === "pending_exists")
     return "이 방문에 이어갈 복사가 이미 있습니다. 첫 차트에서 확인해 주세요.";
   if (key === "revision_conflict" || key === "price_changed")

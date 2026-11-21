@@ -49,6 +49,17 @@ test("모든 단어가 한 차트에 있고 부정 표현만 있으면 관련도
     searchPage(cases, { targets: true }, actor).items.map((c) => c.id),
   ).toEqual(["draft", "colleague"]);
 });
+test("같은 진단명은 확진·의심·감별과 관계없이 최근 진료부터 보여준다", () => {
+  const charts = ["confirmed", "differential", "suspected"].map((kind, i) =>
+    exampleChart(kind, {
+      clinicalAt: `2026-11-${10 + i}T09:00:00Z`,
+      diagnoses: [{ id: kind, catalogId: null, name: "췌장염", kind, primary: true, system: "소화기" }],
+    }),
+  );
+  expect(searchPage(charts, { query: "췌장염" }, actor).items.map((c) => c.id))
+    .toEqual(["suspected", "differential", "confirmed"]);
+});
+
 test("병원 날짜·진료 담당자·필터를 함께 적용하고 동일시각 결과를 한 번씩만 반환한다", () => {
   const charts = Array.from({ length: 35 }, (_v, i) =>
     exampleChart(String(i).padStart(2, "0"), {

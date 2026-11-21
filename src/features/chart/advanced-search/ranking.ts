@@ -44,7 +44,7 @@ const definitions: EmrTableFilterBuilderField<SearchIndexRow>[] = [
   },
   {
     id: "tests",
-    label: "검사 포함 여부",
+    label: "검사 오더 있음",
     getValue: (c) =>
       c.orders
         .map((o) => orderLabel(o.kind))

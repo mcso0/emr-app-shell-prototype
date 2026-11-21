@@ -141,6 +141,8 @@ export type CopyIntent = {
 };
 export type PendingCopy = {
   id: string;
+  canDiscard: boolean;
+  choices?: { id: string; selector: string }[];
   orderPermissionRequired?: boolean;
   sourceId: string;
   sourceVersion: string;
@@ -222,6 +224,7 @@ export type CopyHistoryItem = {
   id: string;
   at: string;
   actor: string;
+  selectedBy: string;
   source: string;
   sourceId: string;
   changes: {

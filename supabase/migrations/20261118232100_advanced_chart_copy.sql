@@ -1,7 +1,7 @@
 -- Receipts and parked selections are private. Only scoped RPCs may access them.
 create table private.clair_chart_copy_receipts (
   workspace_id text not null, actor_id uuid not null, request_id uuid not null,
-  payload jsonb not null, result jsonb not null, changes jsonb not null,
+  selected_by uuid not null, payload jsonb not null, result jsonb not null, changes jsonb not null,
   created_at timestamptz not null default now(), primary key(workspace_id,actor_id,request_id)
 );
 create table private.clair_chart_copy_pending (
@@ -143,7 +143,7 @@ create function public.clair_advanced_chart_transfer(p_workspace_id text,p_actio
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare w text:=p_workspace_id; actor uuid:=auth.uid(); src public.soap_notes; dest public.soap_notes; e public.encounters;
   source_row jsonb; target_row jsonb; changes jsonb; req uuid:=(p_input->>'requestId')::uuid; selection jsonb:=p_input->'selection';
-  pending private.clair_chart_copy_pending; receipt private.clair_chart_copy_receipts; result jsonb; k text; tot int:=0; first_id uuid;
+  pending private.clair_chart_copy_pending; receipt private.clair_chart_copy_receipts; result jsonb; k text; tot int:=0; first_id uuid; first_status text;
 begin
  if actor is null or not private.clair_is_active_workspace_member(w) or not private.clair_current_user_has_workspace_permission(w,'chart:view') or not private.clair_current_user_has_workspace_permission(w,'chart:update') then raise exception 'permission_missing' using errcode='42501'; end if;
  if p_action='visits' then
@@ -156,12 +156,22 @@ begin
  select * into e from public.encounters where workspace_id=w and id=(p_input->>'encounterId')::uuid for update;
  if e.id is null or e.patient_id is distinct from (p_input->>'patientId')::uuid or e.status='cancelled' then raise exception 'encounter_unavailable'; end if;
  if p_action='pending' then
-   select s.id into first_id from public.soap_notes s where s.workspace_id=w and s.encounter_id=e.id and s.status<>'voided' order by s.created_at,s.id limit 1;
-   if first_id is null or first_id is distinct from (p_input->>'targetId')::uuid then return 'null'::jsonb; end if;
-   select p.intent||jsonb_build_object('id',p.id) into result from private.clair_chart_copy_pending p
+   select s.id, s.status into first_id, first_status from public.soap_notes s where s.workspace_id=w and s.encounter_id=e.id and s.status<>'voided' order by s.created_at,s.id limit 1;
+   if e.status not in ('in_consultation','ordered') or first_status not in ('draft','autosaved') or first_id is null or first_id is distinct from (p_input->>'targetId')::uuid then return 'null'::jsonb; end if;
+   with eligible as (
+     select p.id,p.intent,p.actor_id=actor as mine,coalesce(u.display_name,'미기록') as selector
+     from private.clair_chart_copy_pending p
+     left join public.users u on u.id=p.actor_id
    join public.patients target on target.workspace_id=w and target.id=e.patient_id and target.status<>'soft_deleted'
    join public.soap_notes n on n.workspace_id=p.workspace_id and n.id=p.source_id and n.status<>'voided'
-   where p.workspace_id=w and p.actor_id=actor and p.encounter_id=e.id and p.patient_id=e.patient_id;
+   join public.encounters se on se.workspace_id=w and se.id=n.encounter_id and se.status<>'cancelled'
+   join public.patients sp on sp.workspace_id=w and sp.id=se.patient_id and sp.status<>'soft_deleted'
+   where p.workspace_id=w and (p.actor_id=actor or e.primary_veterinarian_id=actor) and p.encounter_id=e.id and p.patient_id=e.patient_id
+   )
+   select x.intent||jsonb_build_object('id',x.id,'canDiscard',x.mine,'choices',
+     (select jsonb_agg(jsonb_build_object('id',id,'selector',selector) order by mine desc,id) from eligible))
+   into result from eligible x where p_input->>'pendingId' is null or x.id=(p_input->>'pendingId')::uuid
+   order by x.mine desc,x.id limit 1;
    if jsonb_array_length(result#>'{selection,orders}')>0 and not private.clair_current_user_has_workspace_permission(w,'service_catalog:view') then
      return jsonb_set(result,'{selection,orders}','[]') || jsonb_build_object('orderPermissionRequired',true);
    end if;
@@ -200,8 +210,11 @@ begin
  end if;
  perform private.clair_require_chart_encounter(w,e.id,actor::text,true);
  if p_input->>'pendingId' is not null then
-   select * into pending from private.clair_chart_copy_pending where workspace_id=w and actor_id=actor and encounter_id=e.id and patient_id=e.patient_id and id=(p_input->>'pendingId')::uuid for update;
+   select * into pending from private.clair_chart_copy_pending where workspace_id=w and (actor_id=actor or e.primary_veterinarian_id=actor)
+     and encounter_id=e.id and patient_id=e.patient_id and id=(p_input->>'pendingId')::uuid for update;
    select s.id into first_id from public.soap_notes s where s.workspace_id=w and s.encounter_id=e.id and s.status<>'voided' order by s.created_at,s.id limit 1;
+   if pending.id is not null and jsonb_array_length(pending.intent#>'{selection,orders}')>0
+      and not private.clair_current_user_has_workspace_permission(w,'service_catalog:view') then raise exception 'catalog_permission_missing' using errcode='42501'; end if;
    if pending.id is null or pending.source_id<>src.id or pending.intent->>'sourceVersion' is distinct from source_row->>'version' or first_id is null or first_id is distinct from (p_input->>'targetId')::uuid or coalesce((p_input->>'newChart')::boolean,false) then raise exception 'invalid_resume'; end if;
  end if;
  if coalesce((p_input->>'newChart')::boolean,false) then
@@ -219,7 +232,8 @@ begin
  changes:=changes||private.clair_copy_diagnoses(w,source_row,dest,selection->'diagnoses');
  changes:=changes||private.clair_copy_orders(w,source_row,dest,selection->'orders');
  result:=jsonb_build_object('chartId',dest.id,'encounterId',e.id,'patientId',e.patient_id,'visitAt',coalesce(e.checked_in_at,e.created_at),'requestId',req,'unchanged',jsonb_array_length(changes)=0);
- insert into private.clair_chart_copy_receipts values(w,actor,req,p_input,result,changes,now());
+ insert into private.clair_chart_copy_receipts(workspace_id,actor_id,request_id,selected_by,payload,result,changes)
+ values(w,actor,req,coalesce(pending.actor_id,actor),p_input,result,changes);
  if pending.id is not null then delete from private.clair_chart_copy_pending where id=pending.id; end if;
  return result;
 end; $$;
@@ -242,13 +256,14 @@ begin
     where n.workspace_id=p_workspace_id and n.id=p_chart_id and n.status<>'voided' and e.status<>'cancelled' and p.status<>'soft_deleted')
   then raise exception 'target_unavailable'; end if;
   select coalesce(jsonb_agg(item order by created_at desc),'[]') into history from (
-    select r.created_at, jsonb_build_object('id',r.request_id,'at',r.created_at,'actor',u.display_name,
+    select r.created_at, jsonb_build_object('id',r.request_id,'at',r.created_at,'actor',u.display_name,'selectedBy',selector.display_name,
       'source',p.name,'sourceId',n.id,'changes',r.changes) item
     from private.clair_chart_copy_receipts r
     join public.soap_notes n on n.workspace_id=r.workspace_id and n.id=(r.payload->>'sourceId')::uuid and n.status<>'voided'
     join public.encounters e on e.workspace_id=n.workspace_id and e.id=n.encounter_id and e.status<>'cancelled'
     join public.patients p on p.workspace_id=e.workspace_id and p.id=e.patient_id and p.status<>'soft_deleted'
     left join public.users u on u.id=r.actor_id
+    left join public.users selector on selector.id=r.selected_by
     where r.workspace_id=p_workspace_id and r.result->>'chartId'=p_chart_id::text
     order by r.created_at desc limit 50
   ) receipts;

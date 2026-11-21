@@ -108,6 +108,7 @@ export function createReviewSession(onChange: () => void) {
       pending.set(visit.id, {
         ...structuredClone(intent),
         id: intent.requestId,
+        canDiscard: true,
       });
       onChange();
       return { id: intent.requestId };
@@ -127,6 +128,8 @@ export function createReviewSession(onChange: () => void) {
       if (previous) return previous;
       const { source, visit } = sourceAndVisit(intent);
       if (visit.status === "waiting") throw new Error("stale_status");
+      if (intent.pendingId && pending.get(visit.id)?.id !== intent.pendingId)
+        throw new Error("invalid_resume");
       const existing = rows.find((r) => r.id === intent.targetId);
       const target = intent.newChart
         ? newChart(visit)
@@ -210,6 +213,7 @@ export function createReviewSession(onChange: () => void) {
           source: source.patient,
           sourceId: source.id,
           actor: "한서진",
+          selectedBy: "한서진",
           changes,
         },
         ...(history.get(target.id) ?? []),
