@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>차트 상세 검색 · 구현 스펙</title><style>
+    :root { color-scheme: light; --ink: #182c2c; --muted: #506665; --teal: #12665e; --line: #d4dfdc; --tint: #eff6f3; --paper: #fff; }
+    * { box-sizing: border-box; }
+    html { scroll-padding-top: 1.5rem; }
+    body { margin: 0; color: var(--ink); background: var(--paper); font: 16px/1.75 system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; word-break: keep-all; overflow-wrap: anywhere; }
+    a { color: var(--teal); text-underline-offset: .22em; }
+    a:focus-visible { outline: 3px solid var(--teal); outline-offset: 4px; }
+    .skip { position: absolute; top: -5rem; left: 1rem; padding: .5rem; background: white; }
+    .skip:focus { top: .5rem; }
+    .page { width: min(1160px, 100%); margin: auto; padding: 0 clamp(20px, 4vw, 64px) 5rem; }
+    header { padding: clamp(2.5rem, 6vw, 5rem) 0 2.2rem; border-bottom: 2px solid var(--ink); }
+    .meta { margin: 0; color: var(--teal); font-size: .85rem; font-weight: 700; }
+    h1, h2, h3 { line-height: 1.32; text-wrap: balance; }
+    h1 { margin: .5rem 0 .75rem; font-size: clamp(2.4rem, 6vw, 4.4rem); letter-spacing: -.065em; }
+    .lead { max-width: 48rem; margin: 0; font-size: clamp(1.08rem, 2.5vw, 1.35rem); }
+    .layout { display: grid; grid-template-columns: 155px minmax(0, 1fr); gap: clamp(2rem, 5vw, 4.5rem); }
+    nav { align-self: start; position: sticky; top: 1.25rem; padding: 2.3rem 0; font-size: .9rem; }
+    nav strong { font-size: .8rem; color: var(--muted); }
+    nav ul { list-style: none; padding: 0; margin-top: .65rem; }
+    nav a { display: block; padding: .28rem 0; color: var(--ink); text-decoration: none; }
+    nav a:hover { color: var(--teal); text-decoration: underline; }
+    main { min-width: 0; }
+    section { padding: 2.2rem 0; border-bottom: 1px solid var(--line); }
+    h2 { margin: 0 0 1.1rem; font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: -.04em; }
+    h3 { font-size: 1.08rem; margin: 1.4rem 0 .4rem; }
+    p { margin: .55rem 0; }
+    ol, ul { margin: .55rem 0; padding-left: 1.4rem; }
+    li { margin: .35rem 0; }
+    li::marker { color: var(--teal); font-weight: 700; }
+    table { border-collapse: collapse; width: 100%; margin: .9rem 0; font-size: .94rem; }
+    th, td { padding: .73rem .8rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    thead th { background: var(--tint); font-size: .86rem; color: #30544e; }
+    tbody th { width: 24%; }
+    .note { background: var(--tint); border-left: 3px solid var(--teal); padding: .85rem 1rem; margin: 1.2rem 0 .25rem; }
+    .small { color: var(--muted); font-size: .9rem; }
+    .sources { font-size: .92rem; }
+    @media (max-width: 800px) {
+      .layout { display: block; }
+      nav { position: static; border-bottom: 1px solid var(--line); padding: 1.2rem 0; }
+      nav ul { display: flex; flex-wrap: wrap; gap: .1rem 1rem; margin: .3rem 0 0; }
+      nav li { margin: 0; }
+    }
+    @media (max-width: 540px) {
+      body { font-size: 15px; }
+      th, td { padding: .6rem .35rem; }
+      tbody th { width: 27%; }
+      section { padding: 1.6rem 0; }
+    }
+    @page { size: A4; margin: 16mm; }
+    @media print {
+      body { font-size: 10pt; color: #172323; }
+      .page { width: auto; padding: 0; }
+      nav, .skip { display: none; }
+      .layout { display: block; }
+      header { padding: 0 0 5mm; }
+      section { padding: 5mm 0; }
+      h1 { font-size: 28pt; }
+      h2 { font-size: 17pt; }
+      h2, h3, thead { break-after: avoid; }
+      tr, .note, li { break-inside: avoid; }
+      p { orphans: 2; widows: 2; }
+      a { color: inherit; }
+    }
+  </style></head><body><a class="skip" href="#main">본문으로 이동</a><div class="page"><header><p class="meta">CLAiR EMR · 차트 상세 검색 · 2026.11.18</p><h1>구현 스펙</h1><p class="lead">수의사가 열람할 수 있는 과거 차트에서 일치 근거를 확인하고, 선택한 기록만 이번 진료에 반영한다.</p><p><a href="../../../../../product/features/chart/advanced-chart-search-prd.html">PRD</a> · <a href="features.html">세부 기능</a> · <a href="structure.html">화면 구조</a> · <a href="index.html">시안</a> · <a href="implementation-spec.html">구현 스펙</a> · <a href="implementation-plan.html">구현 계획</a></p></header><div class="layout"><nav aria-label="문서 목차"><strong>목차</strong><ul><li><a href="#s0">화면과 진입</a></li><li><a href="#s1">조회 단위와 정렬</a></li><li><a href="#s2">원본과 저장 데이터</a></li><li><a href="#s3">항목과 적용</a></li><li><a href="#s4">접수 후 첫 차트에서 재개</a></li><li><a href="#s5">저장과 충돌</a></li><li><a href="#code">실제 코드와 요청</a></li></ul></nav><main id="main"><section id="s0"><h2>화면과 진입</h2><table><thead><tr><th scope="col">화면</th><th scope="col">동작과 상태</th></tr></thead><tbody><tr><th scope="row">진료 차트 · 통합 검색</th><td>차트 이력 옆 버튼과 통합 검색의 빠른 실행에서 같은 화면을 연다. 차트 진입은 작성 중인 차트 문맥을 보존한다. 통합 검색은 선택한 환자 없이 시작한다.</td></tr><tr><th scope="row">검색 바와 결과 행</th><td>제목과 도구 바는 가로를 채운다. 좁게 보기는 최대 1120px, 넓게 보기는 작업 영역 폭을 쓴다. 원본 서랍은 두 보기 모두 작업 영역 오른쪽 끝에 붙는다. 보기 전환 시 선택·스크롤·첨부 순번을 유지한다.</td></tr><tr><th scope="row">정보 순서</th><td>피그마의 왼쪽 썸네일, 오른쪽 환자·진료 요약과 행별 복사 메뉴를 사용한다. 증상은 방문 목적과 S/O 문장을, 진단·오더는 일치한 명칭과 진료 맥락을 먼저 읽는다.</td></tr><tr><th scope="row">컴포넌트</th><td>서비스의 검색 입력, 상세 필터 빌더, 상태 표시, 문서 제목 바, 오른쪽 패널 헤더와 대화상자를 재사용한다. 키보드로 열기·닫기·복사·취소를 수행하고 닫을 때 원래 버튼으로 포커스를 돌린다.</td></tr></tbody></table></section><section id="s1"><h2>조회 단위와 정렬</h2><table><thead><tr><th scope="col">계약</th><th scope="col">규칙</th></tr></thead><tbody><tr><th scope="row">대상</th><td>병원과 열람 권한으로 제한한 차트 한 건이 결과 한 행이다. 서명·정정한 차트가 기본이다. 작성 중 포함을 켜면 접근 가능한 초안을 추가한다. 첫 방문 접수만 있고 차트가 없는 경우는 제외한다.</td></tr><tr><th scope="row">검색어</th><td>공백으로 나눈 모든 단어가 같은 차트 안에 있어야 한다. 방문 목적·주호소, 기본·계통별·자유 SOAP, 차트 귀속 진단명·오더명을 찾는다. 단어 순서와 중복은 대상 집합을 바꾸지 않는다.</td></tr><tr><th scope="row">관련도</th><td>명시적 부정에만 일치한 증상은 관련도순 뒤에 둔다. 같은 차트에 같은 증상의 일반 일치가 하나라도 있으면 해당 증상은 일반 그룹이다. 같은 그룹에서는 진단·오더 정확 일치, 방문 목적·주호소, S/O와 기타 본문을 우선순위로 삼는다. 날짜와 차트 ID로 동점을 구분한다. 진료일 정렬은 관련도에 우선한다.</td></tr><tr><th scope="row">필터</th><td>내 차트는 개별 차트 작성자 기준, 진료 담당의는 방문 담당자 기준이다. 진료일은 병원 운영 날짜 경계를 쓴다. 동물·보호자·동물종·품종·진단 계통·진단·오더·검사 포함 조건을 한 그룹과 그룹 사이에서 AND/OR로 결합한다.</td></tr><tr><th scope="row">첨부</th><td>차트 본문이 참조하고 현재 열람할 수 있는 첨부만 본문 순서로 본다. 첨부 이름·설명에 검색 단어가 하나라도 있으면 첫 일치 자료, 아니면 첫 첨부다. 동영상은 정지 화면으로 열고 파일이 없으면 같은 자리에 없음이 보인다. 첨부 이름만으로 검색 결과를 늘리지 않는다.</td></tr><tr><th scope="row">페이지와 근거</th><td>서버에서 권한·조건·관련도순을 모두 적용한 뒤 페이지를 나눈다. 건수·근거·미리보기에도 같은 가시성 조건을 쓴다. 목록의 문장과 원본에서 같은 단어를 강조한다. 빈 목록과 조회 실패를 구분하고 재시도 중 조건을 보존한다.</td></tr></tbody></table></section><section id="s2"><h2>원본과 저장 데이터</h2><p>기준 코드는 origin/main c69c4ee5다. 기존 환자 이력은 환자 한 명의 기록을 읽는다. 새 검색은 병원을 범위로 삼고, 기록의 귀속은 차트 ID로 판별한다.</p><table><thead><tr><th scope="col">원천</th><th scope="col">사용 기준</th></tr></thead><tbody><tr><th scope="row">진료 건과 개별 차트</th><td>환자·보호자, 방문 목적과 담당의는 방문을 통해 읽는다. 차트 작성자와 진료 시각은 개별 차트에서 읽는다. 생성 시각이나 환자명으로 서로 다른 차트를 합치지 않는다.</td></tr><tr><th scope="row">SOAP 문서</th><td>이전 단일 블록 문서와 계통별 문서, 문서가 없는 이전 텍스트를 처리한다. 자유 문단과 표의 직접 작성 텍스트를 검색하고 첨부 파일 내부는 읽지 않는다.</td></tr><tr><th scope="row">진단 · 오더</th><td>차트의 평가 스냅샷과 해당 차트가 원본인 오더를 읽는다. 같은 방문의 다른 차트에 속하거나 출처가 확인되지 않은 과거 오더는 일치 근거나 복사 후보에서 제외한다.</td></tr><tr><th scope="row">첨부 권한</th><td>본문의 첨부 참조를 현재 병원·진료 건과 대조한다. 원본 파일은 열람 시점 권한을 확인하고 기존 비공개 첨부 경로로 연다.</td></tr></tbody></table><p>기존 코드에서 확인할 위치</p><p><a href="../../../../../../src/features/chart/chart-soap-document.ts">SOAP 문서</a> · <a href="../../../../../../src/features/chart/server-chart-patient-history-core.ts">환자 이력</a> · <a href="../../../../../../supabase/migrations/20260912174500_chart_current_record_scope.sql">차트별 진단</a></p></section><section id="s3"><h2>항목과 적용</h2><table><thead><tr><th scope="col">항목</th><th scope="col">미리보기와 저장</th></tr></thead><tbody><tr><th scope="row">대상</th><td>한 번에 한 차트. 내 작성 중 차트가 먼저 나오고 수정 가능한 동료 차트로 범위를 넓힐 수 있다. 원본 자체와 완료한 차트는 제외한다.</td></tr><tr><th scope="row">S/O · A/P</th><td>빈 원본 문단은 건너뛴다. S/O와 A/P는 선택한 문단을 대상의 같은 항목 끝에 추가한다. A/P만 수의사가 지정한 한 문단을 바꿀 수 있다. 교체 전후를 미리 본다. 가져온 문단에는 새 식별자를 준다.</td></tr><tr><th scope="row">진단</th><td>중복은 이미 있음으로 표시한다. 진단 구분과 주진단 여부는 별개다. 새 진단의 주진단 표시는 기본 해제하며 직접 선택하면 기존 주진단도 유지한다.</td></tr><tr><th scope="row">오더</th><td>약·검사·처치를 개별 선택한다. 수의사가 과거 용량·횟수·기간과 단위를 검토하거나 수정한다. 원본 오더명과 처방 내용은 차트 열람 범위에 속한다. 현재 단가와 사용 가능 여부는 <code>service_catalog:view</code> 권한으로 조회한다. 오더를 포함한 복사 대기와 적용 시 DB가 같은 권한을 다시 확인한다. 대기 중 권한을 잃으면 선택했던 오더의 단가를 숨기고 대기 취소는 허용한다. 같은 오더는 기본 해제하고 명시적으로 중복 추가할 수 있다.</td></tr><tr><th scope="row">원본 유지</th><td>첨부·바이탈·검사 결과, 이전 실행·조제·청구·수납·서명 이력은 원본에서 확인한다. 복사는 이번 진료의 처방 확정이나 외부 요청을 발생시키지 않는다.</td></tr></tbody></table></section><section id="s4"><h2>접수 후 첫 차트에서 재개</h2><p>새 방문은 접수 완료 시, 대기 중인 방문은 해당 방문을 선택해 넘길 때 원본과 선택값을 방문에 연결한다. 검색 창을 닫아도 선택한 문단·처방 수정값을 유지한다. 해당 방문이 호출되어 첫 차트가 열리면 수의사가 복사 이어가기를 눌러 변경 내용을 다시 비교한다.</p><p>복사 대기는 작성한 사용자·병원·환자·방문·원본을 함께 식별한다. 다른 환자나 같은 환자의 다른 방문에 표시하지 않는다. 대기 중인 방문의 호출은 기존 첫 차트 준비 경로를 쓴다. 이미 첫 차트가 있으면 그 차트를 사용한다. 서명·권한 변경 시 적용을 차단한다. 명시적 취소나 적용 완료 후에는 대기 항목을 지운다.</p><p><a href="../../../../../../supabase/migrations/20260913103000_chart_consultation_first_chart.sql">호출 및 첫 차트 준비</a></p></section><section id="s5"><h2>저장과 충돌</h2><p>원본·대상 식별자, 방문, 선택한 원본 항목, 대상 문단, 검토한 처방 및 진단 값, 버전과 요청 식별자를 전달한다. 서버가 로그인 사용자, 병원 소속, 열람·수정 권한을 다시 확인한다. 복사 대기·기존 차트 적용·새 차트 생성·첫 차트 재개 시에는 방문에 연결된 대상 환자의 행을 같은 트랜잭션에서 잠그고 삭제 상태를 확인한다. 삭제된 경우 서버는 <code>409 target_patient_deleted</code>를 반환한다. 화면은 원본과 검색 조건을 유지하고 대상 목록을 다시 읽는다. 새로 선택한 대상에는 이전 방문의 복사 대기를 연결하지 않는다. 환자명, 가격, 작성자를 브라우저 입력에서 신뢰하지 않는다.</p><p>대상 편집기의 미저장 입력을 먼저 저장한다. SOAP 수정 시각, 진단 버전, 진료 건의 오더 버전 중 관련 값이 달라지면 변경 전후를 다시 비교한다. 복사 항목, 원본·대상·적용자·전후 이력, 중복 방지 기록은 한 트랜잭션에서 저장한다. 같은 요청의 재시도는 최초 적용 결과를 반환한다. 권한 해제·서명·저장 실패 시 일부 항목만 남기지 않는다.</p></section><section id="code"><h2>실제 코드와 요청</h2><p>검색과 복사 요청은 인증 세션의 사용자와 병원 권한을 확인한다. 최근 완료 목록은 요청 페이지의 차트만 펼친다. 상세 조건이나 검색어가 있으면 해당 병원의 차트를 50건씩 읽고, 모든 조건과 관련도를 적용한 다음 25건 단위로 반환한다. 건수·담당의 선택지·페이지는 같은 열람 범위에서 만든다.</p>
+<p>원본을 열 때 선택한 한 차트를 다시 읽는다. 새 접수는 기존 접수 화면이 돌려준 방문 ID에 연결한다. 복사 이력에는 원본·대상·적용자·시각·교체 전후와 미확정 오더를 남긴다. 원본 서랍의 ‘진료 차트 열기’로 기존 EMR 차트를 확인하고, ‘검색 결과로 돌아가기’로 작업을 이어간다.</p>
+<p><a href="../../../../../../src/features/chart/advanced-search/workspace.tsx">검색 화면</a> · <a href="../../../../../../src/features/chart/advanced-search/transfer.tsx">복사 검토 화면</a> · <a href="../../../../../../src/features/chart/advanced-search/ranking.ts">검색과 정렬</a> · <a href="../../../../../../supabase/migrations/20261118232000_advanced_chart_search_read.sql">차트 조회 함수</a> · <a href="../../../../../../supabase/migrations/20261118232100_advanced_chart_copy.sql">저장·이력 함수</a></p></section></main></div></div></body></html>

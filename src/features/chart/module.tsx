@@ -316,6 +316,8 @@ import {
   chartLifecycleError,
   useEncounterCharts,
 } from "@/features/chart/encounter-charts-client";
+import { ChartSearchEntry } from "@/features/chart/advanced-search/chart-entry";
+import { copiedEvent } from "@/features/chart/advanced-search/events";
 import { useChartStore } from "@/features/chart/store";
 import { useChartPatientGuardianProfileActions } from "@/features/chart/use-chart-patient-guardian-profile-actions";
 import { useSelectedOperatingDate } from "@/features/work-queue/use-selected-operating-date";
@@ -16189,6 +16191,7 @@ export function ChartContent({
     status: consultationRoomsStatus,
   } = useWorkspaceConsultationRooms({ session: authSession, workspaceId });
   const diagnosisCatalogActorKey = authSession?.id ?? "signed-out";
+  const [copyReadback, setCopyReadback] = useState(0);
   const [soapReloadKey, setSoapReloadKey] = useState(0);
   const [chartListRetryKey, setChartListRetryKey] = useState(0);
   const [persistedSoapState, setPersistedSoapState] = useState<{
@@ -16210,6 +16213,21 @@ export function ChartContent({
     requestedChartId: orderChartId || historyViewChartId || searchParams.get("chartId"),
     requireRequestedChart: Boolean(orderChartId) });
   const activeChartId = encounterCharts.selectedChartId;
+  const reloadEncounterCharts = encounterCharts.reload;
+  useEffect(() => {
+    const readAppliedChart = (event: Event) => {
+      const result = (event as CustomEvent).detail;
+      if (result.workspaceId !== activeWorkspaceId || result.encounterId !== activeEncounterId) return;
+      requestChartHistoryRefresh();
+      void reloadEncounterCharts();
+      if (result.chartId !== activeChartId) return;
+      setPersistedSoapState((current) => ({ ...current, status: "loading" }));
+      setCopyReadback((n) => n + 1);
+      setSoapReloadKey((n) => n + 1);
+    };
+    window.addEventListener(copiedEvent, readAppliedChart);
+    return () => window.removeEventListener(copiedEvent, readAppliedChart);
+  }, [activeWorkspaceId, activeEncounterId, activeChartId, requestChartHistoryRefresh, reloadEncounterCharts]);
   const selectedChart = encounterCharts.charts.find((chart) => chart.id === activeChartId);
   const effectiveLatestSoap = persistedSoapState.encounterId === activeEncounterId
     && persistedSoapState.chartId === activeChartId && persistedSoapState.soapNote
@@ -17184,7 +17202,7 @@ export function ChartContent({
     return () => {
       cancelled = true;
     };
-  }, [activeChartId, activeEncounterId, activeWorkspaceId, actorHeaders, authHydrated]);
+  }, [activeChartId, activeEncounterId, activeWorkspaceId, actorHeaders, authHydrated, copyReadback]);
 
   useEffect(() => {
     if (!authHydrated || !activeEncounterId || !activeWorkspaceId) return;
@@ -17498,15 +17516,24 @@ export function ChartContent({
             operatingDate={getOperatingDateFromIso(chartCheckedInAt) ?? selectedDate}
             workspaceId={workspaceId}
             historyAction={
-              <span className="inline-flex [&_button]:!size-6 [&_button]:!rounded-[var(--clair-radius-atomic-6)] [&_button]:!shadow-[var(--clair-shadow-xs)] [&_svg]:!size-3.5">
-                <EmrInstructionHistoryToggle
-                  ariaLabelPrefix="차트 이력"
-                  controls={documentLayout?.historyControlsId ?? "chart-content-aside"}
-                  disabled={detailHydrationPending}
-                  expanded={documentLayout?.historyVisible ?? contentAsideOpen}
-                  tooltipLabel="과거 이력 보기"
-                  onClick={documentLayout?.toggleHistory ?? (() => setContentAsideOpen(!contentAsideOpen))}
+              <span className="inline-flex items-center gap-1">
+                <ChartSearchEntry
+                  workspaceId={workspaceId}
+                  encounterId={currentBundle.encounter.id}
+                  patientId={currentBundle.patient.id}
+                  chartId={activeChartId}
+                  editable={!chartWriteDisabled && !chartSigned}
                 />
+                <span className="inline-flex [&_button]:!size-6 [&_button]:!rounded-[var(--clair-radius-atomic-6)] [&_button]:!shadow-[var(--clair-shadow-xs)] [&_svg]:!size-3.5">
+                  <EmrInstructionHistoryToggle
+                    ariaLabelPrefix="차트 이력"
+                    controls={documentLayout?.historyControlsId ?? "chart-content-aside"}
+                    disabled={detailHydrationPending}
+                    expanded={documentLayout?.historyVisible ?? contentAsideOpen}
+                    tooltipLabel="과거 이력 보기"
+                    onClick={documentLayout?.toggleHistory ?? (() => setContentAsideOpen(!contentAsideOpen))}
+                  />
+                </span>
               </span>
             }
             startTime={chartStartTime}
@@ -18102,7 +18129,7 @@ export function ChartContent({
               }
             >
               <SoapPanel
-                key={`chart-soap-${bundle.encounter.id}-${activeChartId}`}
+                key={`chart-soap-${bundle.encounter.id}-${activeChartId}-${copyReadback}`}
                 actorHeaders={actorHeaders}
                 collapseContentId="chart-soap-panel-content"
                 diagnoses={chartDiagnosisRows}
@@ -18215,7 +18242,7 @@ export function ChartContent({
           </button>
           <div className="min-h-0 min-w-0">
             <OrderArea
-              key={`${authSession?.role ?? "signed-out"}:${authSession?.id ?? "signed-out"}:${bundle.encounter.workspaceId}:${bundle.encounter.id}:${activeChartId}`}
+              key={`${authSession?.role ?? "signed-out"}:${authSession?.id ?? "signed-out"}:${bundle.encounter.workspaceId}:${bundle.encounter.id}:${activeChartId}:${copyReadback}`}
               actorKey={`${authSession?.role ?? "signed-out"}:${authSession?.id ?? "signed-out"}`}
               actorHeaders={actorHeaders}
               bundle={bundle}
