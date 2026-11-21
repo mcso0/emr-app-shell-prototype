@@ -87,7 +87,7 @@ import {
   type EmrTaskQueueCardItem,
 } from "@/components/emr/task-queue-card";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
-import { EmrCopyLinkButton } from "@/components/emr/copy-link-button";
+import { EmrCopyLinkButton, copyWorkspaceSurfaceLink } from "@/components/emr/copy-link-button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -3689,9 +3689,15 @@ export function LabContent({
     );
   }
 
+  const orderLink = {
+    moduleId: "lab",
+    params: { labResultId: detail?.result.id ?? effectiveDetail.result.id },
+    workspaceId,
+  };
   if (entry.show && fulfillmentWorkItem) return <ExamOrderPrework
     workItem={fulfillmentWorkItem} review={instructionReview}
     busy={false} onEntered={entry.enter}
+    onCopyOrderLink={() => void copyWorkspaceSurfaceLink({ ...orderLink, date: selectedDate })}
     onConfirm={async () => {
       if (!fulfillmentWorkItem.canManage) return false;
       if (!fulfillmentWorkItem.assignedToUserId) return transitionFulfillment("claim");
@@ -3726,9 +3732,7 @@ export function LabContent({
                   detail?.result.enteredAt ?? detail?.result.receivedAt ??
                   displayDetail.result.enteredAt ?? displayDetail.result.receivedAt,
                 ) ?? selectedDate}
-                moduleId="lab"
-                params={{ labResultId: detail?.result.id ?? displayDetail.result.id }}
-                workspaceId={workspaceId}
+                {...orderLink}
               />
             }
             actions={
@@ -4517,9 +4521,15 @@ export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentPro
     );
   }
 
+  const orderLink = {
+    moduleId: "imaging",
+    params: { imagingStudyId: detail.study.id },
+    workspaceId,
+  };
   if (entry.show && fulfillmentWorkItem) return <ExamOrderPrework
     workItem={fulfillmentWorkItem} review={instructionReview}
     busy={false} onEntered={entry.enter}
+    onCopyOrderLink={() => void copyWorkspaceSurfaceLink({ ...orderLink, date: selectedDate })}
     onConfirm={async () => {
       if (!fulfillmentWorkItem.canManage) return false;
       if (!fulfillmentWorkItem.assignedToUserId) return transitionFulfillment("claim");
@@ -4554,9 +4564,7 @@ export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentPro
               <EmrCopyLinkButton
                 ariaLabel="영상검사 Order 상세 링크 복사"
                 date={getOperatingDateFromIso(detail.study.requestedAt) ?? selectedDate}
-                moduleId="imaging"
-                params={{ imagingStudyId: detail.study.id }}
-                workspaceId={workspaceId}
+                {...orderLink}
               />
             }
             actions={
