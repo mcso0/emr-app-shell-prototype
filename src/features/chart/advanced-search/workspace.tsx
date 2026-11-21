@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -25,9 +24,8 @@ import {
   CdsNavigationMinimize2Icon,
 } from "@/components/cds-icons/navigation";
 import { useLayoutStore } from "@/stores/layout-store";
-import { chartSearchApi, errorMessage, type ChartSearchApi } from "./client";
-import { copiedEvent, openSearchEvent, type SearchEntry } from "./events";
-import { getOperatingDateFromIso } from "@/lib/emr-domain/demo-date";
+import { errorMessage, type ChartSearchApi } from "./client";
+import { copiedEvent, type SearchEntry } from "./events";
 import { fields } from "./ranking";
 import type {
   CopyResult,
@@ -39,96 +37,24 @@ import { ChartRow, ChartSource, Pick, type CopyMode } from "./presentation";
 import { Transfer } from "./transfer";
 import styles from "./workspace.module.css";
 
-type ChartLocation = Omit<CopyResult, "requestId">;
+export type ChartLocation = Omit<CopyResult, "requestId">;
 
-export function ChartSearchHost({ workspace }: { workspace: string }) {
-  const [entry, setEntry] = useState<SearchEntry | null>(null);
-  const [activePath, setActivePath] = useState<string | null>(null);
-  const path = usePathname();
-  const router = useRouter();
-  const [viewingChart, setViewingChart] = useState(false);
-  const [instance, setInstance] = useState(0);
-  const opener = useRef<HTMLElement | null>(null);
-  const api = useMemo(() => chartSearchApi(workspace), [workspace]);
-  useEffect(() => {
-    function open(event: Event) {
-      const detail = (event as CustomEvent<SearchEntry>).detail;
-      if (detail?.workspaceId !== workspace) return;
-      opener.current = document.activeElement as HTMLElement | null;
-      setViewingChart(false);
-      setActivePath(path);
-      setInstance((n) => n + 1);
-      setEntry(detail);
-    }
-    window.addEventListener(openSearchEvent, open);
-    return () => window.removeEventListener(openSearchEvent, open);
-  }, [workspace, path]);
-  const registering = useLayoutStore(
-    (s) => s.activeDrawer?.type === "reception-form",
-  );
-  useEffect(() => {
-    if (!entry || registering || viewingChart || path !== activePath) return;
-    const frame = document.querySelector<HTMLElement>(
-      '[data-testid="workspace-frame"]',
-    );
-    if (!frame) return;
-    frame.inert = true;
-    return () => {
-      frame.inert = false;
-    };
-  }, [entry, registering, viewingChart, path, activePath]);
-  function viewChart(chart: ChartLocation) {
-    const date = getOperatingDateFromIso(chart.visitAt);
-    const search = new URLSearchParams({
-      patientId: chart.patientId,
-      encounterId: chart.encounterId,
-      chartId: chart.chartId,
-      orderChart: "1",
-      ...(date ? { date } : {}),
-    });
-    setViewingChart(true);
-    router.push("/w/" + encodeURIComponent(workspace) + "/treatment?" + search);
-  }
-  if (!entry || (!viewingChart && path !== activePath)) return null;
-  return (
-    <>
-      <div hidden={viewingChart}>
-        <ChartSearchWorkspace
-          key={instance}
-          entry={entry}
-          api={api}
-          onViewChart={viewChart}
-          onClose={() => {
-            setEntry(null);
-            requestAnimationFrame(() => opener.current?.focus());
-          }}
-        />
-      </div>
-      {viewingChart && path === `/w/${workspace}/treatment` && (
-        <Button
-          className={styles.returnButton}
-          variant="outline"
-          onClick={() => {
-            setActivePath(path);
-            setViewingChart(false);
-          }}
-        >
-          검색 결과로 돌아가기
-        </Button>
-      )}
-    </>
-  );
-}
 const fresh = () => createInitialEmrTableFilterBuilderModel("chart-search");
 export function ChartSearchWorkspace({
   entry,
   api,
   onClose,
   onViewChart = onClose,
+  onReturnToChart,
+  independent = false,
+  active = true,
 }: {
   entry: SearchEntry;
   api: ChartSearchApi;
   onClose: () => void;
+  onReturnToChart?: () => void;
+  independent?: boolean;
+  active?: boolean;
   onViewChart?: (chart: ChartLocation) => void;
 }) {
   const [q, setQ] = useState(""),
@@ -141,7 +67,7 @@ export function ChartSearchWorkspace({
     [groups, setGroups] = useState(fresh),
     [popup, setPopup] = useState("");
   const [narrow, setNarrow] = useState(false),
-    [page, setPage] = useState<SearchPage | null>(null),
+    [loaded, setLoaded] = useState<{ params: SearchParams; page: SearchPage } | null>(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(true),
     [attempt, setAttempt] = useState(0);
@@ -159,7 +85,12 @@ export function ChartSearchWorkspace({
           }
         : null,
     );
-  const [result, setResult] = useState<CopyResult | null>(null),
+  const [lastResume, setLastResume] = useState(entry.resume);
+  if (lastResume !== entry.resume) {
+    setLastResume(entry.resume);
+    if (entry.resume) setCopy({ source: entry.resume.source, mode: "existing", resume: entry.resume });
+  }
+  const [result, setResult] = useState<(CopyResult & { patientName?: string }) | null>(null),
     [notice, setNotice] = useState("");
   const registering = useLayoutStore(
     (s) => s.activeDrawer?.type === "reception-form",
@@ -182,6 +113,7 @@ export function ChartSearchWorkspace({
     }),
     [q, sort, mine, drafts, doctor, from, to, groups],
   );
+  const page = loaded?.params === params ? loaded.page : null;
   const count = getEmrTableFilterBuilderActiveCount(groups, fields);
   const changed = !!(
     q.trim() ||
@@ -200,7 +132,7 @@ export function ChartSearchWorkspace({
       () => {
         setBusy(true);
         setError("");
-        setPage(null);
+        setLoaded(null);
         setSelected(null);
         if (scroll.current) scroll.current.scrollTop = 0;
         if (from && to && from > to) {
@@ -211,7 +143,7 @@ export function ChartSearchWorkspace({
         api
           .search(params, abort.signal)
           .then((data) => {
-            if (!abort.signal.aborted) setPage(data);
+            if (!abort.signal.aborted) setLoaded({ params, page: data });
           })
           .catch((e) => {
             if (!abort.signal.aborted) setError(errorMessage(e));
@@ -238,11 +170,11 @@ export function ChartSearchWorkspace({
         signal,
       );
       if (!signal?.aborted)
-        setPage({
+        setLoaded({ params, page: {
           ...next,
           doctors: page.doctors,
           items: [...page.items, ...next.items],
-        });
+        } });
     } catch (e) {
       if (!signal?.aborted) setError(errorMessage(e));
     } finally {
@@ -283,9 +215,9 @@ export function ChartSearchWorkspace({
       }
     }
   }
-  function copyDone(out: CopyResult | null) {
+  function copyDone(out: CopyResult | null, patientName?: string) {
     setCopy(null);
-    setResult(out);
+    setResult(out ? { ...out, patientName } : null);
     setNotice(
       out
         ? out.unchanged
@@ -313,14 +245,19 @@ export function ChartSearchWorkspace({
           return;
         if (e.key === "Escape" && !copy && !popup) {
           if (selected) closeSource();
-          else onClose();
+          else if (!independent) onClose();
         }
       }}
     >
       <EmrInstructionTitleBar
         className={styles.header}
         title="차트 상세 검색"
-        icon={
+        badge={onReturnToChart && entry.patientName ? (
+          <Button size="sm" variant="outline" onClick={onReturnToChart}>
+            <ChevronLeftIcon />{entry.patientName} 차트로 돌아가기
+          </Button>
+        ) : undefined}
+        icon={independent ? undefined : (
           <Button
             autoFocus
             size="icon-sm"
@@ -330,7 +267,7 @@ export function ChartSearchWorkspace({
           >
             <ChevronLeftIcon />
           </Button>
-        }
+        )}
         actions={
           <div className={styles.controls}>
             <Pick
@@ -344,7 +281,7 @@ export function ChartSearchWorkspace({
               onChange={(v) => setSort(v as SearchParams["sort"])}
             />
             <Popover
-              open={popup === "filter"}
+              open={active && popup === "filter"}
               onOpenChange={(v) => setPopup(v ? "filter" : "")}
             >
               <PopoverTrigger
@@ -380,7 +317,7 @@ export function ChartSearchWorkspace({
               내 차트
             </EmrFilterToggle>
             <Popover
-              open={popup === "date"}
+              open={active && popup === "date"}
               onOpenChange={(v) => setPopup(v ? "date" : "")}
             >
               <PopoverTrigger
@@ -573,7 +510,7 @@ export function ChartSearchWorkspace({
               variant="outline"
               onClick={() => onViewChart(result)}
             >
-              대상 차트 보기
+              {result.patientName ?? "대상"} 차트 보기
             </Button>
           )}
           <Button size="sm" variant="ghost" onClick={() => setNotice("")}>
@@ -581,7 +518,7 @@ export function ChartSearchWorkspace({
           </Button>
         </div>
       )}
-      {copy && (
+      {active && copy && (
         <Transfer
           workspace={entry.workspaceId}
           api={api}

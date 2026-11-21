@@ -12,7 +12,6 @@ import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
 import { NavRail } from "@/shell/nav-rail";
 import { SHELL_LAYOUT } from "@/shell/layout-contract";
-import { ChartSearchHost } from "@/features/chart/advanced-search/workspace";
 import { WorkspaceFrame } from "@/shell/workspace-frame";
 import { WorkspaceSwitcher } from "@/shell/workspace-switcher";
 
@@ -20,6 +19,7 @@ type ShellMainProps = {
   moduleDefinition: ModuleDefinition;
   navigationSearch: string;
   topBar: ReactNode;
+  chartSearch?: ReactNode;
   userSessionId: string | null;
   workspaceId: string;
   workspaceTabRevision?: number;
@@ -42,6 +42,7 @@ export function ShellMain({
   moduleDefinition,
   navigationSearch,
   topBar,
+  chartSearch,
   userSessionId,
   workspaceId,
   workspaceTabRevision = 0,
@@ -427,7 +428,7 @@ export function ShellMain({
           <div data-testid="workspace-frame" className="h-full min-h-0 min-w-0 [&>main]:h-full">
             <WorkspaceFrame key={workspaceTabRevision} moduleDefinition={moduleDefinition} workspaceId={workspaceId} onNavigateWorkspaceSurface={onNavigateModule} />
           </div>
-          <ChartSearchHost key={workspaceId+":"+userSessionId} workspace={workspaceId}/>
+          {chartSearch}
         </section>
       </section>
     </div>

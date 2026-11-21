@@ -44,7 +44,7 @@ type Props = {
   onTargetDeleted: () => void;
   onRefreshSource: (source: SearchChart) => void;
   onClose: () => void;
-  onDone: (result: CopyResult | null) => void;
+  onDone: (result: CopyResult | null, patientName?: string) => void;
 };
 
 type Destination = { chart?: SearchChart; visit?: SearchVisit };
@@ -313,7 +313,7 @@ export function Transfer({
       if (waiting) {
         await api.park(intent);
         onDone(null);
-      } else onDone(await api.apply(intent));
+      } else onDone(await api.apply(intent), target?.patient ?? visit?.patient);
     } catch (e) {
       handleSaveError(e);
     } finally {

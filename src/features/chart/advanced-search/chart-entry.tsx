@@ -10,12 +10,14 @@ export function ChartSearchEntry({
   workspaceId,
   chartId,
   patientId,
+  patientName,
   encounterId,
   editable,
 }: {
   workspaceId: string;
   chartId?: string | null;
   patientId: string;
+  patientName: string;
   encounterId: string;
   editable: boolean;
 }) {
@@ -56,6 +58,7 @@ export function ChartSearchEntry({
     workspaceId,
     chartId: chartId ?? undefined,
     patientId,
+    patientName,
     encounterId,
   };
   const pending =
@@ -94,10 +97,11 @@ export function ChartSearchEntry({
         aria-label="차트 상세 검색"
         title="차트 상세 검색"
         variant="outline"
-        size="icon-sm"
+        size="sm"
         onClick={() => openChartSearch(entry)}
       >
         <SearchIcon />
+        차트 상세 검색
       </Button>
       {pending && (
         <>

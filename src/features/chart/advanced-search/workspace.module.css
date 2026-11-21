@@ -395,12 +395,3 @@
     width: 100%;
   }
 }
-
-.returnButton {
-  position: absolute;
-  z-index: 19;
-  right: 16px;
-  bottom: 16px;
-  background: var(--card);
-  box-shadow: var(--clair-shadow-sm);
-}
