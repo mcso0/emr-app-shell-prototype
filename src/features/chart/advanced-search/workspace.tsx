@@ -87,9 +87,7 @@ export function ChartSearchHost({ workspace }: { workspace: string }) {
       ...(date ? { date } : {}),
     });
     setViewingChart(true);
-    router.push(
-      "/w/" + encodeURIComponent(workspace) + "/treatment?" + search,
-    );
+    router.push("/w/" + encodeURIComponent(workspace) + "/treatment?" + search);
   }
   if (!entry || (!viewingChart && path !== activePath)) return null;
   return (
@@ -154,7 +152,11 @@ export function ChartSearchWorkspace({
       resume?: SearchEntry["resume"];
     } | null>(
       entry.resume
-        ? { source: entry.resume.source, mode: "existing", resume: entry.resume }
+        ? {
+            source: entry.resume.source,
+            mode: "existing",
+            resume: entry.resume,
+          }
         : null,
     );
   const [result, setResult] = useState<CopyResult | null>(null),
@@ -236,7 +238,11 @@ export function ChartSearchWorkspace({
         signal,
       );
       if (!signal?.aborted)
-        setPage({ ...next, items: [...page.items, ...next.items] });
+        setPage({
+          ...next,
+          doctors: page.doctors,
+          items: [...page.items, ...next.items],
+        });
     } catch (e) {
       if (!signal?.aborted) setError(errorMessage(e));
     } finally {
@@ -282,7 +288,9 @@ export function ChartSearchWorkspace({
     setResult(out);
     setNotice(
       out
-        ? "선택한 항목을 대상 차트에 적용했습니다."
+        ? out.unchanged
+          ? "선택한 진단이 대상 차트에 이미 있습니다."
+          : "선택한 항목을 대상 차트에 적용했습니다."
         : "접수 대기 중입니다. 호출 후 첫 차트에서 복사를 이어갈 수 있습니다.",
     );
     if (out)
@@ -301,7 +309,8 @@ export function ChartSearchWorkspace({
       style={registering ? { visibility: "hidden" } : undefined}
       aria-label="차트 상세 검색"
       onKeyDown={(e) => {
-        if (e.defaultPrevented || !e.currentTarget.contains(e.target as Node)) return;
+        if (e.defaultPrevented || !e.currentTarget.contains(e.target as Node))
+          return;
         if (e.key === "Escape" && !copy && !popup) {
           if (selected) closeSource();
           else onClose();
@@ -580,6 +589,10 @@ export function ChartSearchWorkspace({
           mode={copy.mode}
           contextId={entry.chartId}
           initial={copy.resume}
+          onRefreshSource={(source) => {
+            setSelected(source);
+            setCopy({ ...copy, source });
+          }}
           onTargetDeleted={() => {
             setSelected(copy.source);
             if (copy.resume) setCopy({ source: copy.source, mode: copy.mode });

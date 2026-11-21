@@ -7,6 +7,7 @@ import type {
   SearchChart,
   SearchVisit,
 } from "@/features/chart/advanced-search/contract";
+import { hasSameDiagnosis } from "@/features/chart/advanced-search/contract";
 import { searchPage } from "@/features/chart/advanced-search/ranking";
 import { cases } from "./cases";
 
@@ -156,12 +157,7 @@ export function createReviewSession(onChange: () => void) {
       for (const pick of intent.selection.diagnoses) {
         const dx = source.diagnoses.find((d) => d.id === pick.id);
         if (!dx) throw new Error("invalid_selection");
-        if (
-          target.diagnoses.some((d) =>
-            dx.catalogId ? d.catalogId === dx.catalogId : d.name === dx.name,
-          )
-        )
-          continue;
+        if (target.diagnoses.some((d) => hasSameDiagnosis(dx, d))) continue;
         target.diagnoses.push({
           ...dx,
           id: crypto.randomUUID(),
@@ -199,6 +195,7 @@ export function createReviewSession(onChange: () => void) {
       if (existing) rows[rows.indexOf(existing)] = target;
       else rows.push(target);
       const result: CopyResult = {
+        unchanged: changes.length === 0,
         chartId: target.id,
         patientId: target.patientId,
         encounterId: visit.id,
@@ -244,6 +241,18 @@ export function createReviewSession(onChange: () => void) {
     register,
     resume,
     waiting: () => visits.filter((v) => pending.has(v.id)),
+    editParagraph(chartId: string, paragraphId: string, text: string) {
+      const chart = rows.find((r) => r.id === chartId && r.editable);
+      const paragraph = chart?.paragraphs.find(
+        (p) =>
+          p.id === paragraphId &&
+          (p.section === "subjective" || p.section === "objective"),
+      );
+      if (!chart || !paragraph) return;
+      paragraph.text = text;
+      chart.version = crypto.randomUUID();
+      onChange();
+    },
     isCopiedOrder: (id: string) => !originalOrderIds.has(id),
     chart: (id: string) => rows.find((r) => r.id === id),
   };

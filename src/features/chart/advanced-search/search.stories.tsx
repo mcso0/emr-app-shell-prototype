@@ -39,3 +39,31 @@ export const Draft: Story = {
     query: "초음파",
   },
 };
+
+export const DiagnosisWithChiefComplaint: Story = {
+  args: {
+    query: "외이염",
+    chart: exampleChart("synthetic-ear", {
+      purpose: "현장 접수",
+      complaint: "오른쪽 귀 가려움",
+      species: "rabbit",
+      diagnoses: [
+        {
+          id: "dx",
+          name: "외이염",
+          catalogId: null,
+          kind: "suspected",
+          primary: false,
+          system: "귀",
+        },
+      ],
+    }),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByText("오른쪽 귀 가려움", { exact: false }),
+    ).toBeVisible();
+    await expect(canvas.getByText(/토끼/)).toBeVisible();
+  },
+};

@@ -78,7 +78,8 @@ begin
  ds:=pg_temp.qa_get(d);
  sel:=jsonb_set(base,'{diagnoses}',jsonb_build_array(jsonb_build_object('id',diag->>'id','kind','confirmed','primary',true)));
  -- Existing diagnosis remains unchanged even with a new request that picked a different review state.
- perform public.clair_advanced_chart_transfer(w,'apply',pg_temp.qa_cmd(sr,ds,sel));
+ res:=public.clair_advanced_chart_transfer(w,'apply',pg_temp.qa_cmd(sr,ds,sel));
+ assert (res->>'unchanged')::boolean;
  assert pg_temp.qa_get(d)->'diagnoses'=ds->'diagnoses';
  begin
    perform public.clair_advanced_chart_transfer(w,'apply',rq||jsonb_build_object('selection',sel));
@@ -375,4 +376,25 @@ begin
   assert jsonb_array_length(hist)>0 and hist#>>'{0,actor}' is not null;
   raise notice 'PASS recent pages with tied timestamps and authorized copy history';
 end $recent$;
+reset role;
+do $cell$
+declare tabletext text;
+begin
+ select private.clair_search_block_text('{"type":"table","content":{"rows":[{"cells":[{"content":[{"text":"구"},{"text":"토"}]},{"content":[{"text":"없음"}]}]},{"cells":[{"content":[{"text":"다음 줄"}]}]}]}}') into tabletext;
+ assert tabletext=E'구토\t없음\n다음 줄';
+end $cell$;
+set local role authenticated;
+do $index$
+declare w text:='synthetic-advanced-chart-copy-qa'; idx jsonb; detail jsonb;
+begin
+ perform set_config('request.jwt.claim.sub','afd26000-0000-4000-8000-000000000003',true);
+ idx:=public.clair_advanced_chart_search_batch(w,null,null,true,false,true,true);
+ for detail in select value from jsonb_array_elements(idx) loop
+  assert not(detail ? 'media' or detail ? 'version');
+  assert not exists(select from jsonb_array_elements(detail->'orders') o where o ? 'price' or o ? 'inputs');
+ end loop;
+ assert jsonb_array_length(idx)>0;
+ assert public.clair_advanced_chart_search_batch(w,null,null,true,false,false,true,array[]::uuid[])='[]';
+ raise notice 'PASS ranked candidates omit files and prices; rich table cell boundaries preserved';
+end $index$;
 rollback;

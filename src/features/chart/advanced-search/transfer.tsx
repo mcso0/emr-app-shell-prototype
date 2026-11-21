@@ -16,6 +16,10 @@ import {
 } from "./client";
 import {
   blankSelection,
+  hasSameDiagnosis,
+  orderDescription,
+  prescriptionUnit,
+  type SearchParagraph,
   diagnosisLabels,
   medicationFrequencies,
   sectionNames,
@@ -38,6 +42,7 @@ type Props = {
   contextId?: string;
   initial?: { pending: PendingCopy; target: SearchChart };
   onTargetDeleted: () => void;
+  onRefreshSource: (source: SearchChart) => void;
   onClose: () => void;
   onDone: (result: CopyResult | null) => void;
 };
@@ -45,6 +50,23 @@ type Props = {
 type Destination = { chart?: SearchChart; visit?: SearchVisit };
 const drug = (o: SearchOrder) =>
   ["medication", "dispensing", "drug"].includes(o.kind);
+function paragraphLabel(p: SearchParagraph, rows: SearchParagraph[]) {
+  const scope = p.scope && p.scope !== "기본 SOAP" ? p.scope : "";
+  const same = rows.filter(
+    (row) =>
+      row.section === p.section && row.scope === p.scope && row.text === p.text,
+  );
+  return [
+    scope,
+    same.length > 1
+      ? same.findIndex((row) => row.id === p.id) + 1 + "번째"
+      : "",
+    p.text,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 const visitLabel = (visit: SearchVisit) =>
   visit.status === "waiting" ? "접수 대기" : "진료 중";
 const price = (n: number | null) =>
@@ -58,6 +80,7 @@ export function Transfer({
   contextId,
   initial,
   onTargetDeleted,
+  onRefreshSource,
   onClose,
   onDone,
 }: Props) {
@@ -96,18 +119,24 @@ export function Transfer({
     setErr("");
     request.current = null;
   }, []);
-  const handleSaveError = useCallback((error: unknown) => {
-    if (error instanceof Error && error.message === "target_patient_deleted") {
-      preferredChartId.current = undefined;
-      choose({});
-      setRows([]);
-      setCursor(null);
-      setVisits([]);
-      setStage("target");
-      onTargetDeleted();
-    }
-    setErr(errorMessage(error));
-  }, [choose, onTargetDeleted]);
+  const handleSaveError = useCallback(
+    (error: unknown) => {
+      if (
+        error instanceof Error &&
+        error.message === "target_patient_deleted"
+      ) {
+        preferredChartId.current = undefined;
+        choose({});
+        setRows([]);
+        setCursor(null);
+        setVisits([]);
+        setStage("target");
+        onTargetDeleted();
+      }
+      setErr(errorMessage(error));
+    },
+    [choose, onTargetDeleted],
+  );
   useEffect(() => {
     if (stage !== "target") return;
     let active = true;
@@ -129,10 +158,23 @@ export function Transfer({
             mine: !all,
             excludeId: source.id,
           });
+          const preferred = preferredChartId.current;
+          let current = page.items.find((c) => c.id === preferred);
+          if (!current && preferred && preferred !== source.id) {
+            const exact = await api.search({
+              chartId: preferred,
+              targets: true,
+              mine: true,
+            });
+            current = exact.items[0];
+          }
           if (active) {
-            setRows(page.items);
+            setRows(
+              current && !page.items.some((c) => c.id === current.id)
+                ? [current, ...page.items]
+                : page.items,
+            );
             setCursor(page.nextCursor);
-            const current = page.items.find((c) => c.id === preferredChartId.current);
             if (current) setDest((d) => (d.chart ? d : { chart: current }));
           }
         }
@@ -283,9 +325,7 @@ export function Transfer({
     target?.patient ?? visit?.patient ?? (newVisit ? "신규 접수" : "");
   if (register && activeDrawer?.type === "reception-form") return null;
   const dups = source.diagnoses.filter((d) =>
-    target?.diagnoses.some((t) =>
-      d.catalogId ? t.catalogId === d.catalogId : t.name === d.name,
-    ),
+    target?.diagnoses.some((t) => hasSameDiagnosis(d, t)),
   );
   const title =
     stage === "review"
@@ -422,7 +462,12 @@ export function Transfer({
                             excludeId: source.id,
                             cursor,
                           });
-                          setRows((r) => [...r, ...p.items]);
+                          setRows((old) => [
+                            ...old,
+                            ...p.items.filter(
+                              (item) => !old.some((c) => c.id === item.id),
+                            ),
+                          ]);
                           setCursor(p.nextCursor);
                         } catch (e) {
                           setErr(errorMessage(e));
@@ -497,7 +542,7 @@ export function Transfer({
                                 )
                               }
                             />
-                            {p.text}
+                            {paragraphLabel(p, source.paragraphs)}
                           </label>
                           {picked &&
                             ["assessment", "plan"].includes(sec) &&
@@ -509,10 +554,11 @@ export function Transfer({
                                   ["add", "문단 추가"],
                                   ...replacements.map(
                                     (t) =>
-                                      [t.id, "교체 · " + t.text] as [
-                                        string,
-                                        string,
-                                      ],
+                                      [
+                                        t.id,
+                                        "교체 · " +
+                                          paragraphLabel(t, replacements),
+                                      ] as [string, string],
                                   ),
                                 ]}
                                 onChange={(value) =>
@@ -602,8 +648,20 @@ export function Transfer({
                 {source.orders.map((o) => {
                   const picked = selection.orders.find((v) => v.id === o.id);
                   const medication = drug(o),
-                    unit = String(o.inputs.doseUnit ?? "");
+                    unit = prescriptionUnit(o.inputs);
                   const available = o.available && (!medication || !!unit);
+                  const matches =
+                    target?.orders.filter(
+                      (row) => row.catalogId && row.catalogId === o.catalogId,
+                    ) ?? [];
+                  const reason =
+                    o.unavailableReason === "order_set"
+                      ? "세트는 개별 오더로 복사할 수 없습니다."
+                      : o.unavailableReason === "missing"
+                        ? "현재 오더 목록에 없는 항목입니다."
+                        : !o.available
+                          ? "현재 오더 목록에서 사용할 수 없습니다."
+                          : "원본 처방에 용량 단위가 없습니다.";
                   return (
                     <div className={styles.line} key={o.id}>
                       <label className={styles.check}>
@@ -636,7 +694,7 @@ export function Transfer({
                         />
                         {o.name}　
                         {o.available !== null &&
-                          (available ? price(o.price) : "현재 복사 불가")}
+                          (available ? price(o.price) : reason)}
                       </label>
                       {picked && medication && (
                         <div className={styles.controls}>
@@ -678,23 +736,25 @@ export function Transfer({
                           </label>
                         </div>
                       )}
-                      {picked &&
-                        target?.orders.some(
-                          (t) => t.catalogId === o.catalogId,
-                        ) && (
-                          <label className={styles.check}>
-                            <Checkbox
-                              checked={!!picked.duplicate}
-                              onCheckedChange={(v) =>
-                                select("orders", o.id, {
-                                  ...picked,
-                                  duplicate: !!v,
-                                })
-                              }
-                            />
-                            같은 오더 중복 추가
-                          </label>
-                        )}
+                      {matches.map((match) => (
+                        <p key={match.id}>
+                          대상에 있는 오더 · {orderDescription(match)}
+                        </p>
+                      ))}
+                      {picked && matches.length > 0 && (
+                        <label className={styles.check}>
+                          <Checkbox
+                            checked={!!picked.duplicate}
+                            onCheckedChange={(v) =>
+                              select("orders", o.id, {
+                                ...picked,
+                                duplicate: !!v,
+                              })
+                            }
+                          />
+                          같은 오더 중복 추가
+                        </label>
+                      )}
                     </div>
                   );
                 })}
@@ -710,13 +770,16 @@ export function Transfer({
                   {row.replaceId && (
                     <p>
                       기존　
-                      {
-                        target?.paragraphs.find((p) => p.id === row.replaceId)
-                          ?.text
-                      }
+                      {target?.paragraphs
+                        .filter((p) => p.id === row.replaceId)
+                        .map((p) => paragraphLabel(p, target.paragraphs))}
                     </p>
                   )}
-                  <p>{source.paragraphs.find((p) => p.id === row.id)?.text}</p>
+                  <p>
+                    {source.paragraphs
+                      .filter((p) => p.id === row.id)
+                      .map((p) => paragraphLabel(p, source.paragraphs))}
+                  </p>
                 </div>
               ))}
               {selection.diagnoses.map((row) => (
@@ -748,11 +811,13 @@ export function Transfer({
                   {row.dose &&
                     [
                       row.dose,
-                      String(
-                        source.orders.find((o) => o.id === row.id)?.inputs
-                          .doseUnit ?? "",
+                      prescriptionUnit(
+                        source.orders.find((o) => o.id === row.id)?.inputs ??
+                          {},
                       ),
-                      medicationFrequencies.find(([k]) => k === row.frequency)?.[1],
+                      medicationFrequencies.find(
+                        ([k]) => k === row.frequency,
+                      )?.[1],
                       row.days + "일",
                     ].join(" ")}
                   　{price(row.price)}
@@ -807,12 +872,25 @@ export function Transfer({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    choose({});
-                    setStage("target");
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    try {
+                      const latest = (await api.search({ chartId: source.id }))
+                        .items[0];
+                      if (!latest) throw new Error("source_unavailable");
+                      onRefreshSource(latest);
+                      preferredChartId.current = target?.id;
+                      choose({});
+                      setStage("target");
+                    } catch (error) {
+                      setErr(errorMessage(error));
+                    } finally {
+                      setBusy(false);
+                    }
                   }}
                 >
-                  대상 다시 확인
+                  원본과 대상 다시 확인
                 </Button>
               )}
             </div>

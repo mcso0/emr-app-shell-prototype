@@ -29,6 +29,7 @@ export type SearchOrder = {
   kind: string;
   /** Null when the viewer cannot read the current catalog. */
   available: boolean | null;
+  unavailableReason?: "order_set" | "inactive" | "missing" | null;
   price: number | null;
   quantity: number;
   inputs: Record<string, unknown>;
@@ -88,9 +89,29 @@ export type SearchParams = {
   chartId?: string;
   excludeId?: string;
 };
-export type SearchPage = {
+export type SearchIndexRow = Pick<
+  SearchChart,
+  | "id"
+  | "clinicalAt"
+  | "editable"
+  | "status"
+  | "authorId"
+  | "doctorId"
+  | "doctor"
+  | "purpose"
+  | "complaint"
+  | "patient"
+  | "guardian"
+  | "species"
+  | "breed"
+> & {
+  paragraphs: Pick<SearchParagraph, "section" | "text">[];
+  diagnoses: Pick<SearchDiagnosis, "name" | "system">[];
+  orders: Pick<SearchOrder, "name" | "kind">[];
+};
+export type SearchPage<T extends SearchIndexRow = SearchChart> = {
   doctors?: { id: string; name: string }[];
-  items: SearchChart[];
+  items: T[];
   total: number;
   nextCursor: string | null;
 };
@@ -128,12 +149,41 @@ export type PendingCopy = {
   selection: CopySelection;
 };
 export type CopyResult = {
+  unchanged?: boolean;
   visitAt?: string;
   chartId: string;
   encounterId: string;
   patientId: string;
   requestId: string;
 };
+export function hasSameDiagnosis(a: SearchDiagnosis, b: SearchDiagnosis) {
+  return (
+    (!!a.catalogId && a.catalogId === b.catalogId) ||
+    a.name.toLowerCase() === b.name.toLowerCase()
+  );
+}
+
+export function prescriptionUnit(inputs: SearchOrder["inputs"]) {
+  const unit = String(inputs.doseUnit ?? "");
+  if (!unit || unit.includes("/")) return unit;
+  if (inputs.doseBasis === "kg") return unit + "/kg";
+  if (inputs.doseBasis === "body_surface_area") return unit + "/m²";
+  return unit;
+}
+
+export function orderDescription(order: SearchOrder) {
+  const { dose, frequency, durationDays } = order.inputs;
+  return [
+    order.name,
+    dose != null &&
+      [dose, prescriptionUnit(order.inputs)].filter(Boolean).join(" "),
+    medicationFrequencies.find(([v]) => v === frequency)?.[1] ?? frequency,
+    durationDays != null && durationDays + "일",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 export const blankSelection = (): CopySelection => ({
   paragraphs: [],
   diagnoses: [],

@@ -15,14 +15,31 @@ language sql stable set search_path='' as $$
 $$;
 revoke all on function private.clair_search_note_blocks(public.soap_notes) from public,anon,authenticated;
 
+create function private.clair_search_block_text(block jsonb) returns text
+language sql immutable set search_path='' as $$
+ select case when block->>'type'='table' then (
+   select string_agg(line, E'\n' order by row_no) from (
+     select r.row_no, string_agg(coalesce((
+       select string_agg(v#>>'{}','' order by ord)
+       from jsonb_path_query(c.val->'content','strict $.**.text','{}'::jsonb,true) with ordinality x(v,ord)
+     ),''), E'\t' order by c.col_no) line
+     from jsonb_array_elements(block#>'{content,rows}') with ordinality r(val,row_no)
+     cross join lateral jsonb_array_elements(r.val->'cells') with ordinality c(val,col_no)
+     group by r.row_no
+   ) table_rows
+ ) when jsonb_typeof(block->'content')='string' then block->>'content' else (
+    select string_agg(v#>>'{}','' order by ord)
+    from jsonb_path_query(block->'content','strict $.**.text','{}'::jsonb,true) with ordinality x(v,ord)
+ ) end
+$$;
+revoke all on function private.clair_search_block_text(jsonb) from public,anon,authenticated;
+
 create function private.clair_search_chart(n public.soap_notes) returns jsonb
 language sql stable set search_path='' as $$
  with nodes as materialized (select * from private.clair_search_note_blocks(n)), paragraphs as (
    select path, jsonb_build_object('id',array_to_string(path,'.'),'section',section,'scope',coalesce(scope,''),'text',t.body,'replaceable',block->>'type'<>'table') item
    from nodes cross join lateral (
-     select case when jsonb_typeof(block->'content')='string' then block->>'content' else (
-       select string_agg(v#>>'{}','' order by ord) from jsonb_path_query(block->'content','strict $.**.text','{}'::jsonb,true) with ordinality x(v,ord)
-     ) end body
+     select private.clair_search_block_text(block) body
    ) t where block->>'type' not in ('soapSection','image','video','divider') and btrim(t.body)<>''
    union all select array[0,ordinality::int],jsonb_build_object('id','legacy:'||kind,'section',kind,'scope','','text',body)
    from unnest(array['subjective','objective','assessment','plan'],array[n.subjective,n.objective,n.assessment,n.plan]) with ordinality x(kind,body,ordinality)
@@ -40,6 +57,7 @@ language sql stable set search_path='' as $$
    select o.id,o.sort_order,jsonb_build_object('id',o.id,'name',o.display_name,'catalogId',o.workspace_catalog_item_id,
      'kind',coalesce(o.clinical_order_type,o.order_type),'price',c.price_krw,
      'available',case when access.allowed then coalesce(c.availability_status='active' and o.row_type='individual',false) end,
+     'unavailableReason',case when access.allowed then case when o.row_type<>'individual' then 'order_set' when c.id is null then 'missing' when c.availability_status<>'active' then 'inactive' end end,
      'quantity',o.quantity,'inputs',coalesce(o.detail_inputs,'{}'::jsonb)) item
    from public.orders o cross join catalog_access access
    left join public.order_catalog_items c on access.allowed and c.workspace_id=o.workspace_id and c.id=o.workspace_catalog_item_id
@@ -53,18 +71,68 @@ language sql stable set search_path='' as $$
 $$;
 revoke all on function private.clair_search_chart(public.soap_notes) from public,anon,authenticated;
 
-create function public.clair_advanced_chart_search_batch(p_workspace_id text,p_after uuid default null,p_chart_id uuid default null,p_include_drafts boolean default false,p_targets boolean default false)
+-- Narrow history before loading full chart content, attachments, price lists and versions.
+-- The application ranks the index fields and hydrates at most 25 visible results.
+create function private.clair_chart_index_fields(n public.soap_notes, include_body boolean)
+returns jsonb language sql stable set search_path='' as $$
+ select jsonb_build_object(
+   'paragraphs',case when not include_body then '[]'::jsonb
+    when n.block_document is null then (select coalesce(jsonb_agg(jsonb_build_object('section',kind,'text',body)),'[]')
+     from unnest(array['subjective','objective','assessment','plan'],array[n.subjective,n.objective,n.assessment,n.plan]) x(kind,body) where btrim(body)<>'')
+    else (select coalesce(jsonb_agg(jsonb_build_object('section',section,'text',body) order by path),'[]') from (
+     select path,section,private.clair_search_block_text(block) body from private.clair_search_note_blocks(n)
+     where block->>'type' not in ('soapSection','image','video','divider')
+    ) paragraphs where btrim(body)<>'') end,
+   'diagnoses',(select coalesce(jsonb_agg(jsonb_build_object('name',d.assessment_snapshot->>'diagnosisText','system',coalesce(d.assessment_snapshot->>'systemLabel',''))),'[]')
+     from public.chart_diagnosis_assessments d where d.workspace_id=n.workspace_id and d.encounter_id=n.encounter_id and d.chart_id=n.id),
+   'orders',(select coalesce(jsonb_agg(jsonb_build_object('name',o.display_name,'kind',coalesce(o.clinical_order_type,o.order_type))),'[]')
+     from public.orders o where o.workspace_id=n.workspace_id and o.encounter_id=n.encounter_id and o.origin_chart_id=n.id and o.status<>'cancelled'))
+$$;
+revoke all on function private.clair_chart_index_fields(public.soap_notes,boolean) from public,anon,authenticated;
+
+create function public.clair_advanced_chart_search_batch(p_workspace_id text,p_after uuid default null,p_chart_id uuid default null,p_include_drafts boolean default false,p_targets boolean default false,
+ p_index boolean default false,p_include_body boolean default true,p_ids uuid[] default null,p_mine boolean default false,p_doctor text default null,p_from date default null,p_to date default null)
 returns jsonb language plpgsql stable security definer set search_path='' as $$
-declare result jsonb;
+declare result jsonb; may_edit boolean;
 begin
  if auth.uid() is null or not private.clair_is_active_workspace_member(p_workspace_id) or not private.clair_current_user_has_workspace_permission(p_workspace_id,'chart:view') then raise exception 'permission_missing' using errcode='42501'; end if;
+ may_edit := private.clair_current_user_has_workspace_permission(p_workspace_id,'chart:update');
+ if p_ids is not null and cardinality(p_ids)>25 then raise exception 'invalid_request'; end if;
  select coalesce(jsonb_agg(r order by id),'[]'::jsonb) into result from (
-   select s.id,private.clair_search_chart(s) r from public.soap_notes s join public.encounters e on e.workspace_id=s.workspace_id and e.id=s.encounter_id and e.status<>'cancelled' join public.patients p on p.id=e.patient_id and p.workspace_id=e.workspace_id and p.status<>'soft_deleted'
-   where s.workspace_id=p_workspace_id and (p_after is null or s.id>p_after) and (p_chart_id is null or s.id=p_chart_id) and s.status<>'voided' and (p_include_drafts or p_targets or s.status in ('signed','amended')) and (not p_targets or (s.status in ('draft','autosaved') and e.status in ('in_consultation','ordered') and private.clair_current_user_has_workspace_permission(p_workspace_id,'chart:update'))) order by s.id limit 50
+   select s.id,case when p_index then
+    jsonb_build_object('id',s.id,'clinicalAt',s.clinical_at,'authorId',s.author_user_id,'status',s.status,
+      'editable',may_edit and s.status in ('draft','autosaved') and e.status in ('in_consultation','ordered'),
+      'doctorId',e.primary_veterinarian_id,'doctor',coalesce(v.display_name,''),'purpose',coalesce(e.visit_purpose,''),
+      'complaint',coalesce(e.chief_complaint,''),'patient',p.name,'species',p.species,'breed',coalesce(p.breed,''),'guardian',coalesce(g.name,''))
+      ||private.clair_chart_index_fields(s,p_include_body)
+    else private.clair_search_chart(s) end r from public.soap_notes s
+   join public.encounters e on e.workspace_id=s.workspace_id and e.id=s.encounter_id and e.status<>'cancelled'
+   join public.patients p on p.id=e.patient_id and p.workspace_id=e.workspace_id and p.status<>'soft_deleted'
+   left join public.users v on p_index and v.id=e.primary_veterinarian_id
+   left join public.guardians g on p_index and g.id=e.guardian_id and g.workspace_id=e.workspace_id and g.status<>'soft_deleted'
+   where (p_ids is null or s.id=any(p_ids)) and s.workspace_id=p_workspace_id and (p_after is null or s.id>p_after) and (p_chart_id is null or s.id=p_chart_id)
+     and s.status<>'voided' and (p_include_drafts or p_targets or s.status in ('signed','amended'))
+     and (not p_targets or (s.status in ('draft','autosaved') and e.status in ('in_consultation','ordered') and may_edit))
+     and (not p_mine or s.author_user_id=auth.uid()) and (p_doctor is null or e.primary_veterinarian_id::text=p_doctor)
+     and (p_from is null or s.clinical_at >= (p_from::timestamp at time zone 'Asia/Seoul'))
+     and (p_to is null or s.clinical_at < ((p_to+1)::timestamp at time zone 'Asia/Seoul'))
+   order by s.id limit case when p_index then 500 else 50 end
  ) page; return result;
 end; $$;
-revoke all on function public.clair_advanced_chart_search_batch(text,uuid,uuid,boolean,boolean) from public,anon;
-grant execute on function public.clair_advanced_chart_search_batch(text,uuid,uuid,boolean,boolean) to authenticated;
+revoke all on function public.clair_advanced_chart_search_batch(text,uuid,uuid,boolean,boolean,boolean,boolean,uuid[],boolean,text,date,date) from public,anon;
+grant execute on function public.clair_advanced_chart_search_batch(text,uuid,uuid,boolean,boolean,boolean,boolean,uuid[],boolean,text,date,date) to authenticated;
+
+create function public.clair_advanced_chart_search_doctors(p_workspace_id text,p_include_drafts boolean default false)
+returns jsonb language plpgsql stable security definer set search_path='' as $$
+begin
+ if auth.uid() is null or not private.clair_is_active_workspace_member(p_workspace_id) or not private.clair_current_user_has_workspace_permission(p_workspace_id,'chart:view') then raise exception 'permission_missing' using errcode='42501'; end if;
+ return (select coalesce(jsonb_agg(jsonb_build_object('id',u.id,'name',u.display_name) order by u.display_name,u.id),'[]'::jsonb) from public.users u
+  where exists(select 1 from public.encounters e join public.soap_notes n on n.workspace_id=e.workspace_id and n.encounter_id=e.id
+   join public.patients p on p.workspace_id=e.workspace_id and p.id=e.patient_id and p.status<>'soft_deleted'
+   where e.workspace_id=p_workspace_id and e.primary_veterinarian_id=u.id and e.status<>'cancelled' and n.status<>'voided' and (p_include_drafts or n.status in ('signed','amended'))));
+end; $$;
+revoke all on function public.clair_advanced_chart_search_doctors(text,boolean) from public,anon;
+grant execute on function public.clair_advanced_chart_search_doctors(text,boolean) to authenticated;
 
 -- The unfiltered opening screen projects documents only for the requested page.
 create function public.clair_advanced_chart_recent(p_workspace_id text,p_after uuid default null)

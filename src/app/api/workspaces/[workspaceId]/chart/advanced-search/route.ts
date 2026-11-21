@@ -3,8 +3,14 @@ import { readServerSession } from "@/features/auth/server-session-reader";
 import { resolveRoleUpdateActorIdentity } from "@/features/auth/server-role-update-identity";
 import { createClient } from "@/lib/supabase/server";
 import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
-import { searchPage } from "@/features/chart/advanced-search/ranking";
-import type { SearchChart } from "@/features/chart/advanced-search/contract";
+import {
+  searchPage,
+  searchWords,
+} from "@/features/chart/advanced-search/ranking";
+import type {
+  SearchChart,
+  SearchIndexRow,
+} from "@/features/chart/advanced-search/contract";
 
 const short = z.string().max(180);
 const combinator = z.enum(["and", "or"]);
@@ -57,7 +63,8 @@ const json = (body: unknown, status = 200) =>
     headers: { "Cache-Control": "private, no-store" },
   });
 function dbError(message: string) {
-  if (message === "target_patient_deleted") return json({ error: message }, 409);
+  if (message === "target_patient_deleted")
+    return json({ error: message }, 409);
   if (message === "catalog_permission_missing")
     return json({ error: message }, 403);
   if (
@@ -136,28 +143,88 @@ export async function POST(
         .abortSignal(request.signal);
       return recent.error ? dbError(recent.error.message) : json(recent.data);
     }
-    const rows: SearchChart[] = [];
+    const doctorId = z.string().uuid().safeParse(input.doctor);
+    const scope = {
+      p_workspace_id: workspaceId,
+      p_include_drafts: Boolean(input.includeDrafts || input.chartId),
+      p_targets: !!input.targets,
+      p_mine: !!input.mine,
+      p_doctor: doctorId.success ? doctorId.data : null,
+      p_from: input.from || null,
+      p_to: input.to || null,
+    };
+    if (input.chartId) {
+      const read = await client
+        .rpc("clair_advanced_chart_search_batch", {
+          ...scope,
+          p_chart_id: input.chartId,
+        })
+        .abortSignal(request.signal);
+      if (read.error) return dbError(read.error.message);
+      try {
+        return json(
+          searchPage(read.data as SearchChart[], input, identity.actorUserId),
+        );
+      } catch {
+        return json({ error: "invalid_cursor" }, 400);
+      }
+    }
+
+    // Rank lightweight fields first. Only the visible 25 charts need complete documents and attachment access checks.
+    const includeBody = searchWords(input.query).length > 0;
+    const rows: SearchIndexRow[] = [];
     let after: string | null = null;
     do {
       const read = await client
         .rpc("clair_advanced_chart_search_batch", {
-          p_workspace_id: workspaceId,
+          ...scope,
+          p_index: true,
+          p_include_body: includeBody,
           p_after: after,
-          p_chart_id: input.chartId ?? null,
-          p_include_drafts: Boolean(input.includeDrafts || input.chartId),
-          p_targets: !!input.targets,
         })
         .abortSignal(request.signal);
       if (read.error) return dbError(read.error.message);
-      const batch = read.data as SearchChart[];
+      const batch = read.data as SearchIndexRow[];
       rows.push(...batch);
-      after = batch.length === 50 ? batch[batch.length - 1].id : null;
+      after = batch.length === 500 ? batch[batch.length - 1].id : null;
     } while (after && !request.signal.aborted);
+    let page;
     try {
-      return json(searchPage(rows, input, identity.actorUserId));
+      page = searchPage(rows, input, identity.actorUserId);
     } catch {
       return json({ error: "invalid_cursor" }, 400);
     }
+    const ids = page.items.map((row) => row.id);
+    const [details, roster] = await Promise.all([
+      ids.length
+        ? client
+            .rpc("clair_advanced_chart_search_batch", { ...scope, p_ids: ids })
+            .abortSignal(request.signal)
+        : null,
+      (scope.p_mine || scope.p_doctor || scope.p_from || scope.p_to) &&
+      !input.targets &&
+      !input.cursor
+        ? client
+            .rpc("clair_advanced_chart_search_doctors", {
+              p_workspace_id: workspaceId,
+              p_include_drafts: scope.p_include_drafts,
+            })
+            .abortSignal(request.signal)
+        : null,
+    ]);
+    if (details?.error) return dbError(details.error.message);
+    if (roster?.error) return dbError(roster.error.message);
+    const refreshed = searchPage(
+      (details?.data as SearchChart[]) ?? [],
+      { ...input, cursor: null },
+      identity.actorUserId,
+    );
+    const byId = new Map(refreshed.items.map((chart) => [chart.id, chart]));
+    return json({
+      ...page,
+      doctors: roster?.data ?? page.doctors,
+      items: ids.flatMap((id) => byId.get(id) ?? []),
+    });
   }
   if (body.action === "history") {
     const id = z.string().uuid().safeParse(body.input.chartId);

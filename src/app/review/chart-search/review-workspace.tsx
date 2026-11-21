@@ -1,6 +1,7 @@
 "use client";
 
 import { useReducer, useState } from "react";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
   medicationFrequencies,
@@ -21,6 +22,7 @@ export function ReviewWorkspace() {
   const [session] = useState(() => createReviewSession(refresh));
   const [entry, setEntry] = useState<SearchEntry>({ workspaceId });
   const [opened, setOpened] = useState(true);
+  const [edit, setEdit] = useState<{ id: string; text: string } | null>(null);
   const [chartId, setChartId] = useState<string | null>(null);
   const drawer = useLayoutStore((s) => s.activeDrawer);
   const chart = chartId ? session.chart(chartId) : undefined;
@@ -96,7 +98,10 @@ export function ReviewWorkspace() {
               setOpened(false);
               setEntry({ workspaceId });
             }}
-            onViewChart={(target) => setChartId(target.chartId)}
+            onViewChart={(target) => {
+              setEdit(null);
+              setChartId(target.chartId);
+            }}
           />
         </div>
       )}
@@ -115,7 +120,54 @@ export function ReviewWorkspace() {
               {chart.paragraphs
                 .filter((p) => p.section === key)
                 .map((p) => (
-                  <p key={p.id}>{p.text}</p>
+                  <div key={p.id}>
+                    {edit?.id === p.id ? (
+                      <div className="grid gap-2">
+                        <Textarea
+                          aria-label={label + " 문단 내용"}
+                          value={edit.text}
+                          onChange={(event) =>
+                            setEdit({ ...edit, text: event.target.value })
+                          }
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              session.editParagraph(chart.id, p.id, edit.text);
+                              setEdit(null);
+                            }}
+                          >
+                            문단 저장
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setEdit(null)}
+                          >
+                            취소
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start justify-between gap-3">
+                        <p>{p.text}</p>
+                        {chart.editable &&
+                          (key === "subjective" || key === "objective") && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              aria-label={p.text + " 수정"}
+                              onClick={() =>
+                                setEdit({ id: p.id, text: p.text })
+                              }
+                            >
+                              수정
+                            </Button>
+                          )}
+                      </div>
+                    )}
+                  </div>
                 ))}
             </section>
           ))}

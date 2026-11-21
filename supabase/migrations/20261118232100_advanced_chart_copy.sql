@@ -218,7 +218,7 @@ begin
  changes:=private.clair_copy_soap(w,source_row,dest,selection->'paragraphs',req);
  changes:=changes||private.clair_copy_diagnoses(w,source_row,dest,selection->'diagnoses');
  changes:=changes||private.clair_copy_orders(w,source_row,dest,selection->'orders');
- result:=jsonb_build_object('chartId',dest.id,'encounterId',e.id,'patientId',e.patient_id,'visitAt',coalesce(e.checked_in_at,e.created_at),'requestId',req);
+ result:=jsonb_build_object('chartId',dest.id,'encounterId',e.id,'patientId',e.patient_id,'visitAt',coalesce(e.checked_in_at,e.created_at),'requestId',req,'unchanged',jsonb_array_length(changes)=0);
  insert into private.clair_chart_copy_receipts values(w,actor,req,p_input,result,changes,now());
  if pending.id is not null then delete from private.clair_chart_copy_pending where id=pending.id; end if;
  return result;

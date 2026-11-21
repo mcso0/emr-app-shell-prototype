@@ -1,7 +1,15 @@
 import { expect, test } from "@playwright/test";
 import { exampleChart } from "../src/features/chart/advanced-search/search.stories.fixture";
-import { representativeMedia } from "../src/features/chart/advanced-search/contract";
-import { searchPage } from "../src/features/chart/advanced-search/ranking";
+import {
+  hasSameDiagnosis,
+  orderDescription,
+  representativeMedia,
+} from "../src/features/chart/advanced-search/contract";
+import {
+  evidence,
+  searchPage,
+  speciesLabel,
+} from "../src/features/chart/advanced-search/ranking";
 import { createInitialEmrTableFilterBuilderModel } from "../src/components/emr/table-filter-builder-model";
 const actor = "vet-a";
 const cases = [
@@ -93,7 +101,9 @@ test("대표 첨부는 이름·설명 중 첫 일치로 고르고 첨부 단독 
   ).toBe(0);
 });
 
-test("첨부를 연 직후와 키보드 포커스가 이동한 뒤에도 Esc는 첨부만 닫는다", async ({ page }) => {
+test("첨부를 연 직후와 키보드 포커스가 이동한 뒤에도 Esc는 첨부만 닫는다", async ({
+  page,
+}) => {
   await page.goto("/review/chart-search");
   await page.getByRole("button", { name: "모카 차트 원본 열기" }).click();
   const drawer = page.getByRole("complementary", { name: "차트 원본" });
@@ -110,4 +120,97 @@ test("첨부를 연 직후와 키보드 포커스가 이동한 뒤에도 Esc는 
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
   await expect(drawer).toBeVisible();
+});
+
+test("부정 표현과 실제 기록이 함께 있을 때 단어별 문맥과 동물종을 구분한다", () => {
+  const check = (text: string) =>
+    evidence(
+      exampleChart("example", {
+        purpose: text,
+        paragraphs: [],
+        complaint: "",
+        orders: [],
+      }),
+      ["구토"],
+    ).negative;
+  for (const text of [
+    "구토 안 함",
+    "구토·설사 없음",
+    "구토 및 설사 없음",
+    "구토 증상은 발견되지 않음",
+  ])
+    expect(check(text)).toBe(true);
+  expect(check("어제 구토 3회, 오늘 구토 및 설사 없음")).toBe(false);
+  expect(check("구토 발생. 설사 없음")).toBe(false);
+  expect(speciesLabel("rabbit")).toBe("토끼");
+  const diagnosis = {
+    id: "qa",
+    name: "Example DX",
+    catalogId: "qa-dx",
+    primary: false,
+    kind: "suspected",
+    system: "",
+  };
+  expect(
+    hasSameDiagnosis(diagnosis, {
+      ...diagnosis,
+      catalogId: null,
+      name: "example dx",
+    }),
+  ).toBe(true);
+  expect(
+    orderDescription({
+      id: "qa-rx",
+      name: "예시약",
+      catalogId: "qa-item",
+      kind: "dispensing",
+      price: null,
+      available: true,
+      quantity: 1,
+      inputs: {
+        dose: 2,
+        doseUnit: "mg",
+        doseBasis: "kg",
+        frequency: "bid",
+        durationDays: 3,
+      },
+    }),
+  ).toBe("예시약 · 2 mg/kg · 하루 2회 · 3일");
+});
+
+test("복사한 S를 대상 차트에서 고쳐도 원본과 검색어를 유지한다", async ({
+  page,
+}) => {
+  await page.goto("/review/chart-search");
+  const query = page.getByRole("textbox", { name: "차트 검색어" });
+  await query.fill("구토 초음파");
+  await expect(
+    page.getByRole("button", { name: /차트 원본 열기$/ }),
+  ).toHaveCount(1);
+  await page.getByRole("button", { name: "모카 차트 원본 열기" }).click();
+  await page
+    .getByRole("button", { name: "기존 차트에 복사", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("button", { name: /두부/ }).click();
+  await dialog.getByRole("button", { name: "가져올 항목 선택" }).click();
+  await dialog.getByRole("checkbox", { name: /어제 저녁부터/ }).click();
+  await dialog.getByRole("button", { name: "변경 내용 확인" }).click();
+  await dialog.getByRole("button", { name: "두부 차트에 적용" }).click();
+  await page.getByRole("button", { name: "대상 차트 보기" }).click();
+  await page.getByRole("button", { name: /어제 저녁부터.*수정/ }).click();
+  await page
+    .getByRole("textbox", { name: "S · 문진 문단 내용" })
+    .fill("오늘 보호자가 확인한 내용으로 수정함.");
+  await page.getByRole("button", { name: "문단 저장" }).click();
+  await expect(
+    page.getByText("오늘 보호자가 확인한 내용으로 수정함."),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "검색 결과로 돌아가기" }).click();
+  await expect(query).toHaveValue("구토 초음파");
+  const source = page.getByRole("complementary", { name: "차트 원본" });
+  await expect(source).toContainText("어제 저녁부터");
+  await expect(source).not.toContainText(
+    "오늘 보호자가 확인한 내용으로 수정함.",
+  );
 });

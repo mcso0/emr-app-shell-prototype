@@ -34,7 +34,7 @@ import {
   type SearchChart,
   type SearchMedia,
 } from "./contract";
-import { evidence, orderLabel, searchWords } from "./ranking";
+import { evidence, orderLabel, searchWords, speciesLabel } from "./ranking";
 import styles from "./workspace.module.css";
 
 export function Pick({
@@ -82,8 +82,7 @@ export const when = (value: string) =>
   }).format(new Date(value));
 export const stateText = (s: string) =>
   s === "signed" ? "완료" : s === "amended" ? "정정" : "작성 중";
-export const animal = (s: string) =>
-  ({ dog: "개", cat: "고양이", other: "기타" })[s] ?? s;
+export const animal = speciesLabel;
 export function Highlight({ value, query }: { value: string; query: string }) {
   const words = searchWords(query).sort((a, b) => b.length - a.length);
   const parts = [];
@@ -195,6 +194,19 @@ export function Thumbnail({
     </div>
   );
 }
+function matchingExcerpt(text: string, query: string) {
+  const lower = text.toLocaleLowerCase();
+  const hits = searchWords(query)
+    .map((word) => lower.indexOf(word))
+    .filter((index) => index >= 0);
+  const start = hits.length ? Math.max(0, Math.min(...hits) - 18) : 0;
+  return (
+    (start ? "…" : "") +
+    text.slice(start, start + 100) +
+    (text.length > start + 100 ? "…" : "")
+  );
+}
+
 export type CopyMode = "existing" | "new";
 export function ChartRow({
   chart,
@@ -219,9 +231,22 @@ export function ChartRow({
     hit && (generic || clinicalName)
       ? hit.text
       : chart.purpose || chart.complaint || chart.patient + " 진료";
-  const context = matches.find(
+  let context: { label: string; text: string } | undefined = matches.find(
     (match) => match.text !== title && !["오더", "진단"].includes(match.label),
   );
+  if (!context && clinicalName) {
+    const note = chart.paragraphs.find(
+      (p) => p.section === "subjective" || p.section === "objective",
+    );
+    const fallback = !generic
+      ? { label: "방문 목적", text: chart.purpose }
+      : chart.complaint
+        ? { label: "주호소", text: chart.complaint }
+        : note
+          ? { label: sectionNames[note.section!], text: note.text }
+          : null;
+    if (fallback) context = fallback;
+  }
   return (
     <article className={styles.row} data-active={active}>
       <Thumbnail
@@ -238,12 +263,18 @@ export function ChartRow({
           {when(chart.clinicalAt)}　·　{stateText(chart.status)}
         </small>
         <strong>
-          <Highlight value={title} query={query} />
+          <Highlight
+            value={query.trim() ? matchingExcerpt(title, query) : title}
+            query={query}
+          />
         </strong>
-        {(context || (clinicalName && chart.purpose)) && (
+        {context && (
           <span className={styles.snippet}>
-            {context?.label ?? "방문 목적"}　
-            <Highlight value={context?.text ?? chart.purpose} query={query} />
+            {context.label}　
+            <Highlight
+              value={matchingExcerpt(context.text, query)}
+              query={query}
+            />
           </span>
         )}
         <span>

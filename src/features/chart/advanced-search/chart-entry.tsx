@@ -67,12 +67,11 @@ export function ChartSearchEntry({
         api.search({ chartId: pending.sourceId }),
         api.search({ chartId, targets: true }),
       ]);
-      if (
-        !s.items[0] ||
-        !t.items[0] ||
-        s.items[0].version !== pending.sourceVersion
-      )
-        throw new Error("revision_conflict");
+      if (!s.items[0] || !t.items[0]) throw new Error("target_unavailable");
+      if (s.items[0].version !== pending.sourceVersion) {
+        setErr("복사를 기다리는 동안 원본이나 단가가 변경됐습니다. 복사 대기를 취소하고 최신 원본에서 항목을 다시 선택해 주세요.");
+        return;
+      }
       openChartSearch({
         ...entry,
         resume: { pending, target: t.items[0], source: s.items[0] },

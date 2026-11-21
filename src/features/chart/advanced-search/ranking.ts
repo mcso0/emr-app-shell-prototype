@@ -5,23 +5,26 @@ import {
 import { getOperatingDateFromIso } from "@/lib/emr-domain/demo-date";
 import {
   sectionNames,
-  type SearchChart,
+  type SearchIndexRow,
   type SearchParams,
   type SearchPage,
 } from "./contract";
 
-const definitions: EmrTableFilterBuilderField<SearchChart>[] = [
+import { orderSetSpeciesLabels } from "@/features/hospital-admin/order-set-management";
+
+export function speciesLabel(value: string) {
+  return Object.hasOwn(orderSetSpeciesLabels, value)
+    ? orderSetSpeciesLabels[value as keyof typeof orderSetSpeciesLabels]
+    : value;
+}
+
+const definitions: EmrTableFilterBuilderField<SearchIndexRow>[] = [
   { id: "patient", label: "동물명", getValue: (c) => c.patient },
   { id: "guardian", label: "보호자명", getValue: (c) => c.guardian },
   {
     id: "species",
     label: "동물종",
-    getValue: (c) => [
-      c.species,
-      ({ dog: "개", cat: "고양이", other: "기타" } as Record<string, string>)[
-        c.species
-      ],
-    ],
+    getValue: (c) => [c.species, speciesLabel(c.species)],
   },
   { id: "breed", label: "품종", getValue: (c) => c.breed },
   {
@@ -48,7 +51,7 @@ const definitions: EmrTableFilterBuilderField<SearchChart>[] = [
         .filter((k) => ["임상병리", "영상"].includes(k)),
   },
 ];
-export const fields: EmrTableFilterBuilderField<SearchChart>[] =
+export const fields: EmrTableFilterBuilderField<SearchIndexRow>[] =
   definitions.map((field) => ({
     ...field,
     valueKind:
@@ -57,7 +60,10 @@ export const fields: EmrTableFilterBuilderField<SearchChart>[] =
       field.id === "tests"
         ? ["임상병리", "영상"].map((v) => ({ value: v, label: v }))
         : field.id === "species"
-          ? ["개", "고양이", "기타"].map((v) => ({ value: v, label: v }))
+          ? Object.values(orderSetSpeciesLabels).map((v) => ({
+              value: v,
+              label: v,
+            }))
           : undefined,
   }));
 export function orderLabel(kind: string) {
@@ -79,23 +85,28 @@ export const searchWords = (query = "") => [
   ...new Set(query.toLocaleLowerCase().trim().split(/\s+/u).filter(Boolean)),
 ];
 const absence =
-  /^(?:은|는|이|가|을|를|도)?[ \t]*[:：]?[ \t]*(?:\([ \t]*[-−][ \t]*\)|(?:(?:증상|소견|호소|한 적)(?:은|는|이|가)?[ \t]*)?없(?:음|었음|다(?:고)?|었다(?:고)?|었으나|었으며|었고|고|으며|으나|어요|었어요|습니다|었습니다)|(?:하지|관찰되지|확인되지|보이지)[ \t]*않(?:음|았음|았다(?:고)?|는다(?:고)?|습니다|았습니다))(?=$|[\s.,·，;:!?/)]|으로|이라고|이며|이고)/u;
+  /^(?:은|는|이|가|을|를|도)?[ \t]*[:：]?[ \t]*(?:\([ \t]*[-−][ \t]*\)|(?:(?:증상|소견|호소|한 적)(?:은|는|이|가)?[ \t]*)?없(?:음|었음|다(?:고)?|었다(?:고)?|었으나|었으며|었고|고|으며|으나|어요|었어요|습니다|었습니다)|안[ \t]*(?:함|했음|했다|합니다|했습니다)|(?:(?:증상|소견)(?:은|는|이|가)?[ \t]*)?(?:하지|관찰되지|확인되지|발견되지|보이지)[ \t]*않(?:음|았음|았다(?:고)?|는다(?:고)?|습니다|았습니다))(?=$|[\s.,·，;:!?/)]|으로|이라고|이며|이고)/u;
 function ordinary(text: string, word: string, words: string[]) {
   for (
     let at = text.indexOf(word);
     at >= 0;
     at = text.indexOf(word, at + word.length)
   ) {
-    const cue = absence.exec(text.slice(at + word.length))?.[0];
+    const tail = text.slice(at + word.length);
+    const singlePeer =
+      /^(?:[ \t]*[·ㆍ][ \t]*|[ \t]+및[ \t]+)([가-힣a-z]+)[ \t]+/u.exec(tail);
+    const cue =
+      absence.exec(tail)?.[0] ??
+      (singlePeer && absence.exec(tail.slice(singlePeer[0].length))?.[0]);
     if (
       !cue ||
-      words.some((w) => /^(없|않|\([-−]\))/.test(w) && cue.includes(w))
+      words.some((w) => /^(없|않|안|\([-−]\))/.test(w) && cue.includes(w))
     )
       return true;
   }
   return false;
 }
-export function evidence(chart: SearchChart, words: string[]) {
+export function evidence(chart: SearchIndexRow, words: string[]) {
   const matches: {
     label: string;
     text: string;
@@ -144,17 +155,20 @@ export function evidence(chart: SearchChart, words: string[]) {
     matches,
   };
 }
-export function searchPage(
-  charts: SearchChart[],
+export function searchPage<T extends SearchIndexRow>(
+  charts: T[],
   params: SearchParams,
   actor: string,
-): SearchPage {
+): SearchPage<T> {
   const words = searchWords(params.query);
   const filtered = params.groups
-    ? filterRowsByEmrTableFilterBuilder(charts, params.groups, fields)
+    ? filterRowsByEmrTableFilterBuilder<T>(charts, params.groups, fields)
     : charts;
   const hits = filtered.flatMap((chart) => {
-    const date = getOperatingDateFromIso(chart.clinicalAt) ?? "";
+    const date =
+      params.from || params.to
+        ? (getOperatingDateFromIso(chart.clinicalAt) ?? "")
+        : "";
     if (
       chart.id === params.excludeId ||
       (params.chartId && chart.id !== params.chartId) ||
