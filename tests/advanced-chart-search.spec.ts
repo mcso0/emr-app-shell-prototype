@@ -92,3 +92,22 @@ test("대표 첨부는 이름·설명 중 첫 일치로 고르고 첨부 단독 
       .total,
   ).toBe(0);
 });
+
+test("첨부를 연 직후와 키보드 포커스가 이동한 뒤에도 Esc는 첨부만 닫는다", async ({ page }) => {
+  await page.goto("/review/chart-search");
+  await page.getByRole("button", { name: "모카 차트 원본 열기" }).click();
+  const drawer = page.getByRole("complementary", { name: "차트 원본" });
+  const enlarge = drawer.getByRole("button", { name: "복부 초음파 영상 확대" });
+  const dialog = page.getByRole("dialog");
+
+  await enlarge.click();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(drawer).toBeVisible();
+
+  await enlarge.click();
+  await expect(dialog.locator(":focus")).toHaveCount(1);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(drawer).toBeVisible();
+});

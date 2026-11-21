@@ -321,10 +321,10 @@ export function ChartSource({
       className={styles.drawer}
       aria-label="차트 원본"
       onKeyDown={(e) => {
-        if (e.key === "Escape" && !enlarged) {
-          e.stopPropagation();
-          onClose();
-        }
+        if (e.key !== "Escape") return;
+        e.stopPropagation();
+        if (enlarged) setEnlarged(null);
+        else if (e.currentTarget.contains(e.target as Node)) onClose();
       }}
     >
       <EmrRightPanelHeader className="justify-between border-b">
