@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type KeyboardEvent } from "react";
+import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type KeyboardEvent } from "react";
+import { ChartSearchEditorContext } from "@/features/chart/advanced-search/editor-position";
 import { ko } from "@blocknote/core/locales";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/shadcn";
@@ -76,6 +77,9 @@ export function ChartSoapLiveBlockEditor({
   allowSoapTemplateCommands = true,
   uploadAttachment = uploadSoapAttachment,
   disabled = false,
+  chartId,
+  scopeKey,
+  readyForReturn = false,
   encounterId,
   initialContent,
   onDocumentChange,
@@ -89,6 +93,9 @@ export function ChartSoapLiveBlockEditor({
   allowSoapTemplateCommands?: boolean;
   uploadAttachment?: typeof uploadSoapAttachment;
   disabled?: boolean;
+  chartId?: string;
+  scopeKey?: string;
+  readyForReturn?: boolean;
   encounterId?: string;
   initialContent: ChartSoapPartialBlock[];
   onDocumentChange: (blocks: readonly ChartSoapBlock[]) => void;
@@ -137,6 +144,43 @@ export function ChartSoapLiveBlockEditor({
       editor.setTextCursorPosition(firstParagraph, "start");
     }
   }, [editor]);
+  const bridge = useContext(ChartSearchEditorContext);
+  const editedHere = useRef(false);
+  useEffect(() => {
+    if (!bridge || !workspaceId || !encounterId || !chartId || !scopeKey) return;
+    const capture = () => {
+      const view = editor.prosemirrorView;
+      if (!editedHere.current || !view.dom.isConnected) return null;
+      return {
+        workspaceId, encounterId, chartId, scope: scopeKey,
+        blockId: editor.getTextCursorPosition().block.id,
+        offset: view.state.selection.$head.parentOffset,
+        editorScroll: view.dom.closest(".bn-container")?.scrollTop ?? 0,
+        chartScroll: view.dom.closest('[data-slot="chart-workspace"]')?.scrollTop ?? 0,
+      };
+    };
+    return bridge.register(capture);
+  }, [bridge, workspaceId, encounterId, chartId, scopeKey, editor]);
+
+  useEffect(() => {
+    const position = bridge?.pending();
+    if (!bridge || !position || disabled || !readyForReturn || position.workspaceId !== workspaceId ||
+      position.encounterId !== encounterId || position.chartId !== chartId || position.scope !== scopeKey) return;
+    const frame = requestAnimationFrame(() => {
+      if (bridge.pending() !== position || !editor.getBlock(position.blockId)) return;
+      bridge.restore(null);
+      editor.setTextCursorPosition(position.blockId, "start");
+      const view = editor.prosemirrorView;
+      const start = view.state.selection.$head;
+      editor._tiptapEditor.commands.setTextSelection(start.start() + Math.min(position.offset, start.parent.content.size));
+      view.focus();
+      const scroller = view.dom.closest(".bn-container");
+      const chart = view.dom.closest('[data-slot="chart-workspace"]');
+      if (scroller) scroller.scrollTop = position.editorScroll;
+      if (chart) chart.scrollTop = position.chartScroll;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [bridge, chartId, disabled, editor, encounterId, readyForReturn, scopeKey, workspaceId]);
   useEffect(() => { onReady(editor.document); }, [editor, onReady]);
   useEffect(() => { onNoticeRef.current = onNotice; }, [onNotice]);
   useLayoutEffect(() => {
@@ -241,7 +285,7 @@ export function ChartSoapLiveBlockEditor({
   };
 
   return (
-    <div className={styles.editorBoundary} data-soap-editor-boundary data-read-only={disabled ? "true" : "false"} onKeyDownCapture={onToggleKeyDown} onDropCapture={onFileDrop} onPasteCapture={onFilePaste}>
+    <div onFocusCapture={(event) => { if (event.target instanceof HTMLElement && event.target.isContentEditable) editedHere.current = true; }} className={styles.editorBoundary} data-soap-editor-boundary data-read-only={disabled ? "true" : "false"} onKeyDownCapture={onToggleKeyDown} onDropCapture={onFileDrop} onPasteCapture={onFilePaste}>
       {!disabled ? <ChartSoapToolbar
         allowSoapTemplateCommands={allowSoapTemplateCommands}
         editor={editor}

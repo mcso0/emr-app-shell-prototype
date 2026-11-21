@@ -3,6 +3,7 @@ import type { PendingCopy, SearchChart } from "./contract";
 export type SearchEntry = {
   workspaceId: string;
   chartId?: string;
+  patientName?: string;
   encounterId?: string;
   patientId?: string;
   resume?: { pending: PendingCopy; target: SearchChart; source: SearchChart };

@@ -316,6 +316,7 @@ import {
   chartLifecycleError,
   useEncounterCharts,
 } from "@/features/chart/encounter-charts-client";
+import { useChartReturnScope } from "@/features/chart/advanced-search/editor-position";
 import { ChartSearchEntry } from "@/features/chart/advanced-search/chart-entry";
 import { copiedEvent } from "@/features/chart/advanced-search/events";
 import { useChartStore } from "@/features/chart/store";
@@ -4516,8 +4517,9 @@ function SoapPanel({
   );
   const soapDocumentRef = useRef(soapDocument);
   const [editorVersion, setEditorVersion] = useState(0);
+  const returnScope = useChartReturnScope(workspaceId, encounterId, chartId);
   const [activeSoapId, setActiveSoapId] = useState<string>(
-    SOAP_DEFAULT_SCOPE_KEY,
+    returnScope ?? SOAP_DEFAULT_SCOPE_KEY,
   );
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [saveState, setSaveState] = useState<SoapSaveState>("idle");
@@ -5064,6 +5066,9 @@ function SoapPanel({
         </span>
         <ChartSoapLiveBlockEditor
           key={`${encounterId}-${resolvedActiveSoapId}-${editorVersion}`}
+          chartId={chartId}
+          scopeKey={resolvedActiveSoapId}
+          readyForReturn={!loading && !readError}
           allowSoapTemplateCommands={false}
           disabled={writeDisabled}
           initialContent={editorContent}
@@ -17518,6 +17523,7 @@ export function ChartContent({
             historyAction={
               <span className="inline-flex items-center gap-1">
                 <ChartSearchEntry
+                  patientName={currentBundle.patient.name}
                   workspaceId={workspaceId}
                   encounterId={currentBundle.encounter.id}
                   patientId={currentBundle.patient.id}

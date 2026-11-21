@@ -208,7 +208,7 @@ test("복사한 S를 대상 차트에서 고쳐도 원본과 검색어를 유지
   await dialog.getByRole("checkbox", { name: /어제 저녁부터/ }).click();
   await dialog.getByRole("button", { name: "변경 내용 확인" }).click();
   await dialog.getByRole("button", { name: "두부 차트에 적용" }).click();
-  await page.getByRole("button", { name: "대상 차트 보기" }).click();
+  await page.getByRole("button", { name: "두부 차트 보기" }).click();
   await page.getByRole("button", { name: /어제 저녁부터.*수정/ }).click();
   await page
     .getByRole("textbox", { name: "S · 문진 문단 내용" })
