@@ -130,6 +130,7 @@ export function ReviewWorkspace() {
             {chart.orders.map((o) => (
               <p key={o.id}>
                 {o.name}
+                {session.isCopiedOrder(o.id) && " · 미확정"}
                 {o.inputs.dose != null &&
                   " · " +
                     String(o.inputs.dose) +

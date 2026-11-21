@@ -12,6 +12,9 @@ import { cases } from "./cases";
 
 export function createReviewSession(onChange: () => void) {
   const rows: SearchChart[] = structuredClone(cases.rows);
+  const originalOrderIds = new Set(
+    rows.flatMap((chart) => chart.orders.map((order) => order.id)),
+  );
   const visits: SearchVisit[] = rows
     .filter((row) => row.editable)
     .map((row) => ({
@@ -48,6 +51,7 @@ export function createReviewSession(onChange: () => void) {
   });
   function newChart(visit: SearchVisit): SearchChart {
     const date = new Date().toISOString();
+    const current = rows.find((row) => row.encounterId === visit.id);
     return {
       id: crypto.randomUUID(),
       version: crypto.randomUUID(),
@@ -59,13 +63,13 @@ export function createReviewSession(onChange: () => void) {
       visitAt: visit.visitAt ?? date,
       purpose: visit.purpose ?? "",
       complaint: "",
-      species: "고양이",
-      breed: "",
-      age: null,
+      species: current?.species ?? "고양이",
+      breed: current?.breed ?? "",
+      age: current?.age ?? null,
       author: "한서진",
-      doctor: "한서진",
+      doctor: current?.doctor ?? "한서진",
       authorId: cases.actor,
-      doctorId: cases.actor,
+      doctorId: current ? current.doctorId : cases.actor,
       status: "draft",
       editable: true,
       media: [],
@@ -240,6 +244,7 @@ export function createReviewSession(onChange: () => void) {
     register,
     resume,
     waiting: () => visits.filter((v) => pending.has(v.id)),
+    isCopiedOrder: (id: string) => !originalOrderIds.has(id),
     chart: (id: string) => rows.find((r) => r.id === id),
   };
 }
