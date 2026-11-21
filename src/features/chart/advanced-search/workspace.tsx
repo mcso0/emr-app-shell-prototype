@@ -301,6 +301,7 @@ export function ChartSearchWorkspace({
       style={registering ? { visibility: "hidden" } : undefined}
       aria-label="차트 상세 검색"
       onKeyDown={(e) => {
+        if (e.defaultPrevented || !e.currentTarget.contains(e.target as Node)) return;
         if (e.key === "Escape" && !copy && !popup) {
           if (selected) closeSource();
           else onClose();
@@ -340,7 +341,10 @@ export function ChartSearchWorkspace({
               <PopoverTrigger
                 render={<EmrTableFilterTrigger activeCount={count} />}
               />
-              <PopoverContent className="w-auto max-w-[96vw] p-0">
+              <PopoverContent
+                className="w-auto max-w-[96vw] p-0"
+                initialFocus={false}
+              >
                 <EmrTableFilterBuilder
                   fields={fields}
                   model={groups}

@@ -2,7 +2,10 @@
 
 import { useReducer, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { sectionNames } from "@/features/chart/advanced-search/contract";
+import {
+  medicationFrequencies,
+  sectionNames,
+} from "@/features/chart/advanced-search/contract";
 import {
   receptionCreatedEvent,
   type SearchEntry,
@@ -137,7 +140,9 @@ export function ReviewWorkspace() {
                     " " +
                     String(o.inputs.doseUnit ?? "") +
                     " · " +
-                    String(o.inputs.frequency ?? "") +
+                    (medicationFrequencies.find(
+                      ([value]) => value === o.inputs.frequency,
+                    )?.[1] ?? String(o.inputs.frequency ?? "")) +
                     " · " +
                     String(o.inputs.durationDays ?? "") +
                     "일"}

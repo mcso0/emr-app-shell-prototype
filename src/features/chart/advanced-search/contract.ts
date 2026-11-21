@@ -139,6 +139,16 @@ export const blankSelection = (): CopySelection => ({
   diagnoses: [],
   orders: [],
 });
+export const medicationFrequencies: [string, string][] = [
+  ["once", "1회"],
+  ["sid", "하루 1회"],
+  ["bid", "하루 2회"],
+  ["tid", "하루 3회"],
+  ["qid", "하루 4회"],
+  ["prn", "필요시"],
+  ["custom", "직접 지정"],
+];
+
 export const diagnosisLabels: Record<string, string> = {
   confirmed: "확진",
   suspected: "의심",

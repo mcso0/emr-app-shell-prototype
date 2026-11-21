@@ -17,6 +17,7 @@ import {
 import {
   blankSelection,
   diagnosisLabels,
+  medicationFrequencies,
   sectionNames,
   type CopyIntent,
   type CopyResult,
@@ -44,15 +45,6 @@ type Props = {
 type Destination = { chart?: SearchChart; visit?: SearchVisit };
 const drug = (o: SearchOrder) =>
   ["medication", "dispensing", "drug"].includes(o.kind);
-const frequencies: [string, string][] = [
-  ["once", "1회"],
-  ["sid", "하루 1회"],
-  ["bid", "하루 2회"],
-  ["tid", "하루 3회"],
-  ["qid", "하루 4회"],
-  ["prn", "필요시"],
-  ["custom", "직접 지정"],
-];
 const visitLabel = (visit: SearchVisit) =>
   visit.status === "waiting" ? "접수 대기" : "진료 중";
 const price = (n: number | null) =>
@@ -666,7 +658,7 @@ export function Transfer({
                             <Pick
                               label="횟수"
                               value={picked.frequency ?? ""}
-                              options={frequencies}
+                              options={medicationFrequencies}
                               onChange={(frequency) =>
                                 select("orders", o.id, { ...picked, frequency })
                               }
@@ -760,7 +752,7 @@ export function Transfer({
                         source.orders.find((o) => o.id === row.id)?.inputs
                           .doseUnit ?? "",
                       ),
-                      frequencies.find(([k]) => k === row.frequency)?.[1],
+                      medicationFrequencies.find(([k]) => k === row.frequency)?.[1],
                       row.days + "일",
                     ].join(" ")}
                   　{price(row.price)}
