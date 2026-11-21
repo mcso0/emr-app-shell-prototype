@@ -22,6 +22,7 @@ export function ExamOrderPrework({ workItem, review, busy, error, onConfirm, onE
   const instruction = workItem.sourceSnapshot?.instruction;
   return <PatientOrderPrework workItem={workItem} label={label} testId={`${workItem.queueType}-prework`} excludeWorkItemIds={[workItem.id]}
     actions={<EmrWorkEntryAction scopeKey={`${workItem.workspaceId}:${workItem.id}:${workItem.taskId}`} authorityKey={`${workItem.rowRevision}:${workItem.canManage}:${workItem.assignedToUserId}:${workItem.pauseReason}`}
+      size="default"
       description={workItem.pauseReason ? "오더 수정이 끝난 뒤 다시 진행해 주세요." : !owns ? "담당을 지정하면 업무가 바로 시작됩니다." : undefined}
       mode={workItem.pauseReason ? "blocked" : owns ? "start" : workItem.canManage && !workItem.assignedToUserId ? "claim" : "blocked"}
       assigneeName={workItem.assignedToDisplayName} busy={busy} error={error} onConfirm={onConfirm} onEntered={onEntered}
