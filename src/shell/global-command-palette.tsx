@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { openChartSearch } from "@/features/chart/advanced-search/events";
 import { useRouter } from "next/navigation";
 import {
   CalendarIcon,
@@ -38,7 +39,7 @@ import type { EmrId } from "@/types/emr-domain";
 
 type CommandItemKind = "action" | "patient" | "guardian" | "appointment" | "encounter" | "staff";
 type CommandFilter = CommandSearchFilter;
-type CommandAction = "open-new-reception" | "open-patient-guardian-registration";
+type CommandAction = "advanced-chart-search" | "open-new-reception" | "open-patient-guardian-registration";
 
 type CommandItem = {
   action?: CommandAction;
@@ -136,6 +137,16 @@ const quickActionSpecs = [
     moduleId: "treatment",
     keywords: ["진료", "차트", "SOAP", "대기열"],
   },
+  {
+    id: "advanced-chart-search",
+    action: "advanced-chart-search",
+    title: "차트 상세 검색",
+    subtitle: "과거 진료 사례와 기록을 찾습니다.",
+    badge: "View",
+    icon: SearchIcon,
+    moduleId: "treatment",
+    keywords: ["증상", "진단", "오더", "과거 사례"],
+  },
 ] as const;
 
 function normalizeText(value: string) {
@@ -217,7 +228,7 @@ function buildCommandSections(
   );
   const staffItems = resultItems.filter((item) => item.kind === "staff");
   const sections: CommandSection[] = [
-    { id: "actions", title: "빠른 실행", items: limitItems(quickActions, 5) },
+    { id: "actions", title: "빠른 실행", items: limitItems(quickActions, 6) },
     {
       id: "people",
       title: "환자/보호자",
@@ -412,6 +423,11 @@ export function GlobalCommandPalette({
     handleOpenChange(false);
     if (item.searchResult?.lookupItem) {
       applyPatientGuardianLookupItem(item.searchResult.lookupItem);
+    }
+
+    if (item.action === "advanced-chart-search") {
+      openChartSearch({ workspaceId });
+      return;
     }
 
     if (item.action === "open-new-reception") {
