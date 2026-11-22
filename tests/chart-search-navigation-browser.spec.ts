@@ -8,7 +8,7 @@ async function setup(page: Page, emptyQueue = false) {
   const source = exampleChart("search-source");
   await page.route(url => url.pathname === `/api/workspaces/${workspaceId}/chart/advanced-search`, route => {
     const { action } = route.request().postDataJSON();
-    const json = action === "search" ? { items: [source], total: 1, nextCursor: null, doctors: [] } : action === "pending" ? null : [];
+    const json = action === "patientCharts" ? {items:[source],nextCursor:null} : action === "search" ? { items: [source], total: 1, nextCursor: null, doctors: [] } : action === "pending" ? null : [];
     return route.fulfill({ contentType: "application/json", body: JSON.stringify(json) });
   });
   await page.route(url => url.pathname.endsWith("/operations/work-items"), route => route.fulfill({ json: { ok: true, items: [] } }));
@@ -43,9 +43,13 @@ test("rail and global search share one independent tab, and closing starts a fre
   await expect(searchTab(page)).toHaveCount(1);
   await expect(query(page)).toHaveValue("구토");
   await expect(page.getByRole("complementary", { name: "차트 원본" })).toBeVisible();
+  await expect(page).toHaveURL(/\/chart-search(?:\?|$)/);
+  await searchTab(page).focus();
   await searchTab(page).hover();
   await page.getByRole("button", { name: "차트 상세 검색 탭 닫기" }).click();
+  await expect(searchTab(page)).toHaveCount(0);
   await link.click();
+  await expect(page).toHaveURL(/\/chart-search(?:\?|$)/);
   await expect(query(page)).toHaveValue("");
   await expect(page.getByRole("complementary", { name: "차트 원본" })).toHaveCount(0);
   session.assertNoUnexpectedTraffic();
@@ -77,6 +81,7 @@ test("return restores the exact saved SOAP paragraph, caret and search source", 
   expect(JSON.stringify(saved?.blockDocument)).toContain("ABCDEF");
   await query(page).fill("구토");
   await page.getByRole("button", { name: "모카 차트 원본 열기" }).click();
+  await expect(page.getByRole("complementary", { name: "차트 원본" })).toBeVisible();
   await page.getByRole("button", { name: patients.a.name + " 차트로 돌아가기" }).click();
   await expect(page).toHaveURL(new RegExp(patients.a.chartId));
   await expect(editor(page).locator(".ProseMirror")).toBeFocused();
@@ -99,4 +104,32 @@ test("an empty treatment queue can open hospital search without a return patient
   await expect(searchTab(page)).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("button", { name: "모카 차트 원본 열기" })).toBeVisible();
   await expect(page.getByRole("button", { name: /차트로 돌아가기/ })).toHaveCount(0);
+});
+
+test("검색 결과의 너비를 바꿔도 상단과 스크롤 위치가 유지되고 서랍이 전체 작업 영역에 열린다",async({page},testInfo)=>{
+  await page.setViewportSize({width:1900,height:1200});
+  await setup(page,true);
+  await rail(page).getByRole("link",{name:"차트 상세 검색",exact:true}).click();
+  const header=page.locator("[data-emr-table-workspace-header]").filter({has:query(page)});
+  const result=page.getByRole("region",{name:"차트 검색 결과"});
+  await expect(result).toBeVisible();
+  await page.evaluate(async()=>{await document.fonts.ready;await Promise.allSettled(document.getAnimations().filter(a=>a.effect?.getTiming().iterations!==Infinity).map(a=>a.finished));});
+  const before=await header.boundingBox(),wide=await result.boundingBox();
+  await page.getByRole("button",{name:"좁게 보기"}).click();
+  expect(await header.boundingBox()).toEqual(before);
+  expect((await result.boundingBox())!.width).toBeLessThan(wide!.width);
+  await page.getByRole("button",{name:"넓게 보기"}).click();
+  await result.getByRole("button",{name:"모카 차트 원본 열기"}).click();
+  const drawer=page.getByRole("complementary",{name:"차트 원본"});
+  const work=page.getByRole("region",{name:"차트 상세 검색",exact:true});
+  await expect(drawer).toBeVisible();
+  expect(Math.abs((await drawer.boundingBox())!.y-(await work.boundingBox())!.y)).toBeLessThan(2);
+  expect((await result.boundingBox())!.width).toEqual(wide!.width);
+  for(const [width,height] of [[1900,1200],[1387,866]]){
+    await page.setViewportSize({width,height});
+    await page.evaluate(()=>document.fonts.ready);
+    await expect(drawer.locator("[data-history-chart-id]")).toBeVisible();
+    expect(await drawer.evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
+    await testInfo.attach("chart-search-"+width,{body:await page.screenshot({path:testInfo.outputPath("chart-search-"+width+".png"),animations:"disabled"}),contentType:"image/png"});
+  }
 });

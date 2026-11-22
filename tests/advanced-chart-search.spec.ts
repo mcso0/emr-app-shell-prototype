@@ -119,7 +119,7 @@ test("첨부를 연 직후와 키보드 포커스가 이동한 뒤에도 Esc는 
   await page.getByRole("button", { name: "모카 차트 원본 열기" }).click();
   const drawer = page.getByRole("complementary", { name: "차트 원본" });
   const enlarge = drawer.getByRole("button", { name: "복부 초음파 영상 확대" });
-  const dialog = page.getByRole("dialog");
+  const dialog = page.getByRole("region",{name:"선택한 첨부 미리보기"});
 
   await enlarge.click();
   await page.keyboard.press("Escape");
@@ -199,9 +199,8 @@ test("복사한 S를 대상 차트에서 고쳐도 원본과 검색어를 유지
     page.getByRole("button", { name: /차트 원본 열기$/ }),
   ).toHaveCount(1);
   await page.getByRole("button", { name: "모카 차트 원본 열기" }).click();
-  await page
-    .getByRole("button", { name: "기존 차트에 복사", exact: true })
-    .click();
+  await page.getByRole("complementary", { name: "차트 원본" }).getByRole("button", { name: "식후 반복되는 구토 복사" }).click();
+  await page.getByRole("menuitem", {name:"기존 차트에 복사"}).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("button", { name: /두부/ }).click();
   await dialog.getByRole("button", { name: "가져올 항목 선택" }).click();
@@ -224,4 +223,61 @@ test("복사한 S를 대상 차트에서 고쳐도 원본과 검색어를 유지
   await expect(source).not.toContainText(
     "오늘 보호자가 확인한 내용으로 수정함.",
   );
+});
+
+test("내 차트 includes the attending veterinarian while transfer targets keep authorship", () => {
+  const rows = [
+    exampleChart("author", {authorId:actor, doctorId:"other"}),
+    exampleChart("attending", {authorId:"other", doctorId:actor}),
+    exampleChart("both", {authorId:actor, doctorId:actor}),
+    exampleChart("neither", {authorId:"other", doctorId:"other"}),
+  ];
+  expect(searchPage(rows,{mine:true},actor).items.map(c=>c.id).sort()).toEqual(["attending","author","both"]);
+  expect(searchPage(rows.map(c=>({...c,editable:true,status:"draft"})),{mine:true,targets:true},actor).items.map(c=>c.id).sort()).toEqual(["author","both"]);
+});
+
+test("patient drawer keeps its frame, scopes records and actions, and separates bulk selection", async ({page})=>{
+  await page.setViewportSize({width:1600,height:1000});
+  await page.goto("/review/chart-search");
+  const results=page.getByRole("region",{name:"차트 검색 결과"});
+  const first=results.locator("[data-chart-id]").first(),second=results.locator("[data-chart-id]").nth(1);
+  await first.getByRole("checkbox",{name:/차트 선택$/}).click();
+  await expect(page.getByRole("complementary",{name:"차트 원본"})).toHaveCount(0);
+  await first.getByRole("button",{name:/차트 원본 열기/}).click();
+  const drawer=page.getByRole("complementary",{name:"차트 원본"});
+  await expect(drawer.locator("[data-history-chart-id]")).not.toHaveCount(0);
+  const panel=await drawer.elementHandle();
+  await drawer.getByRole("button",{name:"환자 차트 이력 검색 열기"}).click();
+  await drawer.getByRole("searchbox").fill("없는-차트");
+  await expect(drawer.getByText("조건에 맞는 차트가 없습니다")).toBeVisible();
+  await second.getByRole("button",{name:/차트 원본 열기/}).click();
+  await expect(drawer.getByRole("searchbox")).toHaveCount(0);
+  expect(await panel!.evaluate(el=>el.isConnected)).toBe(true);
+  await expect(first.getByRole("checkbox",{name:/차트 선택$/})).toBeChecked();
+  await expect(second.getByRole("checkbox",{name:/차트 선택$/})).not.toBeChecked();
+  const row=drawer.locator("[data-history-chart-id]").filter({has:page.locator("[aria-expanded=true][aria-controls]")}).first();
+  const star=row.getByRole("button",{name:/즐겨찾기 추가/});
+  await star.click();
+  await expect(row.getByRole("button",{name:/즐겨찾기 해제/})).toHaveAttribute("aria-pressed","true");
+  await drawer.getByRole("button",{name:"차트 원본 닫기"}).click();
+  await page.reload();
+  await expect(results.locator("[data-chart-id]").nth(1).getByRole("button",{name:/즐겨찾기 해제/})).toBeVisible();
+});
+
+test("같은 환자 이력을 함께 펼치고, 선택한 원본에서만 복사를 시작한다", async ({page})=>{
+  await page.goto("/review/chart-search");
+  await page.getByRole("button",{name:"보리 차트 원본 열기"}).first().click();
+  const drawer=page.getByRole("complementary",{name:"차트 원본"});
+  const records=drawer.locator("[data-history-chart-id]");
+  await expect(records).toHaveCount(2);
+  const collapsed=records.locator("button[aria-controls][aria-expanded=false]");
+  await collapsed.focus();
+  await page.keyboard.press("Enter");
+  await expect(records.locator("button[aria-controls][aria-expanded=true]")).toHaveCount(2);
+  const last=records.last();
+  await last.getByRole("button",{name:/즐겨찾기 추가/}).click();
+  await expect(last.locator("button[aria-controls]")).toHaveAttribute("aria-expanded","true");
+  await last.getByRole("button",{name:/ 복사$/,exact:false}).filter({hasNotText:"전체 복사"}).click();
+  await page.getByRole("menuitem",{name:"기존 차트에 복사"}).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
 });
