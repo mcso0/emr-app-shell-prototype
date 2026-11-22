@@ -17,6 +17,9 @@ import {
 } from "@/features/auth/workspace-session";
 import { useWorkspaceEntrySplash } from "@/features/auth/workspace-entry-splash-provider";
 import { useHospitalAdminStore } from "@/features/hospital-admin/store";
+import { openChartSearch } from "@/features/chart/advanced-search/events";
+import { ChartSearchTabs } from "@/features/chart/advanced-search/search-tabs";
+import { ChartSearchEditorContext, createChartSearchEditorBridge } from "@/features/chart/advanced-search/editor-position";
 import { useChartStore } from "@/features/chart/store";
 import { WorkspaceStaffPresenceReporter } from "@/features/staff/workspace-staff-presence";
 import { LiveNotificationDelivery } from "@/features/notifications/live-notification-delivery";
@@ -129,6 +132,9 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     useState<WorkspaceListOption | null>(null);
   const [skipDuplicateWarning, setSkipDuplicateWarning] = useState(false);
   const [urlStateVersion, setUrlStateVersion] = useState(0);
+  const sessionScope = workspaceId + ":" + (authSession?.id ?? "anonymous");
+  const [editorScope, setEditorScope] = useState(() => ({ key: sessionScope, bridge: createChartSearchEditorBridge() }));
+  if (editorScope.key !== sessionScope) setEditorScope({ key: sessionScope, bridge: createChartSearchEditorBridge() });
   const actorHeaders = useMemo(() => getDemoActorHeaders(authSession), [authSession]);
   const {
     notifications,
@@ -435,7 +441,15 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   }
 
   function handleCloseTab(tabId: string) {
-    if (tabs.length <= 1) return;
+    if (tabs.length <= 1) {
+      if (activeTab?.moduleId === "chart-search" && tabId === activeTabId) {
+        const home = buildWorkspaceHomeRoute(workspaceId);
+        createTab({ workspaceId, route: home, moduleId: "home" });
+        closeTab(tabId);
+        navigateToTabRoute(home);
+      }
+      return;
+    }
     if (tabId !== activeTabId) {
       closeTab(tabId);
       return;
@@ -472,6 +486,19 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   }
 
   function handleNavigateModule(href: string, nextModuleId: string) {
+    if (nextModuleId === "chart-search") {
+      openChartSearch({ workspaceId });
+      return;
+    }
+    if (activeTab?.moduleId === "chart-search") {
+      void runWithSavedEditors(() => {
+        const url = new URL(href, window.location.origin);
+        const moduleOnly = Array.from(url.searchParams.keys()).every(key => key === "modulePanel");
+        const existing = tabs.find(t => t.moduleId === nextModuleId && (moduleOnly || t.history[t.historyIndex] === href));
+        navigateToTabRoute(existing ? activateTab(existing.id) : createTab({ workspaceId, moduleId: nextModuleId, route: href }));
+      });
+      return;
+    }
     if (activeTab?.history[activeTab.historyIndex] === href) return;
 
     const duplicateTab = findDuplicateWorkspaceTab({
@@ -609,7 +636,9 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   return (
     <div className="h-screen min-h-0 overflow-hidden bg-[var(--emr-surface-app)] text-foreground">
       <WorkspaceStaffPresenceReporter workspaceId={workspaceId} />
+      <ChartSearchEditorContext.Provider value={editorScope.bridge}>
       <ShellMain
+        chartSearch={<ChartSearchTabs workspace={workspaceId} editor={editorScope.bridge} navigate={navigateToTabRoute} withSavedEditors={runWithSavedEditors} />}
         key={`${workspaceId}:${authSession?.id ?? "anonymous"}`}
         workspaceTabRevision={renderedTab.revision}
         moduleDefinition={moduleDefinition}
@@ -639,6 +668,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
         onNavigateModule={handleNavigateModule}
         onSelectWorkspace={handleSelectWorkspace}
       />
+      </ChartSearchEditorContext.Provider>
       {authSession?.role === "supabase" ? <LiveNotificationDelivery
         key={`${workspaceId}:${authSession.userId}:${notificationDeliveryGeneration}`}
         workspaceId={workspaceId}

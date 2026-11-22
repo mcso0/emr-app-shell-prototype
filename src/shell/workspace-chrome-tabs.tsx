@@ -43,11 +43,13 @@ export type WorkspaceChromeTabItem = {
   iconClassName?: string;
   id: string;
   title: string;
+  closableWhenAlone?: boolean;
   tooltipDescription?: string;
   tooltipTitle?: string;
 };
 
 type WorkspaceChromeTabsProps = {
+  showOnSmallScreens?: boolean;
   activeTabId: string | null;
   tabs: WorkspaceChromeTabItem[];
   onActivateTab: (tabId: string) => void;
@@ -219,7 +221,7 @@ function SortableWorkspaceTab({
           ) : null}
         </TooltipContent>
       </Tooltip>
-      {hasMultipleTabs ? (
+      {hasMultipleTabs || tab.closableWhenAlone ? (
         <Button
           type="button"
           variant="ghost"
@@ -242,6 +244,7 @@ function SortableWorkspaceTab({
 }
 
 export function WorkspaceChromeTabs({
+  showOnSmallScreens = false,
   activeTabId,
   tabs,
   onActivateTab,
@@ -399,7 +402,7 @@ export function WorkspaceChromeTabs({
   const overIndex = tabIds.indexOf(overId ?? "");
 
   return (
-    <div className="hidden min-w-0 flex-1 items-center gap-[var(--emr-topbar-tab-gap)] sm:flex">
+    <div className={cn("min-w-0 flex-1 items-center gap-[var(--emr-topbar-tab-gap)]", showOnSmallScreens ? "flex" : "hidden sm:flex")}>
       <DndContext
         id={dndId}
         sensors={sensors}

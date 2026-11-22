@@ -1,3 +1,4 @@
+import { CdsMedicalFileSearchIcon } from "@/components/cds-icons/medical-and-domain";
 import { withOrderPreworkSlots } from "@/features/fulfillment/use-order-prework";
 import { createElement } from "react";
 import {
@@ -202,6 +203,13 @@ export const modules: ModuleDefinition[] = [
     contentHeader: FixedEmptyMainContentHeader,
     content: InpatientContent,
     drawer: InpatientDrawer,
+  },
+  {
+    id: "chart-search",
+    label: "차트 상세 검색",
+    icon: CdsMedicalFileSearchIcon,
+    // The shell retains this document while its workspace tab is open.
+    content: () => null,
   },
   {
     id: "customer",
