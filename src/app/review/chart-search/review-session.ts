@@ -12,7 +12,7 @@ import { searchPage } from "@/features/chart/advanced-search/ranking";
 import { cases } from "./cases";
 
 export function createReviewSession(onChange: () => void) {
-  const rows: SearchChart[] = structuredClone(cases.rows);
+  const rows: SearchChart[] = structuredClone(cases.rows).map(row=>({...row, createdAt:row.clinicalAt, visitAt:row.clinicalAt, visitType:"walk_in"}));
   const originalOrderIds = new Set(
     rows.flatMap((chart) => chart.orders.map((order) => order.id)),
   );
@@ -92,6 +92,15 @@ export function createReviewSession(onChange: () => void) {
   const api: ChartSearchApi = {
     async search(params) {
       return structuredClone(searchPage(rows, params, cases.actor));
+    },
+    async patientCharts(patientId) {
+      return { items: structuredClone(rows.filter(row => row.patientId === patientId)), nextCursor: null };
+    },
+    async exportSummaries(ids) {
+      return rows.filter(row => ids.includes(row.id)).map(row => ({
+        title: row.purpose, patient: row.patient, species: row.species, visitAt: row.visitAt ?? row.clinicalAt,
+        doctor: row.doctor, author: row.author, diagnosis: row.diagnoses.map(d => d.name).join(", ")
+      }));
     },
     async visits() {
       return structuredClone(visits);

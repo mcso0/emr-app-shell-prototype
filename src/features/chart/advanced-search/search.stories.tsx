@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, fn, within } from "storybook/test";
-import { ChartRow } from "./presentation";
+import { ChartRow } from "./result-card";
 import { exampleChart } from "./search.stories.fixture";
 const meta = {
   title: "Features/Chart/차트 상세 검색/검색 결과",
@@ -8,7 +8,7 @@ const meta = {
   parameters: { layout: "fullscreen" },
   args: {
     chart: exampleChart("synthetic-chart"),
-    active: false,
+    active: false, checked:false, favorite:false, onCheck:fn(), onFavorite:fn(), onViewChart:fn(),
     query: "구토 초음파",
     onOpen: fn(),
     onCopy: fn(),
@@ -22,7 +22,7 @@ export const TwoTerms: Story = {
     await expect(
       canvas.getByRole("button", { name: "모카 차트 원본 열기" }),
     ).toBeVisible();
-    await expect(canvas.getByText("없음")).toBeVisible();
+    await expect(canvas.getByText("첨부된 이미지가 없습니다")).toBeVisible();
     await expect(canvasElement.querySelectorAll("mark").length).toBeGreaterThan(
       1,
     );

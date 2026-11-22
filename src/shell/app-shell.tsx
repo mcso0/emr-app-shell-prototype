@@ -638,7 +638,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
       <WorkspaceStaffPresenceReporter workspaceId={workspaceId} />
       <ChartSearchEditorContext.Provider value={editorScope.bridge}>
       <ShellMain
-        chartSearch={<ChartSearchTabs workspace={workspaceId} editor={editorScope.bridge} navigate={navigateToTabRoute} withSavedEditors={runWithSavedEditors} />}
+        chartSearch={<ChartSearchTabs key={sessionScope} userId={authSession?.role === "supabase" ? authSession.userId : authSession?.id} workspace={workspaceId} editor={editorScope.bridge} navigate={navigateToTabRoute} withSavedEditors={runWithSavedEditors} />}
         key={`${workspaceId}:${authSession?.id ?? "anonymous"}`}
         workspaceTabRevision={renderedTab.revision}
         moduleDefinition={moduleDefinition}
