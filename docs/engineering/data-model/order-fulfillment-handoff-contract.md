@@ -21,7 +21,7 @@ related_work:
   - DEN-349
 supersedes: []
 superseded_by: []
-last_updated: 2026-11-17
+last_updated: 2026-11-21
 ---
 
 # Order Fulfillment Handoff Engineering Contract
@@ -220,6 +220,11 @@ No new API, role policy, migration or remote data change belongs to this UI slic
 - Order information shows the first item and remaining count, request time, requester, and assignee. The read-only table reuses instruction row disclosure. The per-item assignee column appears when an item differs from the set assignee. Dispensing prework shows the route in the table.
 - Applicable instructions appear below the order table. The scope labels are 전체 지시, 조제 지시 or 처치 지시, and 세트 지시. A required review opens through the existing start or completion flow.
 - Below vitals, the prework history reuses the chart timeline with Seoul dates, timestamps, and order names. It starts with the latest three past orders for the selected category and expands when more are available.
+
+## Examination prework action menu — 2026-11-21
+
+- Clinical and imaging examination prework uses the same Default split button as dispensing and treatment. The primary button retains the existing claim or start flow.
+- The arrow opens a menu with only `오더 링크 복사`. The link identifies the selected examination and operating date. Copying it does not assign, start, or complete work.
 
 ## Dispensing and treatment re-request continuity — 2026-11-09
 

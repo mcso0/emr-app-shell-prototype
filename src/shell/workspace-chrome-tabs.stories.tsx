@@ -224,3 +224,11 @@ export const SingleTab: Story = {
     await expect(canvas.getAllByRole("button", { name: /탭 닫기/ })).toHaveLength(2);
   },
 };
+
+export const ChartSearch: Story = {
+  args: {
+    activeTabId: "search",
+    showOnSmallScreens: true,
+    tabs: [sampleTabs[0], { id: "search", title: "차트 상세 검색", ...workspaceTabIconById["chart-search"] }],
+  },
+};

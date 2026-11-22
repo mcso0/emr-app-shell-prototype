@@ -496,6 +496,19 @@ export const useWorkspaceTabsStore = create<WorkspaceTabsStore>()((set, get) => 
   },
 
   syncActiveRoute: (route, moduleId) => {
+    // Direct links and browser history also respect the dedicated search tab.
+    const state = get();
+    const active = state.tabs.find(tab => tab.id === state.activeTabId);
+    if (state.workspaceId && active && active.moduleId !== moduleId &&
+      (moduleId === "chart-search" || active.moduleId === "chart-search")) {
+      const destination = state.tabs.find(tab => tab.moduleId === moduleId &&
+        (moduleId === "chart-search" || tab.history[tab.historyIndex] === route));
+      if (destination) state.activateTab(destination.id);
+      else {
+        state.createTab({ workspaceId: state.workspaceId, route, moduleId });
+        return;
+      }
+    }
     set((state) =>
       updateActiveTab(state, (tab) => {
         if (!state.workspaceId) return tab;

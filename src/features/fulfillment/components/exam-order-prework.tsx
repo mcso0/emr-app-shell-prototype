@@ -8,13 +8,14 @@ import type { TaskInstructionReviewController } from "../use-task-instruction-re
 import type { FulfillmentWorkItem } from "../server-fulfillment-work-item-core";
 import { getFulfillmentOrderDisplayName } from "../patient-history-aside";
 
-export function ExamOrderPrework({ workItem, review, busy, error, onConfirm, onEntered }: {
+export function ExamOrderPrework({ workItem, review, busy, error, onConfirm, onEntered, onCopyOrderLink }: {
   workItem: Pick<FulfillmentWorkItem, "id" | "workspaceId" | "encounterId" | "patientId" | "patientName" | "guardianName" | "requesterName" | "queueType" | "rowRevision" | "canManage" | "assignedToUserId" | "assignedToDisplayName" | "taskId" | "taskAttemptNo" | "pauseReason"> & { createdAt?: string; sourceSnapshot?: Record<string, unknown> };
   review: TaskInstructionReviewController;
   busy: boolean;
   error?: string | null;
   onConfirm: () => Promise<boolean | "review_required">;
   onEntered: () => void;
+  onCopyOrderLink: () => void;
 }) {
   const label = workItem.queueType === "lab" ? "임상검사" : "영상검사";
   const owns = Boolean(workItem.canManage && workItem.assignedToUserId);
@@ -22,6 +23,8 @@ export function ExamOrderPrework({ workItem, review, busy, error, onConfirm, onE
   const instruction = workItem.sourceSnapshot?.instruction;
   return <PatientOrderPrework workItem={workItem} label={label} testId={`${workItem.queueType}-prework`} excludeWorkItemIds={[workItem.id]}
     actions={<EmrWorkEntryAction scopeKey={`${workItem.workspaceId}:${workItem.id}:${workItem.taskId}`} authorityKey={`${workItem.rowRevision}:${workItem.canManage}:${workItem.assignedToUserId}:${workItem.pauseReason}`}
+      size="default"
+      menuAction={{ label: "오더 링크 복사", triggerLabel: "오더 메뉴 열기", onSelect: onCopyOrderLink }}
       description={workItem.pauseReason ? "오더 수정이 끝난 뒤 다시 진행해 주세요." : !owns ? "담당을 지정하면 업무가 바로 시작됩니다." : undefined}
       mode={workItem.pauseReason ? "blocked" : owns ? "start" : workItem.canManage && !workItem.assignedToUserId ? "claim" : "blocked"}
       assigneeName={workItem.assignedToDisplayName} busy={busy} error={error} onConfirm={onConfirm} onEntered={onEntered}

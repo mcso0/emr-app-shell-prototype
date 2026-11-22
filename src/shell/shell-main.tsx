@@ -19,6 +19,7 @@ type ShellMainProps = {
   moduleDefinition: ModuleDefinition;
   navigationSearch: string;
   topBar: ReactNode;
+  chartSearch?: ReactNode;
   userSessionId: string | null;
   workspaceId: string;
   workspaceTabRevision?: number;
@@ -41,6 +42,7 @@ export function ShellMain({
   moduleDefinition,
   navigationSearch,
   topBar,
+  chartSearch,
   userSessionId,
   workspaceId,
   workspaceTabRevision = 0,
@@ -422,10 +424,11 @@ export function ShellMain({
       </section>
       <section data-testid="shell-right-section" className="flex min-h-0 min-w-0 flex-col" style={{ gap: SHELL_LAYOUT.shell.gap }} inert={sheet}>
         {topBar}
-        <section data-testid="shell-workspace-area" className="min-h-0 min-w-0 flex-1">
+        <section data-testid="shell-workspace-area" className="relative min-h-0 min-w-0 flex-1">
           <div data-testid="workspace-frame" className="h-full min-h-0 min-w-0 [&>main]:h-full">
             <WorkspaceFrame key={workspaceTabRevision} moduleDefinition={moduleDefinition} workspaceId={workspaceId} onNavigateWorkspaceSurface={onNavigateModule} />
           </div>
+          {chartSearch}
         </section>
       </section>
     </div>

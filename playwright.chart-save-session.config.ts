@@ -11,6 +11,7 @@ export default defineConfig({
     "chart-order-workspace-save-session-browser.spec.ts",
     "chart-order-workspace-switch-flush-browser.spec.ts",
     "workspace-tab-lifecycle-browser.spec.ts",
+    "chart-search-navigation-browser.spec.ts",
   ],
   outputDir: "test-results/chart-save-session",
   timeout: 45_000,
