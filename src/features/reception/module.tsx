@@ -1,5 +1,7 @@
 "use client";
 
+import { receptionCreatedEvent } from "@/features/chart/advanced-search/events";
+
 import { ReceptionPatientCombobox } from "./reception-patient-combobox";
 
 import { usePageReadiness } from "@/components/emr/page-loading-boundary";
@@ -11258,6 +11260,12 @@ export function ReceptionDrawer({
             });
           }
           applyWalkInCheckIn({ ...input, walkIn });
+          if (activeDrawer.id.startsWith("chart-copy:")) {
+            window.dispatchEvent(new CustomEvent(receptionCreatedEvent, {detail: {
+              registrationId: activeDrawer.id, workspaceId, id: walkIn.encounter.id, patientId: patient.id,
+              patient: patient.name, guardian: selectedSummary.primaryGuardian?.name ?? "", status: walkIn.encounter.status,
+            }}));
+          }
           const persistedOperatingDate = getOperatingDateFromIso(
             walkIn.queueEntry.enteredAt ??
               walkIn.encounter.checkedInAt ??

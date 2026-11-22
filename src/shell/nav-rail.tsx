@@ -49,7 +49,7 @@ type RailNavItem = {
 
 const moduleSections = [
   ["home"],
-  ["reception", "treatment", "lab", "imaging", "dispensing", "billing", "inpatient"],
+  ["reception", "treatment", "chart-search", "lab", "imaging", "dispensing", "billing", "inpatient"],
   ["customer", "orders"],
 ] as const;
 
@@ -244,7 +244,8 @@ function RailModuleItem({
   const hasSidePanel = Boolean(modules.find((module) => module.id === item.moduleId)?.sidePanel);
   const previewsOnHover = Boolean(previewProps.previewEnabled && hasSidePanel && !modulePanelOpen);
   const Icon = item.icon;
-  const href = `/w/${workspaceId}/${item.moduleId}${navigationSearch ? `?${navigationSearch}` : ""}`;
+  const query = item.moduleId === "chart-search" ? "modulePanel=closed" : navigationSearch;
+  const href = `/w/${workspaceId}/${item.moduleId}${query ? `?${query}` : ""}`;
   const unavailable = item.moduleId === "inpatient";
   const itemLabel = unavailable ? `${item.label}(작업 중)` : item.label;
   const itemClassName = cn(

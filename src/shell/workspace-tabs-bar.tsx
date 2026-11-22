@@ -236,6 +236,7 @@ export function WorkspaceTabsBar({
         tab.moduleId === "lab" && "translate-y-px",
       ),
       id: tab.id,
+      closableWhenAlone: tab.moduleId === "chart-search",
       title: getDisplayTitle(tab),
       tooltipDescription: preview.description,
       tooltipTitle: preview.title,
@@ -325,6 +326,7 @@ export function WorkspaceTabsBar({
         </div>
 
         <WorkspaceChromeTabs
+          showOnSmallScreens={tabs.some(tab => tab.moduleId === "chart-search")}
           activeTabId={activeTabId}
           tabs={chromeTabs}
           onActivateTab={onActivateTab}
