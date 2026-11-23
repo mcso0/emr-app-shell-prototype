@@ -1,6 +1,7 @@
 import { useMemo, useRef } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { ChartSearchWorkspace } from "./workspace";
 import type { ChartSearchApi } from "./client";
 import { exampleChart } from "./search.stories.fixture";
@@ -55,5 +56,31 @@ export const FailureAndRetry: Story = {
     await userEvent.click(retry);
     await waitFor(() => expect(count(canvasElement)).toBe(50));
     await expect(canvas.queryByRole("alert")).not.toBeInTheDocument();
+  },
+};
+
+export const SearchAndFilter: Story = {
+  decorators: [(Story) => <TooltipProvider><Story /></TooltipProvider>],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    const search = canvas.getByRole("button", { name: /^검색$/ });
+    const filter = canvas.getByRole("button", { name: /^필터$/ });
+    const searchBox = search.getBoundingClientRect();
+    const filterBox = filter.getBoundingClientRect();
+    await expect([searchBox.width, searchBox.height, filterBox.width, filterBox.height]).toEqual([32, 32, 32, 32]);
+    await expect(filterBox.left - searchBox.right).toBe(8);
+
+    await userEvent.click(search);
+    const input = canvas.getByRole("textbox", { name: "차트 검색어" });
+    await expect(input).toHaveFocus();
+    await userEvent.click(filter);
+    await waitFor(() => expect(body.getByRole("combobox", { name: "그룹 1 조건 1 필터 필드" })).toBeVisible());
+    await expect(input).toBeVisible();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(filter).toHaveAttribute("aria-expanded", "false"));
+    await userEvent.click(input);
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(canvas.getByRole("button", { name: /^검색$/ })).toHaveFocus());
   },
 };
