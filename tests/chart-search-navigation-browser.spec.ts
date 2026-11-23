@@ -1,15 +1,36 @@
 import { expect, test, type Page } from "@playwright/test";
 import { installChartSaveSession, patients, workspaceId } from "./fixtures/chart-order-save-session";
 import { exampleChart } from "../src/features/chart/advanced-search/search.stories.fixture";
+import type { PendingCopy } from "../src/features/chart/advanced-search/contract";
 import type { SoapNote } from "../src/types/emr-domain";
 
-async function setup(page: Page, emptyQueue = false) {
+async function setup(page: Page, emptyQueue = false, pendingCopy?: PendingCopy) {
   const session = await installChartSaveSession(page);
   const source = exampleChart("search-source");
+  const target = pendingCopy && exampleChart(patients.a.chartId, {
+    patient: patients.a.name,
+    patientId: pendingCopy.patientId,
+    encounterId: pendingCopy.encounterId,
+    status: "draft",
+    editable: true,
+  });
   await page.route(url => url.pathname === `/api/workspaces/${workspaceId}/chart/advanced-search`, route => {
-    const { action } = route.request().postDataJSON();
-    const json = action === "patientCharts" ? {items:[source],nextCursor:null} : action === "search" ? { items: [source], total: 1, nextCursor: null, doctors: [] } : action === "pending" ? null : [];
-    return route.fulfill({ contentType: "application/json", body: JSON.stringify(json) });
+    const { action, input } = route.request().postDataJSON();
+    if (action === "pending") {
+      const pending = input.targetId === target?.id ? pendingCopy : undefined;
+      return route.fulfill({ contentType: "application/json", body: JSON.stringify(pending ?? null) });
+    }
+    if (action === "discard") {
+      expect(input.id).toBe(pendingCopy?.id);
+      pendingCopy = undefined;
+      return route.fulfill({ json: { ok: true } });
+    }
+    if (action === "patientCharts") return route.fulfill({ json: { items: [source], nextCursor: null } });
+    if (action === "search") {
+      const items = input.targets && target ? [target] : [source];
+      return route.fulfill({ json: { items, total: 1, nextCursor: null, doctors: [] } });
+    }
+    return route.fulfill({ json: [] });
   });
   await page.route(url => url.pathname.endsWith("/operations/work-items"), route => route.fulfill({ json: { ok: true, items: [] } }));
   if (emptyQueue) {
@@ -87,7 +108,7 @@ test("rail and global search share one independent tab, and closing starts a fre
   session.assertNoUnexpectedTraffic();
 });
 
-test("return restores the exact saved SOAP paragraph, caret and search source", async ({ page }) => {
+test("the chart header keeps history, and opening search from the rail saves the chart", async ({ page }) => {
   const session = await setup(page);
   let saved: SoapNote | undefined;
   await page.route(url => url.pathname === `/api/workspaces/${workspaceId}/chart/soap-notes`, async route => {
@@ -101,49 +122,46 @@ test("return restores the exact saved SOAP paragraph, caret and search source", 
     if (!saved) return route.fallback();
     await route.fulfill({ json: { ok: true, status: 200, soapNote: saved, enforcedBy: "chart-soap-note-persistence" } });
   });
+  const toolbar = page.locator('[data-slot="chart-action-bar"]');
+  await expect(toolbar.getByRole("button", { name: /차트 이력 패널/ })).toBeVisible();
+  await expect(toolbar.getByRole("button", { name: "차트 상세 검색", exact: true })).toHaveCount(0);
+  await expect(toolbar.getByRole("button", { name: "복사 이어가기" })).toHaveCount(0);
+  await expect(toolbar.getByRole("button", { name: "복사 대기 취소" })).toHaveCount(0);
   const block = editor(page).locator('.bn-block-content[data-content-type="paragraph"]').first();
-  await expect(editor(page).locator('[contenteditable="true"]').first()).toBeEditable();
   await block.click();
   await page.keyboard.press("End");
-  await page.keyboard.insertText(" ABCDEF");
-  await page.keyboard.press("ArrowLeft");
-  await page.keyboard.press("ArrowLeft");
-  await expect.poll(() => page.evaluate(() => {
-    const selection = window.getSelection();
-    return selection?.focusNode?.textContent?.slice(selection.focusOffset);
-  })).toBe("EF");
-  await page.getByRole("button", { name: "차트 상세 검색", exact: true }).click();
+  await page.keyboard.insertText(" 합성 저장 확인");
+  await rail(page).getByRole("link", { name: "차트 상세 검색", exact: true }).click();
   await expect(searchTab(page)).toHaveAttribute("aria-selected", "true");
-  expect(JSON.stringify(saved?.blockDocument)).toContain("ABCDEF");
-  await page.locator("header[data-emr-table-workspace-header]").getByRole("button", { name: "검색", exact: true }).click();
-  await query(page).fill("구토");
-  await page.getByRole("button", { name: "모카 차트 원본 열기" }).click();
-  await expect(page.getByRole("complementary", { name: "차트 원본" })).toBeVisible();
-  // The SOAP read can finish while the enclosing chart still waits on orders.
-  let releaseOrderRead!: () => void;
-  const orderReadGate = new Promise<void>(resolve => { releaseOrderRead = resolve; });
-  await page.route(url => url.pathname.endsWith("/chart/order-drafts"), async route => {
-    await orderReadGate;
-    await route.fallback();
-  });
-  await page.getByRole("button", { name: patients.a.name + " 차트로 돌아가기" }).click();
-  try {
-    await expect(editor(page).locator(".ProseMirror")).toBeAttached();
-    await expect(editor(page).locator("xpath=ancestor::*[@data-page-content and @inert]").first()).toBeAttached();
-  } finally {
-    releaseOrderRead();
-  }
+  expect(JSON.stringify(saved?.blockDocument)).toContain("합성 저장 확인");
+  await expect(page.getByRole("button", { name: /차트로 돌아가기/ })).toHaveCount(0);
+  await page.getByRole("tab", { name: "진료/차트", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(patients.a.chartId));
-  await expect(editor(page).locator(".ProseMirror")).toBeFocused();
-  await expect.poll(() => editor(page).evaluate(() => {
-    const selection = window.getSelection();
-    return selection?.anchorNode?.textContent?.slice(selection.anchorOffset);
-  })).toBe("EF");
-  await page.keyboard.insertText("X");
-  await expect(block).toContainText("ABCDXEF");
-  await searchTab(page).click();
-  await expect(query(page)).toHaveValue("구토");
-  await expect(page.getByRole("complementary", { name: "차트 원본" })).toBeVisible();
+  await expect(block).toContainText("합성 저장 확인");
+  session.assertNoUnexpectedTraffic();
+});
+
+test("pending copy opens its saved review and can be discarded from the chart", async ({ page }) => {
+  const session = await setup(page, false, {
+    id: "synthetic-pending-copy",
+    canDiscard: true,
+    sourceId: "search-source",
+    sourceVersion: "1",
+    encounterId: patients.a.encounterId,
+    patientId: "patient-a",
+    selection: { paragraphs: [{ id: "1" }], diagnoses: [], orders: [] },
+  });
+  await page.getByRole("button", { name: "복사 이어가기" }).click();
+  const review = page.getByRole("dialog", { name: "변경 내용 확인" });
+  await expect(review).toBeVisible();
+  await expect(review.getByText("어제 저녁부터 식후 구토가 세 차례 있었음.", { exact: true })).toBeVisible();
+  await review.getByRole("button", { name: "다이얼로그 닫기" }).click();
+  await expect(review).toBeHidden();
+  await expect(page).toHaveURL(new RegExp(patients.a.chartId));
+  const discard = page.getByRole("button", { name: "복사 대기 취소" });
+  await discard.click();
+  await expect(discard).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "복사 이어가기" })).toHaveCount(0);
   session.assertNoUnexpectedTraffic();
 });
 
