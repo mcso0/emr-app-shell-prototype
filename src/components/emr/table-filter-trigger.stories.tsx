@@ -31,7 +31,7 @@ const meta = {
       story: { inline: false, height: "800px" },
       description: {
         component:
-          "Shared Trigger+Popover+Builder API composition follows CustomerDataTable popup wrappers. The icon follows Button size rules: 12px for sm and 16px for default. Source model helpers derive completed-rule count and filtered rows. Active starts with eight rules in two source-limit-compliant groups. Controls reset local model; this does not reproduce the full customer controller.",
+          "Shared Trigger+Popover+Builder API composition follows CustomerDataTable popup wrappers. The icon follows Button size rules: 12px for sm and 16px for default. With iconOnly, the trigger uses the 32px outline icon button and marks active filters with a dot. Source model helpers derive completed-rule count and filtered rows. Active starts with eight rules in two source-limit-compliant groups. Controls reset local model; this does not reproduce the full customer controller.",
       },
     },
   },
@@ -49,6 +49,12 @@ const meta = {
       await userEvent.keyboard("{Enter}"); await expect(body.queryByRole("combobox")).not.toBeInTheDocument();
       return;
     }
+    if (args.iconOnly) {
+      await expect(trigger.textContent).toBe("");
+      const indicator = trigger.querySelector('[data-slot="filter-active-indicator"]');
+      if (args.activeCount > 0) await expect(indicator).toBeVisible();
+      else await expect(indicator).not.toBeInTheDocument();
+    }
     trigger.focus(); await userEvent.keyboard("{Enter}");
     await waitFor(() => expect(trigger).toHaveAttribute("aria-expanded", "true"));
     const field = await body.findByRole("combobox", { name: "그룹 1 조건 1 필터 필드" });
@@ -56,6 +62,7 @@ const meta = {
     if (args.activeCount > 0) {
       await userEvent.click(body.getByRole("button", { name: "초기화" }));
       await waitFor(() => expect(canvas.getByLabelText("필터 결과")).toHaveTextContent("완성된 조건 0개 · 결과 3건"));
+      if (args.iconOnly) await expect(trigger.querySelector('[data-slot="filter-active-indicator"]')).not.toBeInTheDocument();
     }
     await userEvent.click(body.getByRole("button", { name: "필터 닫기" }));
     await waitFor(() => expect(trigger).toHaveAttribute("aria-expanded", "false"));
@@ -82,6 +89,10 @@ export const DefaultSize: Story = {
 
 export const Active: Story = {
   args: { activeCount: 8 },
+};
+
+export const IconOnlyActive: Story = {
+  args: { iconOnly: true, activeCount: 1 },
 };
 
 export const Disabled: Story = {
