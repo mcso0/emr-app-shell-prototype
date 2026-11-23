@@ -34,6 +34,7 @@ test("rail and global search share one independent tab, and closing starts a fre
   await expect(searchTab(page)).toHaveAttribute("aria-selected", "true");
   await expect(link).toHaveAttribute("aria-current", "page");
   await expect(page.getByTestId("module-side-panel-host")).toBeHidden();
+  await expect(page.getByRole("region", { name: "차트 상세 검색", exact: true }).locator('[data-slot="emr-main-content-header"]')).toHaveCount(0);
   await expect(page.getByRole("button", { name: /차트로 돌아가기/ })).toHaveCount(0);
   await page.locator("header[data-emr-table-workspace-header]").getByRole("button", { name: "검색", exact: true }).click();
   await query(page).fill("구토");

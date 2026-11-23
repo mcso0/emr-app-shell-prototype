@@ -387,6 +387,17 @@
 }
 .results[data-view="card"] .clinical {
   grid-template-columns: 1fr;
+  row-gap: 2px;
+}
+.results[data-view="card"] .clinical dl {
+  row-gap: inherit;
+}
+.results[data-view="card"] .infoLine {
+  min-height: 24px;
+  align-items: center;
+}
+.results[data-view="card"] .infoLine dd > :is(button, [data-slot="badge"]) {
+  vertical-align: top;
 }
 .thumb {
   width: 100%;

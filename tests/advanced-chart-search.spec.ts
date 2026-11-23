@@ -316,6 +316,12 @@ test("결과의 전문과 배지를 확인해도 목록과 카드의 썸네일 �
     const rect = await media.boundingBox();
     expect(rect!.width / rect!.height).toBeCloseTo(16/9, 1);
     expect(await first.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+    const labels = first.locator("dt");
+    await expect(labels).toHaveCount(6);
+    const tops = await labels.evaluateAll(rows => rows.map(row => row.getBoundingClientRect().top));
+    for (let i = 1; i < tops.length; i++) {
+      expect(tops[i] - tops[i - 1]).toBeCloseTo(26, 0);
+    }
     const footer = first.locator("footer");
     expect(await footer.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
   }
