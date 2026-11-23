@@ -11,6 +11,7 @@ export type EmrTableFilterTriggerProps = Omit<
   "children" | "variant"
 > & {
   activeCount: number;
+  iconOnly?: boolean;
   label?: string;
 };
 
@@ -22,6 +23,7 @@ export const EmrTableFilterTrigger = React.forwardRef<
     activeCount,
     "aria-label": ariaLabel,
     className,
+    iconOnly = false,
     label = "필터",
     size = "sm",
     ...props
@@ -35,25 +37,35 @@ export const EmrTableFilterTrigger = React.forwardRef<
       ref={ref}
       type="button"
       variant="outline"
-      size={size}
+      size={iconOnly ? "icon" : size}
       aria-label={
         ariaLabel ?? (selected ? `${label}, 적용 중인 룰 ${activeCount}개` : label)
       }
       className={cn(
-        "h-8 min-h-8 gap-1 rounded-lg bg-card px-3 py-1.5 text-sm leading-5 font-medium tracking-[0.014em] shadow-[var(--clair-shadow-xs)]",
-        "aria-expanded:bg-card aria-expanded:text-foreground aria-expanded:shadow-[var(--clair-shadow-xs)]",
-        selected && "border-[var(--clair-color-atomic-sky-200)]",
+        iconOnly
+          ? "relative"
+          : [
+              "h-8 min-h-8 gap-1 rounded-lg bg-card px-3 py-1.5 text-sm leading-5 font-medium tracking-[0.014em] shadow-[var(--clair-shadow-xs)]",
+              "aria-expanded:bg-card aria-expanded:text-foreground aria-expanded:shadow-[var(--clair-shadow-xs)]",
+              selected && "border-[var(--clair-color-atomic-sky-200)]",
+            ],
         className
       )}
       {...props}
     >
       <span data-slot="filter-label-pair" className="inline-flex items-center gap-1.5">
         <CdsActionsListFilterIcon aria-hidden="true" />
-        <span data-slot="filter-label-text">{label}</span>
+        {!iconOnly && <span data-slot="filter-label-text">{label}</span>}
       </span>
-      {selected ? (
+      {selected && (iconOnly ? (
+        <span
+          data-slot="filter-active-indicator"
+          aria-hidden="true"
+          className="pointer-events-none absolute right-[var(--clair-spacing-4)] top-[var(--clair-spacing-4)] size-[var(--clair-spacing-6)] rounded-full bg-[var(--clair-color-atomic-sky-500)]"
+        />
+      ) : (
         <strong className="font-medium text-[var(--emr-text-link)]">{activeCount}</strong>
-      ) : null}
+      ))}
     </Button>
   );
 });

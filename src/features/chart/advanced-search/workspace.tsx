@@ -38,6 +38,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { EmrFilterToggle } from "@/components/emr/filter-toggle";
 import { EmrTableFilterBuilder } from "@/components/emr/table-filter-builder";
 import {
@@ -241,6 +242,7 @@ export function ChartSearchWorkspace({
   };
 
   const count = getEmrTableFilterBuilderActiveCount(groups, fields);
+  const filterLabel = count ? `필터 · 조건 ${count}개 적용 중` : "필터";
   const changed = !!(q.trim() || mine || drafts || doctor || count);
   useEffect(() => {
     const abort = new AbortController();
@@ -495,71 +497,116 @@ export function ChartSearchWorkspace({
           actionsClassName={styles.toolbar}
           actions={
             <>
-              {editingSearch || q ? (
-                <div
-                  className={styles.searchField}
-                  onBlur={(e) => {
-                    if (
-                      !q &&
-                      !e.currentTarget.contains(e.relatedTarget as Node)
-                    )
-                      setEditingSearch(false);
-                  }}
-                >
-                  <Input
-                    autoFocus
-                    aria-label="차트 검색어"
-                    placeholder="증상·진단·오더 검색"
-                    value={composingText ?? q}
-                    onCompositionStart={(e) => {
-                      composing.current = true;
-                      setComposingText(e.currentTarget.value);
-                    }}
-                    onCompositionEnd={(e) => {
-                      composing.current = false;
-                      setComposingText(null);
-                      setQ(e.currentTarget.value);
-                      setSort("relevance");
-                    }}
-                    onValueChange={(v) => {
-                      if (composing.current) setComposingText(v);
-                      else {
-                        setQ(v);
+              <div
+                className={styles.searchControls}
+                onBlur={(e) => {
+                  if (
+                    !q &&
+                    popup !== "filter" &&
+                    !e.currentTarget.contains(e.relatedTarget as Node)
+                  )
+                    setEditingSearch(false);
+                }}
+              >
+                {editingSearch || q ? (
+                  <div className={styles.searchField}>
+                    <Input
+                      autoFocus
+                      aria-label="차트 검색어"
+                      placeholder="증상·진단·오더 검색"
+                      value={composingText ?? q}
+                      onCompositionStart={(e) => {
+                        composing.current = true;
+                        setComposingText(e.currentTarget.value);
+                      }}
+                      onCompositionEnd={(e) => {
+                        composing.current = false;
+                        setComposingText(null);
+                        setQ(e.currentTarget.value);
                         setSort("relevance");
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Escape" && !e.nativeEvent.isComposing) {
-                        e.preventDefault();
-                        e.stopPropagation();
+                      }}
+                      onValueChange={(v) => {
+                        if (composing.current) setComposingText(v);
+                        else {
+                          setQ(v);
+                          setSort("relevance");
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape" && !e.nativeEvent.isComposing) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setQ("");
+                          closeSearch();
+                        }
+                      }}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      aria-label="검색어 지우기"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
                         setQ("");
                         closeSearch();
+                      }}
+                    >
+                      <CloseIcon />
+                    </Button>
+                  </div>
+                ) : (
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <Button
+                          ref={searchButton}
+                          variant="outline"
+                          size="icon"
+                          aria-label="검색"
+                          onClick={() => setEditingSearch(true)}
+                        />
                       }
-                    }}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    aria-label="검색어 지우기"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => {
-                      setQ("");
-                      closeSearch();
-                    }}
-                  >
-                    <CloseIcon />
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  ref={searchButton}
-                  variant="outline"
-                  onClick={() => setEditingSearch(true)}
+                    >
+                      <SearchIcon aria-hidden="true" />
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">검색</TooltipContent>
+                  </Tooltip>
+                )}
+                <Popover
+                  open={active && popup === "filter"}
+                  onOpenChange={(v) => setPopup(v ? "filter" : "")}
                 >
-                  <SearchIcon />
-                  검색
-                </Button>
-              )}
+                  <Tooltip disabled={popup === "filter"}>
+                    <TooltipTrigger
+                      render={
+                        <PopoverTrigger
+                          render={
+                            <EmrTableFilterTrigger
+                              iconOnly
+                              activeCount={count}
+                              aria-label={filterLabel}
+                            />
+                          }
+                        />
+                      }
+                    />
+                    <TooltipContent side="bottom">{filterLabel}</TooltipContent>
+                  </Tooltip>
+                  <PopoverContent
+                    align="end"
+                    className="w-auto max-w-[96vw] p-0"
+                    initialFocus={false}
+                  >
+                    <EmrTableFilterBuilder
+                      autoOpenFirstField={false}
+                      fields={fields}
+                      model={groups}
+                      onModelChange={setGroups}
+                      onClose={() => setPopup("")}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
               <div className={styles.controls}>
                 <Pick
                   size="default"
@@ -584,32 +631,6 @@ export function ChartSearchWorkspace({
                 >
                   내 차트
                 </EmrFilterToggle>
-                <Popover
-                  open={active && popup === "filter"}
-                  onOpenChange={(v) => setPopup(v ? "filter" : "")}
-                >
-                  <PopoverTrigger
-                    render={
-                      <EmrTableFilterTrigger
-                        size="default"
-                        activeCount={count}
-                      />
-                    }
-                  />
-                  <PopoverContent
-                    align="end"
-                    className="w-auto max-w-[96vw] p-0"
-                    initialFocus={false}
-                  >
-                    <EmrTableFilterBuilder
-                      autoOpenFirstField={false}
-                      fields={fields}
-                      model={groups}
-                      onModelChange={setGroups}
-                      onClose={() => setPopup("")}
-                    />
-                  </PopoverContent>
-                </Popover>
               </div>
               <span aria-hidden className="h-4 w-px bg-border" />
               <div className={styles.controls}>
