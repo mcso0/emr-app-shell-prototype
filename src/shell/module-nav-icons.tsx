@@ -30,7 +30,7 @@ export const moduleIconById: Record<string, { icon: GnbIcon; iconClassName: stri
   home: { icon: HomeGnbIcon, iconClassName: "h-[16.1px] w-[17.6px]" },
   reception: { icon: CalendarGnbIcon, iconClassName: "h-[17.4px] w-[18px]" },
   treatment: { icon: MedicalGnbIcon, iconClassName: "h-[16.8px] w-[18.4px]" },
-  "chart-search": { icon: CdsMedicalChartSearchIcon, iconClassName: "size-[18px]" },
+  "chart-search": { icon: CdsMedicalChartSearchIcon, iconClassName: "size-5" },
   lab: { icon: PharmacyGnbIcon, iconClassName: "h-[16.5px] w-[11.8px] rotate-45" },
   imaging: { icon: RadiographyGnbIcon, iconClassName: "size-[17.6px]" },
   dispensing: { icon: PillGnbIcon, iconClassName: "h-[17.4px] w-[16.7px]" },
