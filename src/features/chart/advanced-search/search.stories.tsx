@@ -146,15 +146,32 @@ export const ProfileTargets: Story = {
 export const OpenCopyMenu: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const trigger = canvas.getByRole("button", {name:"모카 차트 복사"});
-    trigger.focus();
+    const body = within(canvasElement.ownerDocument.body);
+    const copy = canvas.getByRole("button", { name: "모카 차트 복사" });
+    const more = canvas.getByRole("button", { name: "모카 차트 더보기" });
+    await expect(copy.getBoundingClientRect().right).toBeLessThanOrEqual(
+      more.getBoundingClientRect().left,
+    );
+
+    copy.focus();
     await userEvent.keyboard("{Enter}");
-    const menu = within(canvasElement.ownerDocument.body).getByRole("menuitem", {name:"기존 차트에 복사"});
+    const menu = body.getByRole("menuitem", { name: "기존 차트에 복사" });
     await userEvent.hover(menu);
-    await expect(trigger).toBeVisible();
-    await expect(canvas.queryByRole("button", {name:/즐겨찾기/})).not.toBeInTheDocument();
+    await expect(copy).toBeVisible();
+    await expect(
+      canvas.queryByRole("button", { name: /즐겨찾기/ }),
+    ).not.toBeInTheDocument();
     await userEvent.keyboard("{Escape}");
-    await waitFor(() => expect(trigger).toHaveFocus());
+    await waitFor(() => expect(copy).toHaveFocus());
+
+    await userEvent.tab();
+    await expect(more).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() =>
+      expect(body.getByRole("menuitem", { name: "원본 보기" })).toBeVisible(),
+    );
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(more).toHaveFocus());
   },
 };
 
