@@ -369,6 +369,16 @@ export function ChartSearchWorkspace({
   const WidthIcon = narrow
     ? CdsNavigationMaximize2Icon
     : CdsNavigationMinimize2Icon;
+  const navigationAction = onReturnToChart && entry.patientName ? (
+    <Button variant="ghost" className="self-start" onClick={onReturnToChart}>
+      <ChevronLeftIcon />
+      {entry.patientName} 차트로 돌아가기
+    </Button>
+  ) : !independent ? (
+    <Button variant="ghost" size="icon" aria-label="검색 닫기" onClick={onClose}>
+      <ChevronLeftIcon />
+    </Button>
+  ) : null;
   return (
     <section
       className={styles.workspace}
@@ -383,29 +393,11 @@ export function ChartSearchWorkspace({
         }
       }}
     >
-      <EmrMainContentHeader heightMode="adaptive">
-        {onReturnToChart && entry.patientName ? (
-          <Button
-            variant="ghost"
-            className="self-start"
-            onClick={onReturnToChart}
-          >
-            <ChevronLeftIcon />
-            {entry.patientName} 차트로 돌아가기
-          </Button>
-        ) : (
-          !independent && (
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="검색 닫기"
-              onClick={onClose}
-            >
-              <ChevronLeftIcon />
-            </Button>
-          )
-        )}
-      </EmrMainContentHeader>
+      {navigationAction && (
+        <EmrMainContentHeader heightMode="adaptive">
+          {navigationAction}
+        </EmrMainContentHeader>
+      )}
       <header className={styles.resultHeader} data-emr-table-workspace-header>
         <EmrPageHeader
           title="차트 상세 검색"
