@@ -52,7 +52,12 @@ for (const timing of ["immediate", "settled"] as const) {
 
 test("rail and global search share one independent tab, and closing starts a fresh search", async ({ page }) => {
   const session = await setup(page);
-  const link = rail(page).getByRole("link", { name: "차트 상세 검색", exact: true });
+  const nav = rail(page);
+  await expect.poll(async () => {
+    const labels = await nav.getByRole("link").evaluateAll((links) => links.map((link) => link.getAttribute("aria-label")));
+    return labels[labels.indexOf("고객관리") - 1];
+  }).toBe("차트 상세 검색");
+  const link = nav.getByRole("link", { name: "차트 상세 검색", exact: true });
   await expect(link).not.toHaveAttribute("href", /patientId|encounterId|chartId/);
   await link.click();
   await expect(searchTab(page)).toHaveAttribute("aria-selected", "true");
