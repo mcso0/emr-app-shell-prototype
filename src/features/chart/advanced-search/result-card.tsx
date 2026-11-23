@@ -47,6 +47,7 @@ export function ChartActions({
   onCopy,
   menu,
   onCopyText,
+  showFavorite = true,
 }: {
   label: string;
   favorite: boolean;
@@ -54,6 +55,7 @@ export function ChartActions({
   onCopy: (mode: CopyMode) => void;
   menu: ReactNode;
   onCopyText?: () => void;
+  showFavorite?: boolean;
 }) {
   return (
     <div className="relative flex shrink-0 items-center gap-1">
@@ -99,16 +101,18 @@ export function ChartActions({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <Button
-        variant={favorite ? "secondary" : "ghost"}
-        size="icon"
-        aria-pressed={favorite}
-        aria-label={label + " 즐겨찾기 " + (favorite ? "해제" : "추가")}
-        title={favorite ? "즐겨찾기 해제" : "즐겨찾기 추가"}
-        onClick={onFavorite}
-      >
-        <CdsUtilitiesStarIcon />
-      </Button>
+      {showFavorite && (
+        <Button
+          variant={favorite ? "secondary" : "ghost"}
+          size="icon"
+          aria-pressed={favorite}
+          aria-label={label + " 즐겨찾기 " + (favorite ? "해제" : "추가")}
+          title={favorite ? "즐겨찾기 해제" : "즐겨찾기 추가"}
+          onClick={onFavorite}
+        >
+          <CdsUtilitiesStarIcon />
+        </Button>
+      )}
     </div>
   );
 }
@@ -215,6 +219,7 @@ export function ChartRow({
     type: "patient" | "guardian",
     name: string,
     id?: string | null,
+    text = name,
   ) =>
     id && name && onOpenProfile ? (
       <Button
@@ -226,10 +231,10 @@ export function ChartRow({
         }
         onClick={() => onOpenProfile({ type, id })}
       >
-        {name}
+        {text}
       </Button>
     ) : (
-      name
+      text
     );
   return (
     <Card
@@ -267,8 +272,12 @@ export function ChartRow({
           <div className={styles.metadata}>
             <span>{dateText(chart.visitAt ?? chart.clinicalAt)}</span>
             <span>
-              {profile("patient", chart.patient, chart.patientId)}
-              {chart.age != null && " (" + chart.age + "세)"}
+              {profile(
+                "patient",
+                chart.patient,
+                chart.patientId,
+                chart.patient + (chart.age != null ? " (" + chart.age + "세)" : ""),
+              )}
             </span>
             <span>
               {[speciesLabel(chart.species), chart.breed]
@@ -403,6 +412,7 @@ export function ChartRow({
         <div className={styles.rowActions}>
           <ChartActions
             label={chart.patient + " 차트"}
+            showFavorite={false}
             favorite={favorite}
             onFavorite={onFavorite}
             onCopy={onCopy}

@@ -263,7 +263,9 @@ test("patient drawer keeps its frame, scopes records and actions, and separates 
   await expect(row.getByRole("button",{name:/즐겨찾기 해제/})).toHaveAttribute("aria-pressed","true");
   await drawer.getByRole("button",{name:"차트 원본 닫기"}).click();
   await page.reload();
-  await expect(results.locator("[data-chart-id]").nth(1).getByRole("button",{name:/즐겨찾기 해제/})).toBeVisible();
+  await expect(results.getByRole("button",{name:/즐겨찾기/})).toHaveCount(0);
+  await second.getByRole("button",{name:/차트 원본 열기/}).click();
+  await expect(drawer.getByRole("button",{name:/즐겨찾기 해제/})).toHaveAttribute("aria-pressed","true");
 });
 
 test("같은 환자 이력을 함께 펼치고, 선택한 원본에서만 복사를 시작한다", async ({page})=>{
