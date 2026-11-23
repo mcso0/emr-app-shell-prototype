@@ -708,31 +708,28 @@ export function ChartSearchWorkspace({
       </header>
       <div className={styles.resultsBody}>
         <div className={styles.listhead} data-narrow={narrow}>
-          <Checkbox
-            aria-label="현재 결과 모두 선택"
-            disabled={!page?.items.length || loadingFirst || loadingMore || selecting}
-            checked={!!page?.items.length && checked.length === page.total}
-            indeterminate={
-              !!checked.length && checked.length !== (page?.total ?? 0)
-            }
-            onCheckedChange={(v) => void selectResults(v)}
-          />
-          <span>{checked.length ? checked.length + "건 선택" : "전체 선택"}</span>
-          {!!checked.length && (
-            <Button
-              variant="secondary"
-              size="xs"
-              onClick={() => setChecked([])}
-              disabled={selecting}
-            >
-              선택 해제
-            </Button>
-          )}
-          {changed && (
-            <Button variant="ghost" onClick={reset}>
-              조건 초기화
-            </Button>
-          )}
+          <div role="group" aria-label="차트 선택" className="flex shrink-0 items-center gap-2">
+            <Checkbox
+              aria-label="현재 결과 모두 선택"
+              disabled={!page?.items.length || loadingFirst || loadingMore || selecting}
+              checked={!!page?.items.length && checked.length === page.total}
+              indeterminate={
+                !!checked.length && checked.length !== (page?.total ?? 0)
+              }
+              onCheckedChange={(v) => void selectResults(v)}
+            />
+            <span className="emr-control-text-compact whitespace-nowrap">{checked.length ? checked.length + "건 선택" : "전체 선택"}</span>
+            {!!checked.length && (
+              <Button
+                variant="outline"
+                size="xs"
+                onClick={() => setChecked([])}
+                disabled={selecting}
+              >
+                선택 해제
+              </Button>
+            )}
+          </div>
           <label>
             <Switch size="sm" checked={drafts} onCheckedChange={setDrafts} />
             작성 중 차트 포함
@@ -887,6 +884,7 @@ export function ChartSearchWorkspace({
               favorites={favorites.ids}
               onFavorite={toggleFavorite}
               onCopy={(chart, mode) => void showSource(chart, mode)}
+              onOpenProfile={onOpenProfile}
               onViewChart={viewDocument}
             />
           </aside>

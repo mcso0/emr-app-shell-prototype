@@ -237,6 +237,16 @@ test("검색 결과에서 방문 환자와 보호자의 기존 프로필을 열�
     await expect(page).not.toHaveURL(/[?&]drawer=/);
     await expect(card).toBeVisible();
   }
+  await card.getByRole("button", { name: /차트 원본 열기$/ }).click();
+  const history = page.getByRole("complementary", { name: "차트 원본" });
+  for (const [kind, label] of [["patient", "환자 프로필 보기"], ["guardian", "보호자 프로필 보기"]]) {
+    await history.getByRole("button", {name: "환자 차트 이력 더보기"}).click();
+    await page.getByRole("menuitem", {name: label}).click();
+    const profile = page.getByTestId("profile-side-panel");
+    await expect(profile).toHaveAttribute("data-profile-kind", kind);
+    await profile.getByRole("button", {name: /닫기/}).first().click();
+    await expect(history.locator("[data-history-chart-id=profile-source]")).toBeVisible();
+  }
 });
 
 

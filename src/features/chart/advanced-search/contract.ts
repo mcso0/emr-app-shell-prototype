@@ -35,6 +35,7 @@ export type SearchOrder = {
   inputs: Record<string, unknown>;
 };
 export type SearchMedia = {
+  scope?: string;
   id: string;
   name: string;
   caption: string;
@@ -47,6 +48,7 @@ export type ChartExportSummary = {
   doctor: string; author: string; diagnosis: string | null;
 };
 export type SearchChart = {
+  patientPhotoUrl?: string | null;
   guardianId?: string | null;
   additionalVets?: { id: string; name: string }[];
   lastContentEditedAt?: string;

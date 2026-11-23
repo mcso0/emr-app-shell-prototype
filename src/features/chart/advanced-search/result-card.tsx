@@ -10,9 +10,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
+import { CdsNavigationExternalLinkIcon } from "@/components/cds-icons/navigation";
+import { CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
+import { CdsFilesFilePlusIcon, CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
 import { CdsUtilitiesStarIcon } from "@/components/cds-icons/utilities-and-misc";
 import {
   CdsActionsCopyIcon,
@@ -27,7 +30,7 @@ import { getOperatingDateFromIso } from "@/lib/emr-domain/demo-date";
 import { diagnosisLabels, type SearchChart } from "./contract";
 import { evidence, searchWords, speciesLabel } from "./ranking";
 import { Highlight, stateText, Thumbnail, type CopyMode } from "./presentation";
-import { CdsMedicalClipboardPenIcon } from "@/components/cds-icons/medical-and-domain";
+import { CdsMedicalClipboardPenIcon, CdsMedicalStethoscopeIcon } from "@/components/cds-icons/medical-and-domain";
 import { ResultExcerpt, ResultReader } from "./result-reader";
 import { ResultFooter } from "./result-footer";
 import styles from "./workspace.module.css";
@@ -47,6 +50,7 @@ export function ChartActions({
   onCopy,
   menu,
   onCopyText,
+  onViewHistoryChart,
   showFavorite = true,
   copyFirst = false,
 }: {
@@ -56,16 +60,18 @@ export function ChartActions({
   onCopy: (mode: CopyMode) => void;
   menu: ReactNode;
   onCopyText?: () => void;
+  onViewHistoryChart?: () => void;
   showFavorite?: boolean;
   copyFirst?: boolean;
 }) {
+  const size = onViewHistoryChart ? "icon-sm" : "icon";
   const moreMenu = (
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
           <Button
             variant="ghost"
-            size="icon"
+            size={size}
             aria-label={label + " 더보기"}
             title="더보기"
           >
@@ -77,14 +83,14 @@ export function ChartActions({
     </DropdownMenu>
   );
   return (
-    <div className="relative flex shrink-0 items-center gap-1">
+    <div data-chart-actions className="relative flex shrink-0 items-center gap-1">
       {!copyFirst && moreMenu}
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
             <Button
               variant="ghost"
-              size="icon"
+              size={size}
               aria-label={label + " 복사"}
               title="차트 복사"
             >
@@ -92,25 +98,34 @@ export function ChartActions({
             </Button>
           }
         />
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="w-max whitespace-nowrap">
           {onCopyText && (
             <DropdownMenuItem onClick={onCopyText}>
+              {onViewHistoryChart && <CdsActionsCopyIcon />}
               텍스트 전체 복사하기
             </DropdownMenuItem>
           )}
           <DropdownMenuItem onClick={() => onCopy("existing")}>
-            기존 차트에 복사
+            {onViewHistoryChart && <CdsMedicalClipboardPenIcon />}
+            {onViewHistoryChart ? "기존 차트에 복사하기" : "기존 차트에 복사"}
           </DropdownMenuItem>
+          {onViewHistoryChart && <DropdownMenuSeparator />}
           <DropdownMenuItem onClick={() => onCopy("new")}>
+            {onViewHistoryChart && <CdsFilesFilePlusIcon />}
             새 차트로 만들기
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      {onViewHistoryChart && (
+        <Button variant="ghost" size={size} aria-label={label + " 차트 보러가기"} title="차트 보러가기" onClick={onViewHistoryChart}>
+          <CdsNavigationExternalLinkIcon />
+        </Button>
+      )}
       {copyFirst && moreMenu}
       {showFavorite && (
         <Button
           variant={favorite ? "secondary" : "ghost"}
-          size="icon"
+          size={size}
           aria-pressed={favorite}
           aria-label={label + " 즐겨찾기 " + (favorite ? "해제" : "추가")}
           title={favorite ? "즐겨찾기 해제" : "즐겨찾기 추가"}
@@ -152,10 +167,10 @@ const taskLabels: Record<string, string> = {
 export function ChartStaff({ chart }: { chart: SearchChart }) {
   return (
     <dl className="grid min-w-0 content-start gap-1">
-      <InfoLine icon={<StethoscopeIcon />} label="주치의">
+      <InfoLine icon={<CdsMedicalStethoscopeIcon />} label="주치의">
         {chart.primaryVet || "미배정"}
       </InfoLine>
-      <InfoLine icon={<BuildingIcon />} label="진료의">
+      <InfoLine icon={<CdsPeopleUserIcon />} label="진료의">
         {chart.doctor || "미배정"}
       </InfoLine>
       <InfoLine icon={<CdsActionsCheckCircleIcon />} label="Task 상태">
