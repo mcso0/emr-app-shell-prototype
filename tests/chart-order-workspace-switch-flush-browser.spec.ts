@@ -16,6 +16,14 @@ const marker = "__syntheticWorkspaceFlushContext";
 async function ready(page: Page, third = false) {
   const session = await installChartSaveSession(page, { includeSecondWorkspace: true, includeThirdWorkspace: third });
   sessions.set(page, session);
+  await page.route(url => [workspaceId, workspaceBId, workspaceCId].some(id =>
+    url.pathname === `/api/workspaces/${id}/chart/advanced-search`), route => {
+    // The chart also checks for a resumable copy. This suite owns no copy writes.
+    if (route.request().method() === "POST" && route.request().postDataJSON().action === "pending") {
+      return route.fulfill({ contentType: "application/json", body: "null" });
+    }
+    return route.fallback();
+  });
   await session.goto(); await session.pauseReadyClock();
   await expect(quantity(page)).toHaveValue("1");
   await page.evaluate(key => Object.defineProperty(window, key, { value: "same-context" }), marker);

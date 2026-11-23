@@ -37,3 +37,13 @@
 - For shared UI work, query component documentation through project-scoped `clair_storybook` when local Storybook is running. Do not invent props or variants. Keep its endpoint local and do not publish or tunnel it without explicit approval.
 - For external API/SDK/library implementation, use `.agents/skills/context-hub-docs-router/SKILL.md`; Context Hub is an optional documentation tool, not an app dependency. Use official OpenAI docs for OpenAI/Codex questions.
 - Prefer targeted `rg` and bounded reads for docs, logs, generated files, and tests. Load a skill only when explicitly invoked or its specific workflow applies. Report high-output sources before changing token-related settings.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
