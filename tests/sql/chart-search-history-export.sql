@@ -53,4 +53,53 @@ do $$begin
     where workspace_id='synthetic-chart-search-history-v2' and actor_id='aac27000-0000-4000-8000-000000000003'
     and chart_ids=array['aac27300-0000-4000-8000-000000000005'::uuid] and issued_at>=transaction_timestamp())=2;
 end$$;
+-- Content timestamps and result counts belong to the originating chart.
+do $$
+declare
+  w constant text := 'synthetic-chart-search-history-v2';
+  chart constant uuid := 'aac27300-0000-4000-8000-000000000005';
+  visit constant uuid := 'aac27300-0000-4000-8000-000000000002';
+  lab_order uuid;
+  stamp timestamptz;
+  meta jsonb;
+begin
+  select edited_at into strict stamp from private.chart_content_edits where chart_id=chart;
+  update public.soap_notes set updated_at=clock_timestamp() where id=chart;
+  assert (select edited_at=stamp from private.chart_content_edits where chart_id=chart);
+  update public.soap_notes set assessment='Revised clinical findings' where id=chart;
+  assert (select edited_at>stamp from private.chart_content_edits where chart_id=chart);
+
+  select edited_at into strict stamp from private.chart_content_edits where chart_id=chart;
+  update public.soap_notes set diagnosis_assessment_revision=diagnosis_assessment_revision where id=chart;
+  assert (select edited_at=stamp from private.chart_content_edits where chart_id=chart);
+  update public.soap_notes set diagnosis_assessment_revision=diagnosis_assessment_revision+1 where id=chart;
+  assert (select edited_at>stamp from private.chart_content_edits where chart_id=chart);
+
+  perform set_config('clair.order_origin_chart_id',chart::text,true);
+  insert into public.orders(workspace_id,encounter_id,origin_chart_id,order_type,clinical_order_type,display_name)
+    values(w,visit,chart,'lab','clinical_lab','Synthetic lab order') returning id into lab_order;
+  select edited_at into strict stamp from private.chart_content_edits where chart_id=chart;
+  update public.orders set display_name='Updated order' where id=lab_order;
+  assert (select edited_at>stamp from private.chart_content_edits where chart_id=chart);
+  select edited_at into strict stamp from private.chart_content_edits where chart_id=chart;
+
+  insert into public.lab_result_entries(workspace_id,encounter_id,order_id,result_id,result_status,result_definition_origin,result_definition_snapshot)
+    values(w,visit,lab_order,'qa-final','reviewed','legacy','{}'),(w,visit,lab_order,'qa-pending','received','legacy','{}');
+  select private.clair_chart_result_metadata(n) into meta from public.soap_notes n where id=chart;
+  assert meta->'extraTags'='[]'::jsonb, 'requires lab read permission';
+
+  update public.workspace_permission_roles set permissions=jsonb_set(permissions,'{allowed}',(permissions->'allowed') || '["lab:view"]'::jsonb)
+    where workspace_id=w and role_key='qa';
+  update public.lab_result_entries set result_status='corrected' where workspace_id=w and result_id='qa-final';
+  meta:=public.clair_search_patient_charts(w,'aac27300-0000-4000-8000-000000000001')->'items'->0;
+  assert (meta#>>'{extraTags,0,label}') is not distinct from '임상 1건', 'a corrected final counts once';
+  assert (meta->>'lastContentEditedAt')::timestamptz=stamp, 'lab results do not edit chart content';
+  assert (select private.clair_chart_result_metadata(n)->'extraTags'='[]'::jsonb from public.soap_notes n
+    where id='aac27300-0000-4000-8000-000000000006'), 'sibling chart isolation';
+  update public.lab_result_entries set result_status='cancelled' where workspace_id=w and result_id='qa-final';
+  assert (select private.clair_chart_result_metadata(n)->'extraTags'='[]'::jsonb from public.soap_notes n where id=chart);
+  delete from public.lab_result_entries where workspace_id=w and order_id=lab_order;
+  delete from public.orders where id=lab_order;
+  assert (select edited_at>stamp from private.chart_content_edits where chart_id=chart);
+end $$;
 rollback;

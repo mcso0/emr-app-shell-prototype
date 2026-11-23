@@ -193,6 +193,7 @@ test("복사한 S를 대상 차트에서 고쳐도 원본과 검색어를 유지
   page,
 }) => {
   await page.goto("/review/chart-search");
+  await page.getByRole("button", { name: "검색", exact: true }).click();
   const query = page.getByRole("textbox", { name: "차트 검색어" });
   await query.fill("구토 초음파");
   await expect(
@@ -241,6 +242,7 @@ test("patient drawer keeps its frame, scopes records and actions, and separates 
   await page.goto("/review/chart-search");
   const results=page.getByRole("region",{name:"차트 검색 결과"});
   const first=results.locator("[data-chart-id]").first(),second=results.locator("[data-chart-id]").nth(1);
+  await first.hover();
   await first.getByRole("checkbox",{name:/차트 선택$/}).click();
   await expect(page.getByRole("complementary",{name:"차트 원본"})).toHaveCount(0);
   await first.getByRole("button",{name:/차트 원본 열기/}).click();
@@ -280,4 +282,45 @@ test("같은 환자 이력을 함께 펼치고, 선택한 원본에서만 복사
   await last.getByRole("button",{name:/ 복사$/,exact:false}).filter({hasNotText:"전체 복사"}).click();
   await page.getByRole("menuitem",{name:"기존 차트에 복사"}).click();
   await expect(page.getByRole("dialog")).toBeVisible();
+});
+
+test("결과의 전문과 배지를 확인해도 목록과 카드의 썸네일 위치가 유지된다", async ({page}) => {
+  await page.setViewportSize({width: 1387,height: 868});
+  await page.goto("/review/chart-search");
+  const results = page.getByRole("region",{name:"차트 검색 결과"});
+  const first = results.locator("[data-chart-id]").first();
+  const media = first.locator("[data-media]");
+  await expect(first.getByText("최근 수정")).toBeVisible();
+  await expect(first.getByText("2026.11.19")).toBeVisible();
+  const other = results.locator("[data-chart-id]").nth(1);
+  await expect(other.getByText("표시할 부가 정보가 없습니다")).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+  const square = await media.boundingBox();
+  expect(square).not.toBeNull();
+  expect(square!.width).toBeCloseTo(square!.height, 0);
+  expect((await other.locator("[data-media]").boundingBox())!.width).toBeCloseTo(square!.width, 0);
+  const more = first.getByRole("button",{name:"전체 오더 외 2건"});
+  await more.click();
+  const reader = page.getByRole("dialog",{name:"전체 오더"});
+  await expect(reader.getByText("이전 검사 패널")).toBeVisible();
+  expect(await media.boundingBox()).toEqual(square);
+  await page.keyboard.press("Escape");
+  await expect(more).toBeFocused();
+  await first.getByRole("button",{name:/부가 정보 \+/}).click();
+  await expect(page.getByRole("dialog",{name:"부가 정보"}).getByText("원외검사 최종 결과 1건")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.getByLabel("카드 보기").click();
+  for (const width of [1625, 1387, 1280, 390]) {
+    await page.setViewportSize({width,height:868});
+    await expect(results).toHaveAttribute("data-view","card");
+    const rect = await media.boundingBox();
+    expect(rect!.width / rect!.height).toBeCloseTo(16/9, 1);
+    expect(await first.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+    const footer = first.locator("footer");
+    expect(await footer.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+  }
+  await more.click();
+  await expect(page.getByRole("dialog",{name:"전체 오더"})).toBeVisible();
+  await page.getByRole("button",{name:"닫기",exact:true}).click();
+  await expect(more).toBeFocused();
 });

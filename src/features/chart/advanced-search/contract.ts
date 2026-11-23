@@ -47,6 +47,10 @@ export type ChartExportSummary = {
   doctor: string; author: string; diagnosis: string | null;
 };
 export type SearchChart = {
+  guardianId?: string | null;
+  additionalVets?: { id: string; name: string }[];
+  lastContentEditedAt?: string;
+  extraTags?: { label: string; detail: string }[];
   createdAt?: string;
   visitType?: string;
   primaryVet?: string | null;
