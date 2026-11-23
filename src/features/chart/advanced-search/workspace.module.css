@@ -414,7 +414,7 @@
 }
 .results[data-view="card"] .clinical {
   grid-template-columns: 1fr;
-  row-gap: 2px;
+  row-gap: 8px;
 }
 .results[data-view="card"] .clinical dl {
   row-gap: inherit;
