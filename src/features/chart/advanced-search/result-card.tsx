@@ -48,6 +48,7 @@ export function ChartActions({
   menu,
   onCopyText,
   showFavorite = true,
+  copyFirst = false,
 }: {
   label: string;
   favorite: boolean;
@@ -56,24 +57,28 @@ export function ChartActions({
   menu: ReactNode;
   onCopyText?: () => void;
   showFavorite?: boolean;
+  copyFirst?: boolean;
 }) {
+  const moreMenu = (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={label + " 더보기"}
+            title="더보기"
+          >
+            <CdsFilesMoreHorizontalIcon />
+          </Button>
+        }
+      />
+      <DropdownMenuContent align="end">{menu}</DropdownMenuContent>
+    </DropdownMenu>
+  );
   return (
     <div className="relative flex shrink-0 items-center gap-1">
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={label + " 더보기"}
-              title="더보기"
-            >
-              <CdsFilesMoreHorizontalIcon />
-            </Button>
-          }
-        />
-        <DropdownMenuContent align="end">{menu}</DropdownMenuContent>
-      </DropdownMenu>
+      {!copyFirst && moreMenu}
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
@@ -101,6 +106,7 @@ export function ChartActions({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      {copyFirst && moreMenu}
       {showFavorite && (
         <Button
           variant={favorite ? "secondary" : "ghost"}
@@ -412,6 +418,7 @@ export function ChartRow({
         <div className={styles.rowActions}>
           <ChartActions
             label={chart.patient + " 차트"}
+            copyFirst
             showFavorite={false}
             favorite={favorite}
             onFavorite={onFavorite}
