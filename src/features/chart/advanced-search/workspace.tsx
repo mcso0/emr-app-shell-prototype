@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { EmrMainContentHeader } from "@/components/emr/main-content-header";
-import { EmrTableWorkspaceHeader } from "@/components/emr/table-workspace-header";
+import { EmrPageHeader } from "@/components/emr/page-header";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { SearchIcon, CloseIcon } from "@/components/icons";
 import { EmrTableFeedbackSurface } from "@/components/emr/table-primitives";
 import { EmrEmptyState } from "@/components/emr/empty-state";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,7 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { deliverSummary } from "./export";
 import { useChartFavorites } from "./favorites";
-import { ChartRow } from "./result-card";
+import { ChartRow, type OpenChartProfile } from "./result-card";
 import { PatientHistory } from "./patient-history";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -70,6 +73,7 @@ export function ChartSearchWorkspace({
   api,
   onClose,
   onViewChart = onClose,
+  onOpenProfile,
   onReturnToChart,
   userId,
   independent = false,
@@ -83,16 +87,20 @@ export function ChartSearchWorkspace({
   independent?: boolean;
   active?: boolean;
   onViewChart?: (chart: ChartLocation) => void;
+  onOpenProfile?: OpenChartProfile;
 }) {
   const [q, setQ] = useState(""),
     [sort, setSort] = useState<SearchParams["sort"]>("relevance"),
     [mine, setMine] = useState(false),
     [drafts, setDrafts] = useState(false);
+  const [composingText, setComposingText] = useState<string | null>(null);
+  const composing = useRef(false);
   const [doctor, setDoctor] = useState(""),
     [groups, setGroups] = useState(fresh),
     [popup, setPopup] = useState("");
   const [narrow, setNarrow] = useState(false),
     [loaded, setLoaded] = useState<{
+      api: ChartSearchApi;
       params: SearchParams;
       page: SearchPage;
     } | null>(null),
@@ -187,7 +195,33 @@ export function ChartSearchWorkspace({
     }),
     [q, sort, mine, drafts, doctor, groups],
   );
-  const page = loaded?.params === params ? loaded.page : null;
+  const sameSource = loaded?.api === api;
+  const page = sameSource && loaded.params === params ? loaded.page : null;
+  // Retain the previous geometry while the same search source refreshes.
+  const visiblePage = page ?? (sameSource && !error ? loaded.page : null);
+  const listRef = useRef<HTMLElement>(null);
+  const searchButton = useRef<HTMLButtonElement>(null);
+  const [editingSearch, setEditingSearch] = useState(false);
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list || view !== "list") return;
+    const bodies = Array.from(list.getElementsByClassName(styles.chartMain));
+    const measure = () => {
+      const height = Math.ceil(
+        Math.max(0, ...bodies.map((el) => el.getBoundingClientRect().height)),
+      );
+      if (height > 0) list.style.setProperty("--thumbnail-side", height + "px");
+    };
+    const observer = new ResizeObserver(measure);
+    bodies.forEach((body) => observer.observe(body));
+    measure();
+    return () => observer.disconnect();
+  }, [view, visiblePage]);
+  const closeSearch = () => {
+    setEditingSearch(false);
+    requestAnimationFrame(() => searchButton.current?.focus());
+  };
+
   const count = getEmrTableFilterBuilderActiveCount(groups, fields);
   const changed = !!(q.trim() || mine || drafts || doctor || count);
   useEffect(() => {
@@ -198,14 +232,13 @@ export function ChartSearchWorkspace({
       () => {
         setBusy(true);
         setError("");
-        setLoaded(null);
         setSelected(null);
         setChecked([]);
         if (scroll.current) scroll.current.scrollTop = 0;
         api
           .search(params, abort.signal)
           .then((data) => {
-            if (!abort.signal.aborted) setLoaded({ params, page: data });
+            if (!abort.signal.aborted) setLoaded({ api, params, page: data });
           })
           .catch((e) => {
             if (!abort.signal.aborted) setError(errorMessage(e));
@@ -233,6 +266,7 @@ export function ChartSearchWorkspace({
       );
       if (!signal?.aborted)
         setLoaded({
+          api,
           params,
           page: {
             ...next,
@@ -372,141 +406,210 @@ export function ChartSearchWorkspace({
           )
         )}
       </EmrMainContentHeader>
-      <EmrTableWorkspaceHeader
-        title="차트 상세 검색"
-        count={page?.total ?? 0}
-        countLoading={!page && !error}
-        searchValue={q}
-        searchAriaLabel="차트 검색어"
-        searchClearAriaLabel="검색어 지우기"
-        searchPlaceholder="증상·진단·오더 검색"
-        onSearchChange={(v) => {
-          setQ(v);
-          setSort("relevance");
-        }}
-        tableControls={
-          <>
-            <div className={styles.controls}>
-              <Pick
-                size="default"
-                label="진료 담당의"
-                value={doctor || "any"}
-                options={[
-                  ["any", "전체 수의사"],
-                  ...(page?.doctors ?? []).map(
-                    (d) => [d.id, d.name] as [string, string],
-                  ),
-                  ...(doctor && !page?.doctors?.some((d) => d.id === doctor)
-                    ? [[doctor, "선택한 담당의"] as [string, string]]
-                    : []),
-                ]}
-                onChange={(v) => setDoctor(v === "any" ? "" : v)}
-              />
-              <EmrFilterToggle
-                size="default"
-                pressed={mine}
-                onPressedChange={setMine}
-                title="내가 담당하거나 작성한 차트"
-              >
-                내 차트
-              </EmrFilterToggle>
-              <Popover
-                open={active && popup === "filter"}
-                onOpenChange={(v) => setPopup(v ? "filter" : "")}
-              >
-                <PopoverTrigger
+      <header className={styles.resultHeader} data-emr-table-workspace-header>
+        <EmrPageHeader
+          title="차트 상세 검색"
+          badge={
+            !page && !error ? (
+              <Skeleton aria-label="차트 수 불러오는 중" className="h-4 w-6" />
+            ) : (
+              <Badge variant="secondary">{page?.total ?? 0}</Badge>
+            )
+          }
+          className={styles.heading}
+          actionsClassName={styles.toolbar}
+          actions={
+            <>
+              {editingSearch || q ? (
+                <div
+                  className={styles.searchField}
+                  onBlur={(e) => {
+                    if (
+                      !q &&
+                      !e.currentTarget.contains(e.relatedTarget as Node)
+                    )
+                      setEditingSearch(false);
+                  }}
+                >
+                  <Input
+                    autoFocus
+                    aria-label="차트 검색어"
+                    placeholder="증상·진단·오더 검색"
+                    value={composingText ?? q}
+                    onCompositionStart={(e) => {
+                      composing.current = true;
+                      setComposingText(e.currentTarget.value);
+                    }}
+                    onCompositionEnd={(e) => {
+                      composing.current = false;
+                      setComposingText(null);
+                      setQ(e.currentTarget.value);
+                      setSort("relevance");
+                    }}
+                    onValueChange={(v) => {
+                      if (composing.current) setComposingText(v);
+                      else {
+                        setQ(v);
+                        setSort("relevance");
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape" && !e.nativeEvent.isComposing) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setQ("");
+                        closeSearch();
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label="검색어 지우기"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setQ("");
+                      closeSearch();
+                    }}
+                  >
+                    <CloseIcon />
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  ref={searchButton}
+                  variant="outline"
+                  onClick={() => setEditingSearch(true)}
+                >
+                  <SearchIcon />
+                  검색
+                </Button>
+              )}
+              <div className={styles.controls}>
+                <Pick
+                  size="default"
+                  label="진료 담당의"
+                  value={doctor || "any"}
+                  options={[
+                    ["any", "전체 수의사"],
+                    ...(page?.doctors ?? []).map(
+                      (d) => [d.id, d.name] as [string, string],
+                    ),
+                    ...(doctor && !page?.doctors?.some((d) => d.id === doctor)
+                      ? [[doctor, "선택한 담당의"] as [string, string]]
+                      : []),
+                  ]}
+                  onChange={(v) => setDoctor(v === "any" ? "" : v)}
+                />
+                <EmrFilterToggle
+                  size="default"
+                  pressed={mine}
+                  onPressedChange={setMine}
+                  title="내가 담당하거나 작성한 차트"
+                >
+                  내 차트
+                </EmrFilterToggle>
+                <Popover
+                  open={active && popup === "filter"}
+                  onOpenChange={(v) => setPopup(v ? "filter" : "")}
+                >
+                  <PopoverTrigger
+                    render={
+                      <EmrTableFilterTrigger
+                        size="default"
+                        activeCount={count}
+                      />
+                    }
+                  />
+                  <PopoverContent
+                    align="end"
+                    className="w-auto max-w-[96vw] p-0"
+                    initialFocus={false}
+                  >
+                    <EmrTableFilterBuilder
+                      autoOpenFirstField={false}
+                      fields={fields}
+                      model={groups}
+                      onModelChange={setGroups}
+                      onClose={() => setPopup("")}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <span aria-hidden className="h-4 w-px bg-border" />
+              <div className={styles.controls}>
+                <Pick
+                  size="default"
+                  label="정렬"
+                  value={sort ?? "relevance"}
+                  options={[
+                    ...(q.trim()
+                      ? [
+                          ["relevance", "관련도순"] as [string, string],
+                          ["recent", "최근순"] as [string, string],
+                        ]
+                      : [
+                          [
+                            sort === "recent" ? "recent" : "relevance",
+                            "최근순",
+                          ] as [string, string],
+                        ]),
+                    ["oldest", "오래된순"],
+                  ]}
+                  onChange={(v) => setSort(v as SearchParams["sort"])}
+                />
+                <ToggleGroup
+                  aria-label="차트 보기 방식"
+                  value={[view]}
+                  variant="outline"
+                  size="default"
+                  onValueChange={(v) => {
+                    if (v.length) setView(v[0]);
+                  }}
+                >
+                  <ToggleGroupItem value="list" aria-label="리스트 보기">
+                    <MenuIcon />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="card" aria-label="카드 보기">
+                    <GridIcon />
+                  </ToggleGroupItem>
+                </ToggleGroup>
+                <Button
+                  variant="outline"
+                  aria-pressed={narrow}
+                  onClick={() => setNarrow(!narrow)}
+                >
+                  <WidthIcon />
+                  {narrow ? "넓게 보기" : "좁게 보기"}
+                </Button>
+              </div>
+              <span aria-hidden className="h-4 w-px bg-border" />
+              <DropdownMenu>
+                <DropdownMenuTrigger
                   render={
-                    <EmrTableFilterTrigger size="default" activeCount={count} />
+                    <Button disabled={!page || !checked.length || exporting}>
+                      <DownloadIcon />
+                      내보내기
+                      {checked.length ? " (" + checked.length + ")" : ""}
+                      <ChevronDownIcon />
+                    </Button>
                   }
                 />
-                <PopoverContent
-                  align="end"
-                  className="w-auto max-w-[96vw] p-0"
-                  initialFocus={false}
-                >
-                  <EmrTableFilterBuilder
-                    autoOpenFirstField={false}
-                    fields={fields}
-                    model={groups}
-                    onModelChange={setGroups}
-                    onClose={() => setPopup("")}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <span aria-hidden className="h-4 w-px bg-border" />
-            <div className={styles.controls}>
-              <Pick
-                size="default"
-                label="정렬"
-                value={sort ?? "relevance"}
-                options={[
-                  ...(q.trim()
-                    ? [
-                        ["relevance", "관련도순"] as [string, string],
-                        ["recent", "최근순"] as [string, string],
-                      ]
-                    : [
-                        [
-                          sort === "recent" ? "recent" : "relevance",
-                          "최근순",
-                        ] as [string, string],
-                      ]),
-                  ["oldest", "오래된순"],
-                ]}
-                onChange={(v) => setSort(v as SearchParams["sort"])}
-              />
-              <ToggleGroup
-                aria-label="차트 보기 방식"
-                value={[view]}
-                variant="outline"
-                size="default"
-                onValueChange={(v) => {
-                  if (v.length) setView(v[0]);
-                }}
-              >
-                <ToggleGroupItem value="list" aria-label="리스트 보기">
-                  <MenuIcon />
-                </ToggleGroupItem>
-                <ToggleGroupItem value="card" aria-label="카드 보기">
-                  <GridIcon />
-                </ToggleGroupItem>
-              </ToggleGroup>
-              <Button
-                variant="outline"
-                aria-pressed={narrow}
-                onClick={() => setNarrow(!narrow)}
-              >
-                <WidthIcon />
-                {narrow ? "넓게 보기" : "좁게 보기"}
-              </Button>
-            </div>
-          </>
-        }
-        primaryAction={
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button disabled={!page || !checked.length || exporting}>
-                  <DownloadIcon />
-                  내보내기{checked.length ? " (" + checked.length + ")" : ""}
-                  <ChevronDownIcon />
-                </Button>
-              }
-            />
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => void exportChecked("pdf")}>
-                <DocumentIcon />
-                PDF로 내보내기
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => void exportChecked("csv")}>
-                <DownloadIcon />
-                CSV로 내보내기
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        }
-      />
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => void exportChecked("pdf")}>
+                    <DocumentIcon />
+                    PDF로 내보내기
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void exportChecked("csv")}>
+                    <DownloadIcon />
+                    CSV로 내보내기
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          }
+        />
+      </header>
       <div className={styles.listhead} data-narrow={narrow}>
         <Checkbox
           aria-label="현재 결과 모두 선택"
@@ -548,7 +651,7 @@ export function ChartSearchWorkspace({
               </Button>
             </div>
           )}
-          {!page && !error && (
+          {!visiblePage && !error && (
             <div
               role="status"
               aria-label="차트를 불러오는 중입니다"
@@ -569,21 +672,25 @@ export function ChartSearchWorkspace({
               ))}
             </div>
           )}
-          {!!page?.items.length && (
+          {!!visiblePage?.items.length && (
             <section
               aria-label="차트 검색 결과"
+              aria-busy={!page}
+              inert={!page}
+              ref={listRef}
               className={styles.results}
               data-view={view}
             >
-              {page.items.map((chart) => (
+              {visiblePage.items.map((chart) => (
                 <ChartRow
                   key={chart.id}
                   chart={chart}
-                  query={q}
+                  query={loaded?.params.query ?? q}
                   active={selected?.id === chart.id}
                   checked={checked.includes(chart.id)}
                   favorite={favorites.ids.includes(chart.id)}
                   onOpen={() => void showSource(chart)}
+                  onOpenProfile={onOpenProfile}
                   onCheck={() =>
                     setChecked((ids) =>
                       ids.includes(chart.id)

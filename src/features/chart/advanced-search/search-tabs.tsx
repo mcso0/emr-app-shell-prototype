@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { getOperatingDateFromIso } from "@/lib/emr-domain/demo-date";
+import { SHELL_LAYOUT } from "@/shell/layout-contract";
+import { useLayoutStore } from "@/stores/layout-store";
 import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
 import { chartSearchApi } from "./client";
 import type { ChartEditorPosition, ChartSearchEditorBridge } from "./editor-position";
@@ -29,6 +31,8 @@ export function ChartSearchTabs({ userId, workspace, navigate, withSavedEditors,
     ? s.tabs.find(t => t.moduleId === "chart-search") : undefined);
   const [origin, setOrigin] = useState<Origin | null>(null);
   const currentOrigin = origin && origin.searchTab === searchTab?.id ? origin : null;
+  const openProfile = useLayoutStore(state => state.setActiveDrawer);
+  const profileOpen = useLayoutStore(state => state.activeDrawer?.type === "patient" || state.activeDrawer?.type === "guardian");
   const activeTabId = useWorkspaceTabsStore(s => s.activeTabId);
   const active = !!searchTab && activeTabId === searchTab.id;
   const [visited, setVisited] = useState<string | null>(null);
@@ -105,9 +109,12 @@ export function ChartSearchTabs({ userId, workspace, navigate, withSavedEditors,
     openTreatment(tab?.history[tab.historyIndex] ?? `/w/${encodeURIComponent(workspace)}/treatment?${params}`, tab?.id);
   }
   if (!searchTab || (!active && visited !== searchTab.id)) return null;
-  return <div hidden={!active} inert={!active} className="pointer-events-none absolute inset-0 [&>section]:pointer-events-auto">
+  return <div hidden={!active} inert={!active}
+    data-profile-open={profileOpen}
+    style={profileOpen ? { right: SHELL_LAYOUT.rightPanel.profileWidth + SHELL_LAYOUT.shell.gap } : undefined}
+    className="pointer-events-none absolute inset-0 max-[1100px]:data-[profile-open=true]:hidden [&>section]:pointer-events-auto">
     <ChartSearchWorkspace key={searchTab.id} entry={currentOrigin?.entry ?? { workspaceId: workspace }}
-      userId={userId} independent active={active} api={api}
+      userId={userId} independent active={active} api={api} onOpenProfile={openProfile}
       onReturnToChart={currentOrigin ? returnToOrigin : undefined}
       onClose={() => navigate(useWorkspaceTabsStore.getState().closeTab(searchTab.id))} onViewChart={viewChart} />
   </div>;

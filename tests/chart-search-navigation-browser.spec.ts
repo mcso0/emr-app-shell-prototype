@@ -35,6 +35,7 @@ test("rail and global search share one independent tab, and closing starts a fre
   await expect(link).toHaveAttribute("aria-current", "page");
   await expect(page.getByTestId("module-side-panel-host")).toBeHidden();
   await expect(page.getByRole("button", { name: /차트로 돌아가기/ })).toHaveCount(0);
+  await page.locator("header[data-emr-table-workspace-header]").getByRole("button", { name: "검색", exact: true }).click();
   await query(page).fill("구토");
   await page.getByRole("button", { name: "모카 차트 원본 열기" }).click();
   await page.getByRole("tab", { name: "진료/차트", exact: true }).click();
@@ -50,7 +51,8 @@ test("rail and global search share one independent tab, and closing starts a fre
   await expect(searchTab(page)).toHaveCount(0);
   await link.click();
   await expect(page).toHaveURL(/\/chart-search(?:\?|$)/);
-  await expect(query(page)).toHaveValue("");
+  await expect(page.locator("header[data-emr-table-workspace-header]").getByRole("button", { name: "검색", exact: true })).toBeVisible();
+  await expect(query(page)).toHaveCount(0);
   await expect(page.getByRole("complementary", { name: "차트 원본" })).toHaveCount(0);
   session.assertNoUnexpectedTraffic();
 });
@@ -76,13 +78,31 @@ test("return restores the exact saved SOAP paragraph, caret and search source", 
   await page.keyboard.insertText(" ABCDEF");
   await page.keyboard.press("ArrowLeft");
   await page.keyboard.press("ArrowLeft");
+  await expect.poll(() => page.evaluate(() => {
+    const selection = window.getSelection();
+    return selection?.focusNode?.textContent?.slice(selection.focusOffset);
+  })).toBe("EF");
   await page.getByRole("button", { name: "차트 상세 검색", exact: true }).click();
   await expect(searchTab(page)).toHaveAttribute("aria-selected", "true");
   expect(JSON.stringify(saved?.blockDocument)).toContain("ABCDEF");
+  await page.locator("header[data-emr-table-workspace-header]").getByRole("button", { name: "검색", exact: true }).click();
   await query(page).fill("구토");
   await page.getByRole("button", { name: "모카 차트 원본 열기" }).click();
   await expect(page.getByRole("complementary", { name: "차트 원본" })).toBeVisible();
+  // The SOAP read can finish while the enclosing chart still waits on orders.
+  let releaseOrderRead!: () => void;
+  const orderReadGate = new Promise<void>(resolve => { releaseOrderRead = resolve; });
+  await page.route(url => url.pathname.endsWith("/chart/order-drafts"), async route => {
+    await orderReadGate;
+    await route.fallback();
+  });
   await page.getByRole("button", { name: patients.a.name + " 차트로 돌아가기" }).click();
+  try {
+    await expect(editor(page).locator(".ProseMirror")).toBeAttached();
+    await expect(editor(page).locator("xpath=ancestor::*[@data-page-content and @inert]").first()).toBeAttached();
+  } finally {
+    releaseOrderRead();
+  }
   await expect(page).toHaveURL(new RegExp(patients.a.chartId));
   await expect(editor(page).locator(".ProseMirror")).toBeFocused();
   await expect.poll(() => editor(page).evaluate(() => {
@@ -110,7 +130,7 @@ test("검색 결과의 너비를 바꿔도 상단과 스크롤 위치가 유지�
   await page.setViewportSize({width:1900,height:1200});
   await setup(page,true);
   await rail(page).getByRole("link",{name:"차트 상세 검색",exact:true}).click();
-  const header=page.locator("[data-emr-table-workspace-header]").filter({has:query(page)});
+  const header=page.locator("[data-emr-table-workspace-header]");
   const result=page.getByRole("region",{name:"차트 검색 결과"});
   await expect(result).toBeVisible();
   await page.evaluate(async()=>{await document.fonts.ready;await Promise.allSettled(document.getAnimations().filter(a=>a.effect?.getTiming().iterations!==Infinity).map(a=>a.finished));});
@@ -131,5 +151,25 @@ test("검색 결과의 너비를 바꿔도 상단과 스크롤 위치가 유지�
     await expect(drawer.locator("[data-history-chart-id]")).toBeVisible();
     expect(await drawer.evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
     await testInfo.attach("chart-search-"+width,{body:await page.screenshot({path:testInfo.outputPath("chart-search-"+width+".png"),animations:"disabled"}),contentType:"image/png"});
+  }
+});
+
+test("검색 결과에서 방문 환자와 보호자의 기존 프로필을 열고 목록으로 돌아온다", async ({page}) => {
+  await page.setViewportSize({width:1387,height:868});
+  const row = exampleChart("profile-source", {
+    patient: "코코", patientId: "patient-coco", guardian: "이지은", guardianId: "guardian-lee-jieun",
+  });
+  await page.route("**/api/workspaces/clair-demo/chart/advanced-search", route =>
+    route.fulfill({json:{items:[row],total:1,nextCursor:null,doctors:[]}}));
+  await page.goto("/w/clair-demo/chart-search?modulePanel=closed");
+  const card = page.locator("[data-chart-id=profile-source]");
+  for (const [kind, name] of [["patient","코코 환자 프로필"], ["guardian","이지은 보호자 프로필"]]) {
+    await card.getByRole("button",{name,exact:true}).click();
+    const profile = page.getByTestId("profile-side-panel");
+    await expect(profile).toHaveAttribute("data-profile-kind",kind);
+    const close = profile.getByRole("button",{name:/닫기/}).first();
+    await close.click();
+    await expect(profile).toBeHidden();
+    await expect(card).toBeVisible();
   }
 });

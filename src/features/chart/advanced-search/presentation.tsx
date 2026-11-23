@@ -179,8 +179,62 @@ export function Thumbnail({
     representativeMedia(chart.media, query),
   );
   const item = chart.media[index];
+  const container = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const box = container.current;
+    const image = box?.querySelector("img");
+    if (!box || !image || item?.video || chart.media.length < 2) return;
+    const buttons = box.querySelectorAll<HTMLButtonElement>("button");
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 8;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    const sample = () => {
+      if (!ctx || !image.naturalWidth) return;
+      const rect = image.getBoundingClientRect();
+      const scale = Math.min(
+        rect.width / image.naturalWidth,
+        rect.height / image.naturalHeight,
+      );
+      const w = image.naturalWidth * scale,
+        h = image.naturalHeight * scale;
+      for (const button of buttons) {
+        const area = button.getBoundingClientRect();
+        if (!area.width || !area.height) continue;
+        ctx.fillStyle = "#101116";
+        ctx.fillRect(0, 0, 8, 8);
+        ctx.drawImage(
+          image,
+          ((rect.left + (rect.width - w) / 2 - area.left) * 8) / area.width,
+          ((rect.top + (rect.height - h) / 2 - area.top) * 8) / area.height,
+          (w * 8) / area.width,
+          (h * 8) / area.height,
+        );
+        try {
+          const pixels = ctx.getImageData(0, 0, 8, 8).data;
+          let light = 0;
+          for (let i = 0; i < pixels.length; i += 4)
+            light +=
+              pixels[i] * 0.2126 +
+              pixels[i + 1] * 0.7152 +
+              pixels[i + 2] * 0.0722;
+          button.dataset.backdrop = light / 64 >= 128 ? "light" : "dark";
+        } catch {
+          return;
+        } // Cross-origin media keeps the default control tone.
+      }
+    };
+    const observer = new ResizeObserver(sample);
+    observer.observe(box);
+    image.addEventListener("load", sample);
+    sample();
+    return () => {
+      observer.disconnect();
+      image.removeEventListener("load", sample);
+      buttons.forEach((b) => delete b.dataset.backdrop);
+    };
+  }, [item?.id, item?.url, item?.video, chart.media.length]);
   return (
-    <div className={styles.thumb}>
+    <div className={styles.thumb} ref={container}>
       {item ? (
         <>
           <PreviewMedia key={item.id} item={item} inlinePlayback={item.video} />

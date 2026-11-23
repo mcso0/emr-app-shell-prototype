@@ -20,7 +20,6 @@ import {
 } from "@/components/cds-icons/actions-and-controls";
 import {
   BuildingIcon,
-  CalendarIcon,
   DocumentIcon,
   StethoscopeIcon,
 } from "@/components/icons";
@@ -28,6 +27,9 @@ import { getOperatingDateFromIso } from "@/lib/emr-domain/demo-date";
 import { diagnosisLabels, type SearchChart } from "./contract";
 import { evidence, searchWords, speciesLabel } from "./ranking";
 import { Highlight, stateText, Thumbnail, type CopyMode } from "./presentation";
+import { CdsMedicalClipboardPenIcon } from "@/components/cds-icons/medical-and-domain";
+import { ResultExcerpt, ResultReader } from "./result-reader";
+import { ResultFooter } from "./result-footer";
 import styles from "./workspace.module.css";
 
 export const dateText = (value?: string) =>
@@ -156,8 +158,11 @@ export function ChartStaff({ chart }: { chart: SearchChart }) {
     </dl>
   );
 }
+export type OpenChartProfile = (profile: { type: "patient" | "guardian"; id: string }) => void;
+
 export function ChartRow({
   chart,
+  onOpenProfile,
   query,
   active,
   checked,
@@ -170,6 +175,7 @@ export function ChartRow({
 }: {
   chart: SearchChart;
   query: string;
+  onOpenProfile?: OpenChartProfile;
   active: boolean;
   checked: boolean;
   favorite: boolean;
@@ -180,28 +186,57 @@ export function ChartRow({
   onViewChart: () => void;
 }) {
   const hit = evidence(chart, searchWords(query)).matches[0];
-  const title =
-    hit &&
-    (["진단", "오더"].includes(hit.label) ||
-      /^(현장 접수|방문|내원|진료|재진|초진)$/.test(chart.purpose))
-      ? hit.text
-      : chartTitle(chart);
-  const text = (value: string) => (
-    <Highlight value={value || "미기록"} query={query} />
-  );
-  const so = [
-    chart.complaint,
-    ...chart.paragraphs
-      .filter((p) => p.section === "subjective" || p.section === "objective")
-      .map((p) => p.text),
-  ]
+  const paragraphs = (sections: string[]) =>
+    chart.paragraphs
+      .filter((p) => p.section && sections.includes(p.section))
+      .map((p) => p.text);
+  const so = [chart.complaint, ...paragraphs(["subjective", "objective"])]
     .filter(Boolean)
-    .join(" ");
+    .join("\n");
+  const diagnoses = [...chart.diagnoses].sort(
+    (a, b) => Number(b.primary) - Number(a.primary),
+  );
+  const diagnosisName = (d: SearchChart["diagnoses"][number]) =>
+    d.name +
+    (diagnosisLabels[d.kind] ? "(" + diagnosisLabels[d.kind] + ")" : "");
+  const words = searchWords(query);
+  const matches = (name: string) =>
+    words.some((word) => name.toLocaleLowerCase().includes(word));
+  const sortedOrders = [...chart.orders].sort(
+    (a, b) => Number(matches(b.name)) - Number(matches(a.name)),
+  );
+  const vetNames = [
+    chart.doctor,
+    ...(chart.additionalVets ?? [])
+      .filter((v) => v.id !== chart.doctorId)
+      .map((v) => v.name),
+  ].filter(Boolean);
+  const profile = (
+    type: "patient" | "guardian",
+    name: string,
+    id?: string | null,
+  ) =>
+    id && name && onOpenProfile ? (
+      <Button
+        size="xs"
+        variant="ghost"
+        className={styles.profileLink}
+        aria-label={
+          name + (type === "patient" ? " 환자 프로필" : " 보호자 프로필")
+        }
+        onClick={() => onOpenProfile({ type, id })}
+      >
+        {name}
+      </Button>
+    ) : (
+      name
+    );
   return (
     <Card
       data-chart-id={chart.id}
       aria-current={active || undefined}
       data-active={active}
+      data-checked={checked}
       className={styles.resultCard}
       onClick={(event) => {
         if (
@@ -230,65 +265,140 @@ export function ChartRow({
         </div>
         <div className={styles.chartMain}>
           <div className={styles.metadata}>
-            <span>{dateText(chart.createdAt)}</span>
+            <span>{dateText(chart.visitAt ?? chart.clinicalAt)}</span>
             <span>
-              {chart.patient}
+              {profile("patient", chart.patient, chart.patientId)}
               {chart.age != null && " (" + chart.age + "세)"}
             </span>
-            <span>{chart.guardian}</span>
             <span>
               {[speciesLabel(chart.species), chart.breed]
                 .filter(Boolean)
                 .join(" · ")}
             </span>
+            {chart.guardian && (
+              <span>
+                {profile("guardian", chart.guardian, chart.guardianId)}
+              </span>
+            )}
           </div>
-          <div className="grid gap-1 py-2">
-            <Button
-              className={styles.chartTitle}
-              variant="ghost"
-              aria-label={chart.patient + " 차트 원본 열기"}
-              aria-expanded={active}
-              onClick={onOpen}
-            >
-              {text(title)}
-            </Button>
-            <div className="flex min-w-0 items-center gap-3 text-muted-foreground">
-              <span className="truncate">{text(diagnosesText(chart))}</span>
-              <EmrStatusBadge label={stateText(chart.status)} />
-            </div>
-          </div>
-          <div className={styles.clinical}>
-            <ChartStaff chart={chart} />
-            <dl className="grid min-w-0 content-start gap-1">
-              <InfoLine icon={<DocumentIcon />} label="S/O 내용">
-                {text(so)}
-              </InfoLine>
-              <InfoLine icon={<StethoscopeIcon />} label="진단 내용">
-                {text(diagnosesText(chart))}
-              </InfoLine>
-              <InfoLine icon={<CalendarIcon />} label="Plan 내용">
-                {text(
-                  chart.paragraphs
-                    .filter((p) => p.section === "plan")
-                    .map((p) => p.text)
-                    .join(" "),
-                )}
-              </InfoLine>
-            </dl>
-          </div>
-          <div className="flex min-h-9 flex-wrap items-center justify-between gap-2 py-2">
-            <div className="flex flex-wrap gap-1">
-              {chart.orders.map((o) => (
-                <Badge key={o.id} variant="secondary">
-                  {text(o.name)}
+          <div className={styles.visitGroup}>
+            <ResultExcerpt
+              value={chartTitle(chart)}
+              label="방문목적"
+              query={query}
+              openOriginal={onOpen}
+              originalLabel={chart.patient + " 차트 원본 열기"}
+            />
+            <div className={styles.diagnoses} aria-label="진단">
+              {diagnoses.slice(0, 3).map((d) => (
+                <Badge key={d.id} size="sm" variant="secondary">
+                  <span className={styles.ellipsis} title={diagnosisName(d)}>
+                    <Highlight query={query} value={diagnosisName(d)} />
+                  </span>
                 </Badge>
               ))}
+              {diagnoses.length === 0 && (
+                <span className={styles.missing}>등록된 진단 없음</span>
+              )}
+              {diagnoses.length > 3 && (
+                <ResultReader
+                  label="진단명"
+                  action={"외 " + (diagnoses.length - 3) + "개"}
+                >
+                  <ul>
+                    {diagnoses.map((d) => (
+                      <li key={d.id}>
+                        <Highlight query={query} value={diagnosisName(d)} />
+                      </li>
+                    ))}
+                  </ul>
+                </ResultReader>
+              )}
             </div>
-            <span className="emr-text-metadata text-muted-foreground">
-              진료 {dateText(chart.visitAt ?? chart.clinicalAt)} · 작성{" "}
-              {chart.author || "미기록"}
-            </span>
           </div>
+          <div>
+            {hit && (
+              <div className={styles.match}>
+                <span>검색 일치 · {hit.label}</span>
+                <ResultExcerpt
+                  label="검색 일치 내용"
+                  value={hit.text}
+                  query={query}
+                />
+              </div>
+            )}
+            <div className={styles.clinical}>
+              <dl>
+                <InfoLine icon={<StethoscopeIcon />} label="주치의">
+                  {chart.primaryVet || (
+                    <span className={styles.missing}>미배정</span>
+                  )}
+                </InfoLine>
+                <InfoLine icon={<BuildingIcon />} label="진료의">
+                  {vetNames[0] || (
+                    <span className={styles.missing}>미배정</span>
+                  )}
+                  {vetNames.length > 1 && (
+                    <ResultReader
+                      label="진료의"
+                      action={"외 " + (vetNames.length - 1) + "명"}
+                    >
+                      {vetNames.join("\n")}
+                    </ResultReader>
+                  )}
+                </InfoLine>
+                <InfoLine icon={<CdsActionsCheckCircleIcon />} label="진행상태">
+                  <EmrStatusBadge
+                    marker="none"
+                    label={stateText(chart.status)}
+                  />
+                </InfoLine>
+              </dl>
+              <dl>
+                <InfoLine icon={<DocumentIcon />} label="S/O 소견">
+                  <ResultExcerpt label="S/O 소견" value={so} query={query} />
+                </InfoLine>
+                <InfoLine icon={<StethoscopeIcon />} label="진단 소견">
+                  <ResultExcerpt
+                    label="진단 소견"
+                    value={paragraphs(["assessment"]).join("\n")}
+                    query={query}
+                  />
+                </InfoLine>
+                <InfoLine
+                  icon={<CdsMedicalClipboardPenIcon />}
+                  label="오더 내역"
+                >
+                  <ResultExcerpt
+                    label="전체 오더"
+                    query={query}
+                    value={sortedOrders
+                      .slice(0, 2)
+                      .map((o) => o.name)
+                      .join(" · ")}
+                    empty="등록된 오더 없음"
+                    overflowAction={
+                      sortedOrders.length <= 2
+                        ? undefined
+                        : {
+                            action: "외 " + (sortedOrders.length - 2) + "건",
+                            content: (
+                              <ul>
+                                {chart.orders.map((o) => (
+                                  <li key={o.id}>
+                                    <Highlight value={o.name} query={query} />
+                                  </li>
+                                ))}
+                              </ul>
+                            ),
+                          }
+                    }
+                  />
+                </InfoLine>
+              </dl>
+            </div>
+          </div>
+          <ResultFooter chart={chart} />
         </div>
         <div className={styles.rowActions}>
           <ChartActions
