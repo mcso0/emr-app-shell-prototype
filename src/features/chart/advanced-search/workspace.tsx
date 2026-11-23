@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Button } from "@/components/ui/button";
 import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import { EmrPageHeader } from "@/components/emr/page-header";
@@ -8,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { SearchIcon, CloseIcon } from "@/components/icons";
 import { EmrTableFeedbackSurface } from "@/components/emr/table-primitives";
+import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { EmrEmptyState } from "@/components/emr/empty-state";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -105,7 +113,13 @@ export function ChartSearchWorkspace({
       page: SearchPage;
     } | null>(null),
     [error, setError] = useState(""),
-    [busy, setBusy] = useState(true),
+    [loadingFirst, setLoadingFirst] = useState(true),
+    [loadingMore, setLoadingMore] = useState(false),
+    [selecting, setSelecting] = useState(false),
+    [moreError, setMoreError] = useState<{
+      message: string;
+      restart: boolean;
+    } | null>(null),
     [attempt, setAttempt] = useState(0);
   const [selected, setSelected] = useState<SearchChart | null>(null),
     [copy, setCopy] = useState<{
@@ -182,6 +196,10 @@ export function ChartSearchWorkspace({
   const request = useRef<AbortController | null>(null),
     scroll = useRef<HTMLDivElement>(null),
     opener = useRef<HTMLElement | null>(null);
+  // The ref closes the gap before React commits a loading-state update.
+  const operation = useRef<"first" | "more" | "select" | null>(null);
+  const cursors = useRef(new Set<string>());
+  const sentinel = useRef<HTMLDivElement>(null);
   const detailRequest = useRef<AbortController | null>(null);
   useEffect(() => () => detailRequest.current?.abort(), []);
   const params = useMemo(
@@ -228,9 +246,14 @@ export function ChartSearchWorkspace({
     const abort = new AbortController();
     detailRequest.current?.abort();
     request.current = abort;
+    operation.current = "first";
+    cursors.current = new Set();
     const timer = window.setTimeout(
       () => {
-        setBusy(true);
+        setLoadingFirst(true);
+        setLoadingMore(false);
+        setSelecting(false);
+        setMoreError(null);
         setError("");
         setSelected(null);
         setChecked([]);
@@ -244,7 +267,10 @@ export function ChartSearchWorkspace({
             if (!abort.signal.aborted) setError(errorMessage(e));
           })
           .finally(() => {
-            if (!abort.signal.aborted) setBusy(false);
+            if (!abort.signal.aborted) {
+              operation.current = null;
+              setLoadingFirst(false);
+            }
           });
       },
       q ? 180 : 0,
@@ -254,37 +280,86 @@ export function ChartSearchWorkspace({
       abort.abort();
     };
   }, [api, params, attempt, q]);
-  async function more() {
-    if (!page?.nextCursor || busy) return;
-    const signal = request.current?.signal;
-    setBusy(true);
-    setError("");
+  const more = useCallback(async () => {
+    const abort = request.current;
+    const cursor = page?.nextCursor;
+    if (
+      !active || !page || !cursor || error || loadingFirst || operation.current ||
+      !abort || abort.signal.aborted
+    ) return;
+    operation.current = "more";
+    setLoadingMore(true);
+    setMoreError(null);
     try {
-      const next = await api.search(
-        { ...params, cursor: page.nextCursor },
-        signal,
-      );
-      if (!signal?.aborted)
-        setLoaded({
-          api,
-          params,
-          page: {
-            ...next,
-            doctors: page.doctors,
-            items: [...page.items, ...next.items],
-          },
-        });
+      const next = await api.search({ ...params, cursor }, abort.signal);
+      if (abort.signal.aborted || request.current !== abort) return;
+      const existing = new Set(page.items.map((chart) => chart.id));
+      const additions = next.items.filter((chart) => {
+        if (existing.has(chart.id)) return false;
+        existing.add(chart.id);
+        return true;
+      });
+      if (
+        next.nextCursor && (
+          next.nextCursor === cursor ||
+          cursors.current.has(next.nextCursor) ||
+          !additions.length
+        )
+      )
+        throw new Error("invalid_cursor");
+      cursors.current.add(cursor);
+      setLoaded({
+        api,
+        params,
+        page: {
+          ...next,
+          doctors: page.doctors,
+          items: [...page.items, ...additions],
+        },
+      });
     } catch (e) {
-      if (!signal?.aborted) setError(errorMessage(e));
+      if (!abort.signal.aborted && request.current === abort) {
+        const restart = e instanceof Error && e.message === "invalid_cursor";
+        setMoreError({
+          restart,
+          message: restart
+            ? "검색 결과가 변경되어 이어서 불러올 수 없습니다. 검색을 다시 불러와 주세요."
+            : "다음 차트를 불러오지 못했습니다. 다시 시도해 주세요.",
+        });
+      }
     } finally {
-      if (!signal?.aborted) setBusy(false);
+      if (!abort.signal.aborted && request.current === abort) {
+        operation.current = null;
+        setLoadingMore(false);
+      }
     }
-  }
+  }, [active, api, params, page, error, loadingFirst]);
+  useEffect(() => {
+    const root = scroll.current;
+    const target = sentinel.current;
+    if (
+      !active || !root || !target || !page?.nextCursor ||
+      error || loadingFirst || loadingMore || selecting || moreError
+    ) return;
+    let observing = true;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (observing && entry.isIntersecting) void more();
+      },
+      { root, rootMargin: "0px 0px 300px 0px" },
+    );
+    observer.observe(target);
+    return () => {
+      observing = false;
+      observer.disconnect();
+    };
+  }, [active, page, error, loadingFirst, loadingMore, selecting, moreError, more, view, narrow]);
   async function selectResults(checkedAll: boolean) {
     if (!checkedAll || !page) {
       setChecked([]);
       return;
     }
+    if (operation.current || loadingFirst) return;
     if (page.total > 500) {
       setNotice(
         "한 번에 최대 500건까지 선택할 수 있습니다. 검색 조건을 좁혀 주세요.",
@@ -295,7 +370,8 @@ export function ChartSearchWorkspace({
     const ids = new Set(page.items.map((chart) => chart.id));
     let cursor = page.nextCursor;
     const seen = new Set<string>();
-    setBusy(true);
+    operation.current = "select";
+    setSelecting(true);
     try {
       while (cursor) {
         if (seen.has(cursor)) throw new Error("invalid_cursor");
@@ -303,13 +379,20 @@ export function ChartSearchWorkspace({
         const next = await api.search({ ...params, cursor }, signal);
         if (signal?.aborted) return;
         next.items.forEach((chart) => ids.add(chart.id));
+        if (ids.size > 500) throw new Error("selection_limit");
         cursor = next.nextCursor;
       }
       if (!signal?.aborted) setChecked([...ids]);
     } catch (e) {
-      if (!signal?.aborted) setNotice(errorMessage(e));
+      if (!signal?.aborted)
+        setNotice(e instanceof Error && e.message === "selection_limit"
+          ? "한 번에 최대 500건까지 선택할 수 있습니다. 검색 조건을 좁혀 주세요."
+          : errorMessage(e));
     } finally {
-      if (!signal?.aborted) setBusy(false);
+      if (!signal?.aborted) {
+        operation.current = null;
+        setSelecting(false);
+      }
     }
   }
   function reset() {
@@ -606,7 +689,7 @@ export function ChartSearchWorkspace({
         <div className={styles.listhead} data-narrow={narrow}>
           <Checkbox
             aria-label="현재 결과 모두 선택"
-            disabled={!page?.items.length || busy}
+            disabled={!page?.items.length || loadingFirst || loadingMore || selecting}
             checked={!!page?.items.length && checked.length === page.total}
             indeterminate={
               !!checked.length && checked.length !== (page?.total ?? 0)
@@ -619,6 +702,7 @@ export function ChartSearchWorkspace({
               variant="secondary"
               size="xs"
               onClick={() => setChecked([])}
+              disabled={selecting}
             >
               선택 해제
             </Button>
@@ -640,9 +724,7 @@ export function ChartSearchWorkspace({
                 {error}
                 <Button
                   variant="outline"
-                  onClick={
-                    page?.nextCursor ? more : () => setAttempt((a) => a + 1)
-                  }
+                  onClick={() => setAttempt((a) => a + 1)}
                 >
                   다시 시도
                 </Button>
@@ -688,13 +770,18 @@ export function ChartSearchWorkspace({
                     favorite={favorites.ids.includes(chart.id)}
                     onOpen={() => void showSource(chart)}
                     onOpenProfile={onOpenProfile}
-                    onCheck={() =>
+                    onCheck={() => {
+                      if (selecting) return;
+                      if (!checked.includes(chart.id) && checked.length >= 500) {
+                        setNotice("한 번에 최대 500건까지 선택할 수 있습니다. 검색 조건을 좁혀 주세요.");
+                        return;
+                      }
                       setChecked((ids) =>
                         ids.includes(chart.id)
                           ? ids.filter((id) => id !== chart.id)
                           : [...ids, chart.id],
-                      )
-                    }
+                      );
+                    }}
                     onFavorite={() => toggleFavorite(chart.id)}
                     onCopy={(mode) => void showSource(chart, mode)}
                     onViewChart={() => viewDocument(chart)}
@@ -702,7 +789,7 @@ export function ChartSearchWorkspace({
                 ))}
               </section>
             )}
-            {!busy && !error && page?.total === 0 && (
+            {!loadingFirst && !error && page?.total === 0 && (
               <EmrTableFeedbackSurface className="min-h-52 flex-1" role="status">
                 <EmrEmptyState
                   surface="content"
@@ -742,14 +829,30 @@ export function ChartSearchWorkspace({
               </EmrTableFeedbackSurface>
             )}
             {page?.nextCursor && (
-              <Button
-                className="my-4 self-center"
-                disabled={busy}
-                variant="outline"
-                onClick={more}
-              >
-                더 보기
-              </Button>
+              <div ref={sentinel} data-chart-search-sentinel className="min-h-px py-2">
+                {loadingMore && (
+                  <div role="status" className="py-2 text-center text-sm text-muted-foreground">
+                    차트 불러오는 중
+                  </div>
+                )}
+                {moreError && (
+                  <EmrInlineAlert
+                    severity="error"
+                    title={moreError.message}
+                    action={
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={moreError.restart
+                          ? () => setAttempt((a) => a + 1)
+                          : () => void more()}
+                      >
+                        {moreError.restart ? "검색 다시 불러오기" : "다시 시도"}
+                      </Button>
+                    }
+                  />
+                )}
+              </div>
             )}
           </div>
         </ScrollArea>
