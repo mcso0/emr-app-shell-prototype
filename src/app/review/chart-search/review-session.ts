@@ -12,7 +12,12 @@ import { searchPage } from "@/features/chart/advanced-search/ranking";
 import { cases } from "./cases";
 
 export function createReviewSession(onChange: () => void) {
-  const rows: SearchChart[] = structuredClone(cases.rows).map(row=>({...row, createdAt:row.clinicalAt, visitAt:row.clinicalAt, visitType:"walk_in"}));
+  const rows: SearchChart[] = structuredClone(cases.rows).map((row) => ({
+    ...row,
+    createdAt: row.createdAt ?? row.clinicalAt,
+    visitAt: row.visitAt ?? row.clinicalAt,
+    visitType: row.visitType ?? "walk_in",
+  }));
   const originalOrderIds = new Set(
     rows.flatMap((chart) => chart.orders.map((order) => order.id)),
   );

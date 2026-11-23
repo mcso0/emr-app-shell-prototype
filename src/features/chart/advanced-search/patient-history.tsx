@@ -21,6 +21,7 @@ import {
 } from "@/components/emr/history-controls";
 import { EmrTableFilterTrigger } from "@/components/emr/table-filter-trigger";
 import { EmrEmptyState } from "@/components/emr/empty-state";
+import { EmrSidePanelTypeBadge } from "@/components/emr/side-panel-card";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { CdsMedicalPawPrintIcon } from "@/components/cds-icons/medical-and-domain";
@@ -75,10 +76,10 @@ const clock = new Intl.DateTimeFormat("ko-KR", {
 });
 const visitLabel = (c: SearchChart) =>
   c.visitType === "walk_in"
-    ? "현장 접수"
+    ? "외래"
     : c.visitType === "appointment"
-      ? "예약 진료"
-      : "진료";
+      ? "예약"
+      : null;
 const toggled = (ids: string[], id: string) =>
   ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id];
 function documentSections(c: SearchChart) {
@@ -414,151 +415,169 @@ export function PatientHistory({
                 onToggle={() => setCollapsed((ids) => toggled(ids, date))}
               >
                 {charts.map((c) => {
-                  const open = expanded.includes(c.id),
-                    title = chartTitle(c),
-                    time = clock.format(new Date(c.createdAt ?? c.clinicalAt)),
-                    sections = documentSections(c);
+                  const open = expanded.includes(c.id);
+                  const title = chartTitle(c);
+                  const visitTimestamp = c.visitAt ? Date.parse(c.visitAt) : NaN;
+                  const time = Number.isFinite(visitTimestamp)
+                    ? clock.format(visitTimestamp)
+                    : null;
+                  const visitType = visitLabel(c);
+                  const sections = documentSections(c);
                   return (
-                    <Card
-                      key={c.id}
-                      data-history-chart-id={c.id}
-                      className="gap-0 overflow-hidden border py-0 ring-0"
-                    >
-                      <div className={styles.recordHead}>
-                        <Button
-                          variant="ghost"
-                          className={styles.recordToggle}
-                          aria-expanded={open}
-                          aria-controls={"history-" + c.id}
-                          aria-label={[
-                            date,
-                            time,
-                            title,
-                            open ? "접기" : "펼치기",
-                          ].join(" ")}
-                          onClick={() =>
-                            setExpanded((ids) => toggled(ids, c.id))
-                          }
-                        />
-                        <div className="pointer-events-none relative flex min-w-0 flex-1 items-center gap-2">
-                          <ChevronDownIcon
-                            className={open ? "size-4 rotate-180" : "size-4"}
+                    <div key={c.id} className="grid min-w-0 gap-1">
+                      {time && (
+                        <time
+                          dateTime={c.visitAt}
+                          className="emr-text-metadata px-3 text-muted-foreground tabular-nums"
+                        >
+                          <span className="sr-only">접수 시간 </span>
+                          {time}
+                        </time>
+                      )}
+                      <Card
+                        data-history-chart-id={c.id}
+                        className="gap-0 overflow-hidden border py-0 ring-0"
+                      >
+                        <div className={styles.recordHead}>
+                          <Button
+                            variant="ghost"
+                            className={styles.recordToggle}
+                            aria-expanded={open}
+                            aria-controls={"history-" + c.id}
+                            aria-label={[
+                              date,
+                              time,
+                              visitType,
+                              title,
+                              open ? "접기" : "펼치기",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                            onClick={() =>
+                              setExpanded((ids) => toggled(ids, c.id))
+                            }
                           />
-                          <div className="min-w-0 flex-1">
-                            <span className="emr-text-metadata text-muted-foreground">
-                              {time} · {visitLabel(c)}
-                            </span>
-                            <h3 className="emr-text-body truncate font-semibold">
+                          <div className="pointer-events-none relative flex min-w-0 flex-1 items-center gap-2">
+                            <ChevronDownIcon
+                              aria-hidden="true"
+                              className={
+                                open ? "size-4 shrink-0 rotate-180" : "size-4 shrink-0"
+                              }
+                            />
+                            {visitType && <EmrSidePanelTypeBadge label={visitType} />}
+                            <h3 className="emr-text-body min-w-0 flex-1 truncate font-semibold">
                               {title}
                             </h3>
+                            <EmrStatusBadge label={stateText(c.status)} />
                           </div>
-                          <EmrStatusBadge label={stateText(c.status)} />
-                        </div>
-                        <ChartActions
-                          label={title}
-                          favorite={favorites.includes(c.id)}
-                          onFavorite={() => onFavorite(c.id)}
-                          onCopy={(mode) => onCopy(c, mode)}
-                          onCopyText={() =>
-                            void clip(
-                              [
-                                c.patient,
-                                title,
-                                date,
-                                time,
-                                c.complaint,
-                                c.doctor,
-                                c.author,
-                                ...sections.flatMap((s) => [
-                                  s.title,
-                                  ...s.lines,
-                                ]),
-                              ]
-                                .filter(Boolean)
-                                .join("\n"),
-                            )
-                          }
-                          menu={
-                            <>
-                              <DropdownMenuItem
-                                onClick={() => setExpanded([c.id])}
-                              >
-                                이 차트만 펼치기
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => onViewChart(c)}>
-                                진료 차트 열기
-                              </DropdownMenuItem>
-                            </>
-                          }
-                        />
-                      </div>
-                      {open && (
-                        <CardContent
-                          id={"history-" + c.id}
-                          className="emr-text-body grid min-w-0 gap-4 border-t p-4"
-                        >
-                          <strong>{diagnosesText(c) || "진단 미기록"}</strong>
-                          <div>
-                            <ChartStaff chart={c} />
-                            <dl>
-                              <InfoLine label="작성자" icon={<DocumentIcon />}>
-                                {c.author}
-                              </InfoLine>
-                              <InfoLine
-                                label="차트 작성일"
-                                icon={<CalendarIcon />}
-                              >
-                                {dateText(c.createdAt)}
-                              </InfoLine>
-                            </dl>
-                          </div>
-                          {c.complaint && <p>주호소　{c.complaint}</p>}
-                          {sections.map((section) => (
-                            <section
-                              key={section.title}
-                              className="grid min-w-0 gap-2 border-t pt-4"
-                            >
-                              <div className="flex items-center justify-between">
-                                <h4 className="emr-text-section font-semibold">
-                                  {section.title}
-                                </h4>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  disabled={!section.lines.length}
-                                  aria-label={
-                                    title + " " + section.title + " 전체 복사"
-                                  }
-                                  onClick={() =>
-                                    void clip(section.lines.join("\n"))
-                                  }
+                          <ChartActions
+                            label={title}
+                            copyFirst
+                            showFavorite={false}
+                            favorite={favorites.includes(c.id)}
+                            onFavorite={() => onFavorite(c.id)}
+                            onCopy={(mode) => onCopy(c, mode)}
+                            onCopyText={() =>
+                              void clip(
+                                [
+                                  c.patient,
+                                  title,
+                                  date,
+                                  clock.format(new Date(c.createdAt ?? c.clinicalAt)),
+                                  c.complaint,
+                                  c.doctor,
+                                  c.author,
+                                  ...sections.flatMap((s) => [
+                                    s.title,
+                                    ...s.lines,
+                                  ]),
+                                ]
+                                  .filter(Boolean)
+                                  .join("\n"),
+                              )
+                            }
+                            menu={
+                              <>
+                                <DropdownMenuItem
+                                  onClick={() => setExpanded([c.id])}
                                 >
-                                  <CdsActionsCopyIcon />
-                                  전체 복사
-                                </Button>
-                              </div>
-                              <Card size="sm" className="border ring-0">
-                                <CardContent className="grid gap-2 whitespace-pre-wrap wrap-anywhere">
-                                  {section.lines.length
-                                    ? section.lines.map((line, i) => (
-                                        <p key={i}>{line}</p>
-                                      ))
-                                    : "기록 없음"}
-                                  {section.title === "Subjective/Objective" &&
-                                    c.media.length > 0 && (
-                                      <SourceMedia
-                                        chart={c}
-                                        query={search.query}
-                                      />
-                                    )}
-                                </CardContent>
-                              </Card>
-                            </section>
-                          ))}
-                          <CopyHistory chartId={c.id} api={api} />
-                        </CardContent>
-                      )}
-                    </Card>
+                                  이 차트만 펼치기
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => onViewChart(c)}>
+                                  진료 차트 열기
+                                </DropdownMenuItem>
+                              </>
+                            }
+                          />
+                        </div>
+                        {open && (
+                          <CardContent
+                            id={"history-" + c.id}
+                            className="emr-text-body grid min-w-0 gap-4 border-t p-4"
+                          >
+                            <strong>{diagnosesText(c) || "진단 미기록"}</strong>
+                            <div>
+                              <ChartStaff chart={c} />
+                              <dl>
+                                <InfoLine label="작성자" icon={<DocumentIcon />}>
+                                  {c.author}
+                                </InfoLine>
+                                <InfoLine
+                                  label="차트 작성일"
+                                  icon={<CalendarIcon />}
+                                >
+                                  {dateText(c.createdAt)}
+                                </InfoLine>
+                              </dl>
+                            </div>
+                            {c.complaint && <p>주호소　{c.complaint}</p>}
+                            {sections.map((section) => (
+                              <section
+                                key={section.title}
+                                className="grid min-w-0 gap-2 border-t pt-4"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <h4 className="emr-text-section font-semibold">
+                                    {section.title}
+                                  </h4>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    disabled={!section.lines.length}
+                                    aria-label={
+                                      title + " " + section.title + " 전체 복사"
+                                    }
+                                    onClick={() =>
+                                      void clip(section.lines.join("\n"))
+                                    }
+                                  >
+                                    <CdsActionsCopyIcon />
+                                    전체 복사
+                                  </Button>
+                                </div>
+                                <Card size="sm" className="border ring-0">
+                                  <CardContent className="grid gap-2 whitespace-pre-wrap wrap-anywhere">
+                                    {section.lines.length
+                                      ? section.lines.map((line, i) => (
+                                          <p key={i}>{line}</p>
+                                        ))
+                                      : "기록 없음"}
+                                    {section.title === "Subjective/Objective" &&
+                                      c.media.length > 0 && (
+                                        <SourceMedia
+                                          chart={c}
+                                          query={search.query}
+                                        />
+                                      )}
+                                  </CardContent>
+                                </Card>
+                              </section>
+                            ))}
+                            <CopyHistory chartId={c.id} api={api} />
+                          </CardContent>
+                        )}
+                      </Card>
+                    </div>
                   );
                 })}
               </EmrContentHistoryGroup>
