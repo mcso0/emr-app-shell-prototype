@@ -1,7 +1,5 @@
 "use client";
 
-import { errorMessage, type ChartSearchApi } from "./client";
-import type { CopyHistoryItem } from "./contract";
 import { useEffect, useRef, useState } from "react";
 import { EmrEmptyState } from "@/components/emr/empty-state";
 import { ImageOff } from "lucide-react";
@@ -23,7 +21,6 @@ import {
 } from "@/components/ui/select";
 import {
   representativeMedia,
-  sectionNames,
   type SearchChart,
   type SearchMedia,
 } from "./contract";
@@ -355,76 +352,6 @@ export function SourceMedia({
         </section>
       )}
     </div>
-  );
-}
-
-export function CopyHistory({
-  chartId,
-  api,
-}: {
-  chartId: string;
-  api: ChartSearchApi;
-}) {
-  const [open, setOpen] = useState(false),
-    [records, setRecords] = useState<CopyHistoryItem[] | null>(null),
-    [error, setError] = useState("");
-  useEffect(() => {
-    if (!open) return;
-    const abort = new AbortController();
-    api
-      .history(chartId, abort.signal)
-      .then((rows) => {
-        if (!abort.signal.aborted) setRecords(rows);
-      })
-      .catch((e) => {
-        if (!abort.signal.aborted) setError(errorMessage(e));
-      });
-    return () => abort.abort();
-  }, [api, chartId, open]);
-  return (
-    <section>
-      <Button
-        variant="outline"
-        size="sm"
-        aria-expanded={open}
-        onClick={() => {
-          setOpen(!open);
-          setError("");
-        }}
-      >
-        복사 이력
-      </Button>
-      {open &&
-        (error ? (
-          <p role="alert">{error}</p>
-        ) : records === null ? (
-          <p>불러오는 중</p>
-        ) : !records.length ? (
-          <p>복사 이력 없음</p>
-        ) : (
-          records.map((r) => (
-            <div className={styles.line} key={r.id}>
-              <b>
-                {when(r.at)} · 선택 {r.selectedBy} · 적용 {r.actor}
-              </b>
-              <p>
-                원본　{r.source} · {r.sourceId}
-              </p>
-              {r.changes.map((c, i) => (
-                <div key={i}>
-                  {c.section
-                    ? sectionNames[c.section]
-                    : c.originalOrder
-                      ? "미확정 오더"
-                      : "진단"}
-                  　{c.before?.text && <del>{c.before.text}　</del>}
-                  {c.after?.text ?? c.after?.diagnosisText ?? c.name}
-                </div>
-              ))}
-            </div>
-          ))
-        ))}
-    </section>
   );
 }
 

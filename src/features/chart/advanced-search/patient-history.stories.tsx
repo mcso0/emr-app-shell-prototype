@@ -18,6 +18,7 @@ const meta = {
     favorites: [source.id],
     onFavorite: fn(),
     onClose: fn(),
+    onOpenProfile: fn(),
     onCopy: fn(),
     onViewChart: fn(),
   },
@@ -43,11 +44,13 @@ export const VisitHeaders: Story = {
     );
     copy.focus();
     await userEvent.tab();
+    await expect(drawer.getByRole("button", { name: "식욕 저하와 무른 변 차트 보러가기" })).toHaveFocus();
+    await userEvent.tab();
     await expect(more).toHaveFocus();
     await userEvent.keyboard("{Enter}");
     const body = within(canvasElement.ownerDocument.body);
     await waitFor(() =>
-      expect(body.getByRole("menuitem", { name: "진료 차트 열기" })).toBeVisible(),
+      expect(body.getByRole("menuitem", { name: "이 차트만 펼치기" })).toBeVisible(),
     );
     await userEvent.keyboard("{Escape}");
   },

@@ -122,11 +122,12 @@
   box-shadow: none;
   cursor: pointer;
 }
-.resultCard[data-active="true"] {
-  border-color: var(--emr-state-selected-border);
+.resultCard[data-active="true"],
+.resultCard[data-checked="true"] {
+  border-color: var(--clair-color-atomic-neutral-300);
+  box-shadow: var(--clair-shadow-sm);
 }
 .resultCard[data-checked="true"] {
-  border-color: var(--clair-color-atomic-neutral-400);
   background:
     linear-gradient(var(--emr-state-selected), var(--emr-state-selected)),
     var(--card);
@@ -134,14 +135,14 @@
 .resultContent {
   position: relative;
   display: grid;
-  grid-template-columns: min(var(--thumbnail-side, 220px), 35%) minmax(0, 1fr);
+  grid-template-columns: min(calc(var(--thumbnail-side, 220px) * 4 / 3), 35%) minmax(0, 1fr);
   gap: 8px;
   align-items: center;
   padding: 0;
 }
 .resultContent > [data-media] {
   width: 100%;
-  aspect-ratio: 1;
+  aspect-ratio: 4 / 3;
 }
 .resultContent > [role="checkbox"],
 .rowActions {
@@ -729,7 +730,7 @@
     justify-items: stretch;
   }
   .resultContent > [data-media] {
-    max-width: min(100%, var(--thumbnail-side, 220px));
+    max-width: min(100%, calc(var(--thumbnail-side, 220px) * 4 / 3));
     justify-self: center;
   }
   .results[data-view="card"] .resultContent > [data-media] {
@@ -785,4 +786,169 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 8px;
+}
+
+.historySurface {
+  background: var(--emr-surface-workspace);
+  container: history-toolbar / inline-size;
+  --emr-content-history-group-title-height: var(--clair-control-height-lg);
+  --emr-content-history-group-title-icon: var(--clair-color-atomic-neutral-500);
+  --emr-content-history-group-action-size: var(--clair-spacing-16);
+  --emr-content-history-group-action-icon-size: var(--clair-spacing-16);
+  --emr-content-history-timeline-gutter: var(--clair-spacing-16);
+  --emr-content-history-timeline-padding-right: var(--clair-spacing-10);
+}
+.historySurface [data-history-toolbar] { grid-template-columns: max-content minmax(0, 1fr); }
+.historySurface [data-history-divider] { margin-inline: var(--clair-spacing-20); }
+.historySurface [data-history-tools] {
+  inline-size: max-content;
+  max-inline-size: 100%;
+  justify-self: end;
+}
+.historySurface [data-history-tools] > :not([data-history-search]) { flex-shrink: 0; }
+.historySurface [data-history-search] { min-inline-size: 0; }
+.historySurface [data-history-search][data-search-open="true"] { inline-size: 176px; }
+.historySurface [data-history-search] [data-slot="input"] { background-color: var(--card); }
+
+@container history-toolbar (max-width: 360px) {
+  .historySurface [data-history-toolbar] {
+    grid-template-columns: minmax(0, 1fr);
+    padding-inline: var(--clair-spacing-12);
+  }
+  .historySurface [data-history-groups] { padding-inline: var(--clair-spacing-16); }
+  .historySurface [data-history-divider] { margin-inline: var(--clair-spacing-16); }
+  .historySurface [data-history-tools] { gap: var(--clair-spacing-4); }
+  .historySurface [data-history-search] [data-slot="input"] {
+    padding-inline-start: var(--clair-spacing-6);
+    padding-inline-end: var(--clair-control-height-sm);
+  }
+}
+
+.historySurface [data-history-tools] [data-slot="select-trigger"] {
+  background-color: var(--card);
+  font-size: var(--emr-type-size-metadata);
+  font-weight: var(--font-weight-medium, 500);
+  line-height: var(--emr-type-leading-metadata);
+  letter-spacing: var(--emr-type-tracking-status);
+}
+
+.historySurface [data-history-chart-id][aria-current="true"]:has(> [data-record-header] > [aria-expanded="true"]) {
+  border-color: var(--clair-color-atomic-neutral-300);
+  box-shadow: var(--clair-shadow-sm);
+}
+.historySurface [data-record-header] {
+  padding: var(--clair-spacing-12) var(--clair-spacing-16);
+}
+.historySurface [data-record-header]:is(:hover, :focus-within) {
+  background-color: transparent;
+}
+.historySurface [data-record-caret] {
+  color: var(--clair-color-atomic-neutral-500);
+  scale: 1.5;
+}
+.historySurface [data-record-identity] { column-gap: var(--clair-spacing-6); }
+.historySurface [data-record-identity] > [data-slot="badge"] {
+  height: 22px;
+  column-gap: var(--clair-spacing-2);
+  padding-inline: var(--clair-spacing-8);
+  border-radius: var(--clair-radius-atomic-6);
+  font-size: var(--emr-type-size-metadata);
+  line-height: var(--emr-type-leading-metadata);
+  letter-spacing: var(--emr-type-tracking-status);
+}
+.historySurface [data-record-identity][data-visit-type="예약"] > [data-slot="badge"][data-variant="secondary"] {
+  border-color: var(--emr-status-info-border);
+}
+.historySurface [data-record-identity][data-visit-type="외래"] > [data-slot="badge"][data-variant="secondary"] {
+  border-color: var(--emr-status-neutral-border);
+}
+.historySurface [data-record-header] > [data-chart-actions] {
+  min-height: var(--clair-control-height-md);
+  column-gap: var(--clair-spacing-2);
+  opacity: 0;
+  pointer-events: none;
+}
+.historySurface [data-record-header] > [data-chart-actions] > button > svg {
+  width: var(--clair-spacing-16);
+  height: var(--clair-spacing-16);
+}
+.historySurface [data-record-header]:has(> [aria-expanded="true"], :focus-visible, [data-popup-open]) > [data-chart-actions] {
+  opacity: 1;
+  pointer-events: auto;
+}
+@media (hover: hover) {
+  .historySurface [data-record-header]:hover > [data-chart-actions] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+.historySurface [data-history-chart-id] { container: history-card / inline-size; }
+.historySurface [data-slot="content-history-group-title"] {
+  padding-inline: var(--clair-spacing-8);
+}
+.historySurface [data-slot="content-history-group-title"] > div {
+  font-size: var(--emr-type-size-compact-title);
+  line-height: var(--emr-type-leading-compact-title);
+  letter-spacing: var(--emr-type-tracking-compact-title);
+}
+.historySurface [data-slot="content-history-group-title"] > div > span:last-child {
+  color: var(--emr-text-tertiary);
+  font-size: var(--emr-type-size-dense);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--emr-type-leading-dense);
+}
+.historySurface [data-slot="content-history-group-list"] {
+  row-gap: var(--clair-spacing-6);
+  padding: var(--clair-spacing-4) var(--clair-spacing-4) var(--clair-spacing-4) 0;
+}
+.historySurface [data-record-body] {
+  padding-inline: calc(var(--clair-spacing-16) + var(--clair-spacing-12));
+}
+
+.historySurface [data-chart-tag="예약"] {
+  background-color: var(--emr-status-info-bg);
+  color: var(--emr-status-info-text);
+}
+.historySurface [data-chart-tag="마취/수술"] {
+  background-color: var(--emr-status-success-bg);
+  color: var(--emr-status-success-text);
+}
+.historySurface [data-chart-people] > dl:first-child {
+  row-gap: var(--clair-spacing-8);
+  font-weight: var(--font-weight-medium, 500);
+}
+.historySurface [data-chart-people] > dl:first-child dt svg { color: var(--emr-text-tertiary); }
+.historySurface [data-chart-people] > dl:first-child dd {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--clair-spacing-4);
+  white-space: normal;
+}
+.historySurface [data-chart-people] > dl:first-child dd > [data-slot="badge"] {
+  height: var(--clair-spacing-20);
+  padding-inline: var(--clair-spacing-4);
+}
+.historySurface [data-record-scope] > [data-slot="card-header"] { padding-block: var(--clair-spacing-12); }
+.historySurface [data-record-scope] [aria-label="첨부 자료 목록"] > [data-slot="button"] {
+  width: var(--clair-spacing-64);
+  height: var(--clair-spacing-64);
+  border-radius: var(--clair-radius-atomic-6);
+  background-color: var(--clair-color-atomic-neutral-900);
+}
+.historySurface [data-record-scope] [aria-label="첨부 자료 목록"] > [data-slot="button"] :is(img, video) {
+  object-fit: contain;
+}
+
+@container history-card (max-width: 340px) {
+  .historySurface [data-record-header] {
+    flex-wrap: wrap;
+    padding-inline: var(--clair-spacing-6);
+  }
+  .historySurface [data-record-identity] {
+    flex-basis: 100%;
+    flex-wrap: wrap;
+    column-gap: var(--clair-spacing-4);
+  }
+  .historySurface [data-record-header] > [data-chart-actions] { margin-inline-start: auto; }
+  .historySurface [data-record-body] { padding-inline: var(--clair-spacing-12); }
 }

@@ -282,10 +282,17 @@ test("같은 환자 이력을 함께 펼치고, 선택한 원본에서만 복사
   const drawer=page.getByRole("complementary",{name:"차트 원본"});
   const records=drawer.locator("[data-history-chart-id]");
   await expect(records).toHaveCount(2);
-  await expect(records.first().getByText("예약", { exact: true })).toBeVisible();
+  await expect(records.first().locator("[data-record-header]").getByText("예약", { exact: true })).toBeVisible();
   await expect(records.last().getByText("외래", { exact: true })).toBeVisible();
-  await expect(records.first().locator("xpath=../time")).toContainText("13:48");
-  await expect(records.last().locator("xpath=../time")).toContainText("13:30");
+  await expect(records.first().locator("time")).toContainText("13:48");
+  await expect(records.last().locator("time")).toContainText("13:30");
+  const sort = drawer.getByRole("combobox", {name: "환자 차트 정렬"});
+  await sort.click();
+  await page.getByRole("option", {name: "정렬: 오래된순"}).click();
+  await expect(records.first().locator("time")).toHaveText("13:30");
+  await sort.click();
+  await page.getByRole("option", {name: "정렬: 최신순"}).click();
+  await expect(records.first().locator("time")).toHaveText("13:48");
   const collapsed=records.locator("button[aria-controls][aria-expanded=false]");
   await collapsed.focus();
   await page.keyboard.press("Enter");
@@ -295,9 +302,11 @@ test("같은 환자 이력을 함께 펼치고, 선택한 원본에서만 복사
   const more = last.getByRole("button", { name: "피부 상태 재진 더보기", exact: true });
   await copy.focus();
   await page.keyboard.press("Tab");
+  await expect(last.getByRole("button", { name: "피부 상태 재진 차트 보러가기" })).toBeFocused();
+  await page.keyboard.press("Tab");
   await expect(more).toBeFocused();
   await more.click();
-  await expect(page.getByRole("menuitem", { name: "진료 차트 열기" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "이 차트만 펼치기" })).toBeVisible();
   await expect(last.getByRole("button", { name: /피부 상태 재진 접기$/ }))
     .toHaveAttribute("aria-expanded", "true");
   await page.keyboard.press("Escape");
@@ -324,15 +333,15 @@ test("결과의 전문과 배지를 확인해도 목록과 카드의 썸네일 �
     const tops = await first.locator("dt").evaluateAll(rows => rows.map(row => row.getBoundingClientRect().top));
     for (const index of [1, 2, 4, 5]) expect(tops[index] - tops[index - 1]).toBeCloseTo(26, 0);
   }
-  const square = await media.boundingBox();
-  expect(square).not.toBeNull();
-  expect(square!.width).toBeCloseTo(square!.height, 0);
-  expect((await other.locator("[data-media]").boundingBox())!.width).toBeCloseTo(square!.width, 0);
+  const thumbnailBox = await media.boundingBox();
+  expect(thumbnailBox).not.toBeNull();
+  expect(thumbnailBox!.width / thumbnailBox!.height).toBeCloseTo(4 / 3, 2);
+  expect((await other.locator("[data-media]").boundingBox())!.width).toBeCloseTo(thumbnailBox!.width, 0);
   const more = first.getByRole("button",{name:"전체 오더 외 2건"});
   await more.click();
   const reader = page.getByRole("dialog",{name:"전체 오더"});
   await expect(reader.getByText("이전 검사 패널")).toBeVisible();
-  expect(await media.boundingBox()).toEqual(square);
+  expect(await media.boundingBox()).toEqual(thumbnailBox);
   await page.keyboard.press("Escape");
   await expect(more).toBeFocused();
   await first.getByRole("button",{name:/부가 정보 \+/}).click();

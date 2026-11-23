@@ -8,6 +8,7 @@ export const cases: { actor: string; rows: SearchChart[] } = {
       encounterId: "41f7930f-d204-4543-a257-47684c3c505b",
       patientId: "dc5456e8-1e28-4534-ad93-e9cd86953611",
       patient: "모카",
+      patientPhotoUrl: "/chart-search-review/moka.jpg",
       primaryVet: "한서진",
       lastContentEditedAt: "2026-11-19T09:00:00+09:00",
       extraTags: [
@@ -326,6 +327,7 @@ export const cases: { actor: string; rows: SearchChart[] } = {
       age: 8,
       clinicalAt: "2026-11-15T13:55:00+09:00",
       visitAt: "2026-11-15T13:30:00+09:00",
+      createdAt: "2026-11-15T14:30:00+09:00",
       visitType: "walk_in",
       authorId: "a48b7e6e-7f23-43ed-a1c0-c7e439fb5883",
       author: "이도윤",

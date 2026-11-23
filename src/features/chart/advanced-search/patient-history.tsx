@@ -9,6 +9,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EmrRightPanel, EmrRightPanelBody } from "@/components/emr/right-panel";
@@ -24,16 +25,16 @@ import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrSidePanelTypeBadge } from "@/components/emr/side-panel-card";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
-import { CdsMedicalPawPrintIcon } from "@/components/cds-icons/medical-and-domain";
+import { AnimalPatientAvatar } from "@/components/emr/animal-patient-avatar";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { CdsNavigationArrowDropDownIcon } from "@/components/cds-icons/navigation";
+import { ChartSummary, SoapGroups } from "./history-detail";
 import { CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
+import type { OpenChartProfile } from "./result-card";
+import { CdsFilesCalendarIcon } from "@/components/cds-icons/files-and-layout";
 import { CdsActionsCopyIcon } from "@/components/cds-icons/actions-and-controls";
-import {
-  CalendarIcon,
-  ChevronDownIcon,
-  CloseIcon,
-  DocumentIcon,
-  SearchIcon,
-} from "@/components/icons";
+import { CloseIcon, SearchIcon } from "@/components/icons";
 import {
   emptyHistoryDateRange,
   matchesHistoryQuery,
@@ -50,20 +51,11 @@ import {
   ChartActions,
   chartTitle,
   ChartStaff,
-  dateText,
   diagnosesText,
-  InfoLine,
 } from "./result-card";
-import {
-  CopyHistory,
-  Pick,
-  SourceMedia,
-  stateText,
-  type CopyMode,
-} from "./presentation";
+import { Pick, stateText, type CopyMode } from "./presentation";
 import { speciesLabel } from "./ranking";
 import styles from "./workspace.module.css";
-
 const emptyFilters = () => ({
   dates: { ...emptyHistoryDateRange },
   statuses: [] as string[],
@@ -130,6 +122,7 @@ export function PatientHistory({
   onClose,
   onCopy,
   onViewChart,
+  onOpenProfile,
 }: {
   source: SearchChart;
   api: ChartSearchApi;
@@ -138,6 +131,7 @@ export function PatientHistory({
   onClose: () => void;
   onCopy: (chart: SearchChart, mode: CopyMode) => void;
   onViewChart: (chart: SearchChart) => void;
+  onOpenProfile?: OpenChartProfile;
 }) {
   const [history, setHistory] = useState<SearchChart[] | null>(null);
   const [error, setError] = useState(""),
@@ -216,8 +210,8 @@ export function PatientHistory({
     .sort((a, b) => {
       const order =
         dateOf(a).localeCompare(dateOf(b)) ||
-        Date.parse(a.createdAt ?? a.clinicalAt) -
-          Date.parse(b.createdAt ?? b.clinicalAt) ||
+        Date.parse(a.visitAt ?? a.createdAt ?? a.clinicalAt) -
+          Date.parse(b.visitAt ?? b.createdAt ?? b.clinicalAt) ||
         a.id.localeCompare(b.id);
       return direction === "oldest" ? order : -order;
     });
@@ -231,7 +225,7 @@ export function PatientHistory({
   const closeSearch = () => {
     search.clear();
     search.setOpen(false);
-    trigger.current?.focus();
+    requestAnimationFrame(() => trigger.current?.focus());
   };
   async function clip(text: string) {
     try {
@@ -246,19 +240,31 @@ export function PatientHistory({
   return (
     <EmrRightPanel
       header={
-        <EmrRightPanelHeader className="gap-2 border-b">
-          <CdsMedicalPawPrintIcon className="size-5 shrink-0 text-muted-foreground" />
-          <div className="emr-text-body flex min-w-0 flex-1 flex-wrap items-center gap-x-2">
-            <strong>
+        <EmrRightPanelHeader className="h-auto min-h-[var(--emr-rightpanel-header-height)] gap-2 border-b py-1.5">
+          <AnimalPatientAvatar
+            alt={source.patient + " 프로필 사진"}
+            size="sm"
+            className="border-[var(--clair-color-atomic-neutral-200)] [&_[data-slot=avatar-image]]:object-top"
+            src={source.patientPhotoUrl}
+          />
+          <div className="grid min-w-0 flex-1 gap-0.5">
+            <h2 className="emr-text-panel-title wrap-anywhere font-semibold">
               {source.patient}
-              {source.age != null && " (" + source.age + "세)"}
-            </strong>
-            <span>{source.guardian}</span>
-            <span>
-              {[speciesLabel(source.species), source.breed]
-                .filter(Boolean)
-                .join(" · ")}
-            </span>
+            </h2>
+            <div className="emr-text-metadata flex flex-wrap items-center gap-x-3 gap-y-0.5 text-muted-foreground">
+              <span>
+                {[
+                  source.age == null ? null : source.age + "세",
+                  speciesLabel(source.species),
+                  source.breed,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </span>
+              {source.guardian && (
+                <span className="border-l pl-3">보호자 {source.guardian}</span>
+              )}
+            </div>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -272,10 +278,34 @@ export function PatientHistory({
                 </Button>
               }
             />
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent
+              align="end"
+              className="w-max whitespace-nowrap"
+            >
+              <DropdownMenuItem
+                disabled={!onOpenProfile}
+                onClick={() =>
+                  onOpenProfile?.({ type: "patient", id: source.patientId })
+                }
+              >
+                환자 프로필 보기
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={!onOpenProfile || !source.guardianId}
+                onClick={() => {
+                  if (source.guardianId)
+                    onOpenProfile?.({
+                      type: "guardian",
+                      id: source.guardianId,
+                    });
+                }}
+              >
+                보호자 프로필 보기
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => {
-                  setExpanded(visible.map((c) => c.id));
+                  setExpanded(visible.map((chart) => chart.id));
                   setCollapsed([]);
                 }}
               >
@@ -297,95 +327,120 @@ export function PatientHistory({
         </EmrRightPanelHeader>
       }
     >
-      <div className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
-        <Pick
-          size="default"
-          label="환자 차트 정렬"
-          value={direction}
-          onChange={setDirection}
-          options={[
-            ["newest", "정렬: 최신순"],
-            ["oldest", "정렬: 오래된순"],
-          ]}
-        />
-        <EmrHistoryFilterPopover
-          open={filterOpen}
-          trigger={
-            <EmrTableFilterTrigger
-              aria-label="환자 차트 필터"
-              size="default"
-              activeCount={
-                Number(!!(filters.dates.start || filters.dates.end)) +
-                filters.statuses.length
-              }
-            />
-          }
-          title="환자 차트 이력 필터"
-          dateLabel="진료일"
-          dates={draft.dates}
-          onDatesChange={(dates) => setDraft({ ...draft, dates })}
-          onOpen={() => {
-            setDraft(filters);
-            setFilterOpen(true);
-          }}
-          onCancel={() => setFilterOpen(false)}
-          onApply={() => {
-            setFilters(draft);
-            setCollapsed([]);
-            setFilterOpen(false);
-          }}
-          onReset={() => setDraft(emptyFilters())}
+      <EmrRightPanelBody className={styles.historySurface}>
+        <div
+          data-history-toolbar
+          className="grid shrink-0 items-center gap-2 px-5 py-3"
         >
-          <fieldset>
-            <legend className="emr-text-section mb-2">차트 상태</legend>
-            <div className="flex gap-4">
-              {[
-                ["completed", "완료"],
-                ["draft", "작성 중"],
-              ].map(([id, label]) => (
-                <label key={id} className="flex items-center gap-2">
-                  <Checkbox
-                    checked={draft.statuses.includes(id)}
-                    onCheckedChange={() =>
-                      setDraft({
-                        ...draft,
-                        statuses: toggled(draft.statuses, id),
-                      })
-                    }
-                  />
-                  {label}
-                </label>
-              ))}
+          <div className="flex shrink-0 items-center gap-2" aria-live="polite">
+            <span className="emr-text-body font-medium">차트 이력</span>
+            {history !== null && (
+              <Badge variant="outline">{visible.length}</Badge>
+            )}
+          </div>
+          <div
+            role="group"
+            aria-label="환자 차트 이력 도구"
+            data-history-tools
+            className="flex min-w-0 items-center justify-end gap-2"
+          >
+            <div data-history-search data-search-open={search.open}>
+              {search.open ? (
+                <EmrHistorySearch
+                  label="환자 차트 이력 검색어"
+                  search={search}
+                  onClose={closeSearch}
+                  onQueryChange={() => setCollapsed([])}
+                />
+              ) : (
+                <Button
+                  ref={trigger}
+                  variant="outline"
+                  size="icon-sm"
+                  aria-label="환자 차트 이력 검색 열기"
+                  aria-expanded={search.open}
+                  onClick={() => search.setOpen(true)}
+                >
+                  <SearchIcon />
+                </Button>
+              )}
             </div>
-          </fieldset>
-        </EmrHistoryFilterPopover>
-        <span className="emr-text-metadata text-muted-foreground">
-          {history !== null && visible.length + "건"}
-        </span>
-        <Button
-          ref={trigger}
-          className="ml-auto"
-          variant="outline"
-          size="icon"
-          aria-label="환자 차트 이력 검색 열기"
-          aria-expanded={search.open}
-          onClick={() => (search.open ? closeSearch() : search.setOpen(true))}
-        >
-          <SearchIcon />
-        </Button>
-        {search.open && (
-          <EmrHistorySearch
-            label="환자 차트 이력 검색어"
-            search={search}
-            onClose={closeSearch}
-            onQueryChange={() => setCollapsed([])}
-          />
-        )}
-      </div>
-      {notice && <EmrInlineAlert severity="info" title={notice} />}
-      <EmrRightPanelBody>
-        <ScrollArea className="min-h-0 flex-1 bg-[var(--emr-surface-workspace)]">
-          <div className="grid min-w-0 gap-4 p-4">
+            <span aria-hidden="true" className="h-4 w-px shrink-0 bg-border" />
+            <EmrHistoryFilterPopover
+              open={filterOpen}
+              trigger={
+                <EmrTableFilterTrigger
+                  aria-label="환자 차트 필터"
+                  size="sm"
+                  className="h-[var(--clair-control-height-sm)] min-h-[var(--clair-control-height-sm)] px-2 py-0"
+                  activeCount={
+                    Number(!!(filters.dates.start || filters.dates.end)) +
+                    filters.statuses.length
+                  }
+                />
+              }
+              title="환자 차트 이력 필터"
+              dateLabel="진료일"
+              dates={draft.dates}
+              onDatesChange={(dates) => setDraft({ ...draft, dates })}
+              onOpen={() => {
+                setDraft(filters);
+                setFilterOpen(true);
+              }}
+              onCancel={() => setFilterOpen(false)}
+              onApply={() => {
+                setFilters(draft);
+                setCollapsed([]);
+                setFilterOpen(false);
+              }}
+              onReset={() => setDraft(emptyFilters())}
+            >
+              <fieldset>
+                <legend className="emr-text-section mb-2">차트 상태</legend>
+                <div className="flex gap-4">
+                  {[
+                    ["completed", "완료"],
+                    ["draft", "작성 중"],
+                  ].map(([id, label]) => (
+                    <label key={id} className="flex items-center gap-2">
+                      <Checkbox
+                        checked={draft.statuses.includes(id)}
+                        onCheckedChange={() =>
+                          setDraft({
+                            ...draft,
+                            statuses: toggled(draft.statuses, id),
+                          })
+                        }
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            </EmrHistoryFilterPopover>
+            <Pick
+              size="sm"
+              label="환자 차트 정렬"
+              value={direction}
+              onChange={setDirection}
+              options={[
+                ["newest", "정렬: 최신순"],
+                ["oldest", "정렬: 오래된순"],
+              ]}
+            />
+          </div>
+        </div>
+        {notice && <EmrInlineAlert severity="info" title={notice} />}
+        <Separator
+          data-history-divider
+          className="data-horizontal:w-auto"
+          aria-hidden="true"
+        />
+        <ScrollArea className="min-h-0 flex-1">
+          <div
+            data-history-groups
+            className="grid min-w-0 gap-5 px-5 pb-5 pt-2"
+          >
             {error ? (
               <div role="alert">
                 {error}
@@ -410,6 +465,13 @@ export function PatientHistory({
               <EmrContentHistoryGroup
                 key={date}
                 label={date.replaceAll("-", ".")}
+                icon={
+                  <CdsFilesCalendarIcon
+                    size={16}
+                    className="shrink-0 text-[var(--emr-content-history-group-title-icon)]"
+                    aria-hidden="true"
+                  />
+                }
                 count={charts.length}
                 collapsed={collapsed.includes(date)}
                 onToggle={() => setCollapsed((ids) => toggled(ids, date))}
@@ -417,167 +479,171 @@ export function PatientHistory({
                 {charts.map((c) => {
                   const open = expanded.includes(c.id);
                   const title = chartTitle(c);
-                  const visitTimestamp = c.visitAt ? Date.parse(c.visitAt) : NaN;
+                  const visitTimestamp = c.visitAt
+                    ? Date.parse(c.visitAt)
+                    : NaN;
                   const time = Number.isFinite(visitTimestamp)
                     ? clock.format(visitTimestamp)
                     : null;
                   const visitType = visitLabel(c);
                   const sections = documentSections(c);
                   return (
-                    <div key={c.id} className="grid min-w-0 gap-1">
-                      {time && (
-                        <time
-                          dateTime={c.visitAt}
-                          className="emr-text-metadata px-3 text-muted-foreground tabular-nums"
+                    <Card
+                      key={c.id}
+                      data-history-chart-id={c.id}
+                      aria-current={c.id === source.id || undefined}
+                      className="gap-0 overflow-hidden border py-0 ring-0"
+                    >
+                      <div className={styles.recordHead} data-record-header>
+                        <Button
+                          variant="ghost"
+                          className={styles.recordToggle}
+                          aria-expanded={open}
+                          aria-controls={"history-" + c.id}
+                          aria-label={[
+                            date,
+                            time,
+                            visitType,
+                            title,
+                            open ? "접기" : "펼치기",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                          onClick={() =>
+                            setExpanded((ids) => toggled(ids, c.id))
+                          }
+                        />
+                        <div
+                          className="pointer-events-none relative flex min-w-0 flex-1 items-center gap-2"
+                          data-record-identity
+                          data-visit-type={visitType ?? undefined}
                         >
-                          <span className="sr-only">접수 시간 </span>
-                          {time}
-                        </time>
-                      )}
-                      <Card
-                        data-history-chart-id={c.id}
-                        className="gap-0 overflow-hidden border py-0 ring-0"
-                      >
-                        <div className={styles.recordHead}>
-                          <Button
-                            variant="ghost"
-                            className={styles.recordToggle}
-                            aria-expanded={open}
-                            aria-controls={"history-" + c.id}
-                            aria-label={[
-                              date,
-                              time,
-                              visitType,
-                              title,
-                              open ? "접기" : "펼치기",
-                            ]
-                              .filter(Boolean)
-                              .join(" ")}
-                            onClick={() =>
-                              setExpanded((ids) => toggled(ids, c.id))
+                          <CdsNavigationArrowDropDownIcon
+                            data-record-caret
+                            aria-hidden="true"
+                            className={
+                              open
+                                ? "size-4 shrink-0 rotate-180"
+                                : "size-4 shrink-0"
                             }
                           />
-                          <div className="pointer-events-none relative flex min-w-0 flex-1 items-center gap-2">
-                            <ChevronDownIcon
-                              aria-hidden="true"
-                              className={
-                                open ? "size-4 shrink-0 rotate-180" : "size-4 shrink-0"
-                              }
-                            />
-                            {visitType && <EmrSidePanelTypeBadge label={visitType} />}
-                            <h3 className="emr-text-body min-w-0 flex-1 truncate font-semibold">
-                              {title}
-                            </h3>
-                            <EmrStatusBadge label={stateText(c.status)} />
-                          </div>
-                          <ChartActions
-                            label={title}
-                            copyFirst
-                            showFavorite={false}
-                            favorite={favorites.includes(c.id)}
-                            onFavorite={() => onFavorite(c.id)}
-                            onCopy={(mode) => onCopy(c, mode)}
-                            onCopyText={() =>
-                              void clip(
-                                [
-                                  c.patient,
-                                  title,
-                                  date,
-                                  clock.format(new Date(c.createdAt ?? c.clinicalAt)),
-                                  c.complaint,
-                                  c.doctor,
-                                  c.author,
-                                  ...sections.flatMap((s) => [
-                                    s.title,
-                                    ...s.lines,
-                                  ]),
-                                ]
-                                  .filter(Boolean)
-                                  .join("\n"),
-                              )
-                            }
-                            menu={
-                              <>
-                                <DropdownMenuItem
-                                  onClick={() => setExpanded([c.id])}
-                                >
-                                  이 차트만 펼치기
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => onViewChart(c)}>
-                                  진료 차트 열기
-                                </DropdownMenuItem>
-                              </>
-                            }
-                          />
+                          {time ? (
+                            <time
+                              dateTime={c.visitAt}
+                              className="emr-text-panel-title shrink-0 font-semibold tabular-nums"
+                            >
+                              {time}
+                            </time>
+                          ) : (
+                            <span className="emr-text-metadata shrink-0 text-muted-foreground">
+                              시각 미기록
+                            </span>
+                          )}
+                          {visitType && (
+                            <EmrSidePanelTypeBadge label={visitType} />
+                          )}
+                          <EmrStatusBadge label={stateText(c.status)} />
                         </div>
-                        {open && (
-                          <CardContent
-                            id={"history-" + c.id}
-                            className="emr-text-body grid min-w-0 gap-4 border-t p-4"
-                          >
-                            <strong>{diagnosesText(c) || "진단 미기록"}</strong>
-                            <div>
-                              <ChartStaff chart={c} />
-                              <dl>
-                                <InfoLine label="작성자" icon={<DocumentIcon />}>
-                                  {c.author}
-                                </InfoLine>
-                                <InfoLine
-                                  label="차트 작성일"
-                                  icon={<CalendarIcon />}
-                                >
-                                  {dateText(c.createdAt)}
-                                </InfoLine>
-                              </dl>
-                            </div>
-                            {c.complaint && <p>주호소　{c.complaint}</p>}
-                            {sections.map((section) => (
-                              <section
-                                key={section.title}
-                                className="grid min-w-0 gap-2 border-t pt-4"
+                        <ChartActions
+                          label={title}
+                          copyFirst
+                          onViewHistoryChart={() => onViewChart(c)}
+                          showFavorite={false}
+                          favorite={favorites.includes(c.id)}
+                          onFavorite={() => onFavorite(c.id)}
+                          onCopy={(mode) => onCopy(c, mode)}
+                          onCopyText={() =>
+                            void clip(
+                              [
+                                c.patient,
+                                title,
+                                date,
+                                clock.format(
+                                  new Date(c.createdAt ?? c.clinicalAt),
+                                ),
+                                c.complaint,
+                                c.doctor,
+                                c.author,
+                                ...sections.flatMap((section) => [
+                                  section.title,
+                                  ...section.lines,
+                                ]),
+                              ]
+                                .filter(Boolean)
+                                .join("\n"),
+                            )
+                          }
+                          menu={
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => setExpanded([c.id])}
                               >
-                                <div className="flex items-center justify-between">
-                                  <h4 className="emr-text-section font-semibold">
-                                    {section.title}
-                                  </h4>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    disabled={!section.lines.length}
-                                    aria-label={
-                                      title + " " + section.title + " 전체 복사"
-                                    }
-                                    onClick={() =>
-                                      void clip(section.lines.join("\n"))
-                                    }
-                                  >
-                                    <CdsActionsCopyIcon />
-                                    전체 복사
-                                  </Button>
-                                </div>
-                                <Card size="sm" className="border ring-0">
-                                  <CardContent className="grid gap-2 whitespace-pre-wrap wrap-anywhere">
+                                이 차트만 펼치기
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => onFavorite(c.id)}
+                              >
+                                {favorites.includes(c.id)
+                                  ? "즐겨찾기 해제"
+                                  : "즐겨찾기 추가"}
+                              </DropdownMenuItem>
+                            </>
+                          }
+                        />
+                      </div>
+                      {open && (
+                        <CardContent
+                          id={"history-" + c.id}
+                          data-record-body
+                          className="emr-text-body grid min-w-0 gap-4 border-t py-6"
+                        >
+                          <ChartSummary chart={c} visitType={visitType} />
+                          <div data-chart-people className="min-w-0 pb-2">
+                            <ChartStaff chart={c} />
+                          </div>
+                          {sections.map((section) => (
+                            <section
+                              key={section.title}
+                              className="grid min-w-0 gap-[var(--clair-spacing-10)] border-t pt-4 pb-1.5"
+                            >
+                              <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
+                                <h4 className="emr-text-section font-semibold">
+                                  {section.title}
+                                </h4>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-muted-foreground hover:text-foreground"
+                                  disabled={!section.lines.length}
+                                  aria-label={
+                                    title + " " + section.title + " 전체 복사"
+                                  }
+                                  onClick={() =>
+                                    void clip(section.lines.join("\n"))
+                                  }
+                                >
+                                  <CdsActionsCopyIcon />
+                                  전체 복사
+                                </Button>
+                              </div>
+                              {section.title === "Subjective/Objective" ? (
+                                <SoapGroups chart={c} query={search.query} />
+                              ) : (
+                                <Card className="border py-3 ring-0">
+                                  <CardContent className="grid gap-2 text-xs leading-normal font-medium whitespace-pre-wrap wrap-anywhere">
                                     {section.lines.length
                                       ? section.lines.map((line, i) => (
                                           <p key={i}>{line}</p>
                                         ))
                                       : "기록 없음"}
-                                    {section.title === "Subjective/Objective" &&
-                                      c.media.length > 0 && (
-                                        <SourceMedia
-                                          chart={c}
-                                          query={search.query}
-                                        />
-                                      )}
                                   </CardContent>
                                 </Card>
-                              </section>
-                            ))}
-                            <CopyHistory chartId={c.id} api={api} />
-                          </CardContent>
-                        )}
-                      </Card>
-                    </div>
+                              )}
+                            </section>
+                          ))}
+                        </CardContent>
+                      )}
+                    </Card>
                   );
                 })}
               </EmrContentHistoryGroup>
