@@ -27,6 +27,13 @@
   background: var(--emr-surface-workspace);
   container: chart-search / inline-size;
 }
+.resultsBody {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
 .resultsScroll {
   flex: 1;
   min-height: 0;
@@ -147,7 +154,8 @@
   right: 8px;
 }
 @media (hover: hover) and (pointer: fine) {
-  .resultCard:not(:hover):not(:focus-within) .rowActions,
+  .resultCard:not(:hover):not(:focus-within)
+    .rowActions:not(:has([data-popup-open])),
   .resultCard:not(:hover):not(:focus-within)[data-checked="false"]
     .resultContent
     > [role="checkbox"] {
@@ -165,20 +173,35 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  padding-right: 108px;
+  padding-right: 72px;
   gap: 4px 8px;
   color: var(--muted-foreground);
   font-size: 12px;
   line-height: 18px;
 }
+.metadata > span {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
 .metadata > span + span {
-  border-left: 1px solid var(--border);
-  padding-left: 8px;
+  padding-left: 9px;
+}
+.metadata > span + span::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 10px;
+  background: var(--border);
 }
 .profileLink {
-  display: inline;
   height: auto;
-  padding: 0;
+  padding: 0 4px;
+  margin-inline: -4px;
+  border: 0;
   font: inherit;
   color: inherit;
 }

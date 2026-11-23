@@ -127,7 +127,7 @@ test("an empty treatment queue can open hospital search without a return patient
   await expect(page.getByRole("button", { name: /차트로 돌아가기/ })).toHaveCount(0);
 });
 
-test("검색 결과의 너비를 바꿔도 상단과 스크롤 위치가 유지되고 서랍이 전체 작업 영역에 열린다",async({page},testInfo)=>{
+test("검색 결과의 너비를 바꿔도 상단과 스크롤 위치가 유지되고 서랍이 검색 헤더 아래 본문에 열린다",async({page},testInfo)=>{
   await page.setViewportSize({width:1900,height:1200});
   await setup(page,true);
   await rail(page).getByRole("link",{name:"차트 상세 검색",exact:true}).click();
@@ -135,6 +135,7 @@ test("검색 결과의 너비를 바꿔도 상단과 스크롤 위치가 유지�
   const result=page.getByRole("region",{name:"차트 검색 결과"});
   await expect(result).toBeVisible();
   await page.evaluate(async()=>{await document.fonts.ready;await Promise.allSettled(document.getAnimations().filter(a=>a.effect?.getTiming().iterations!==Infinity).map(a=>a.finished));});
+  await page.screenshot({animations:"disabled"});
   const before=await header.boundingBox(),wide=await result.boundingBox();
   await page.getByRole("button",{name:"좁게 보기"}).click();
   expect(await header.boundingBox()).toEqual(before);
@@ -144,12 +145,16 @@ test("검색 결과의 너비를 바꿔도 상단과 스크롤 위치가 유지�
   const drawer=page.getByRole("complementary",{name:"차트 원본"});
   const work=page.getByRole("region",{name:"차트 상세 검색",exact:true});
   await expect(drawer).toBeVisible();
-  expect(Math.abs((await drawer.boundingBox())!.y-(await work.boundingBox())!.y)).toBeLessThan(2);
+  expect(Math.abs((await drawer.boundingBox())!.y - ((await header.boundingBox())!.y + (await header.boundingBox())!.height))).toBeLessThan(2);
+  expect((await drawer.boundingBox())!.y).toBeGreaterThan((await work.boundingBox())!.y);
+  await header.getByRole("button", {name: "검색", exact: true}).click();
+  await expect(query(page)).toBeEditable();
   expect((await result.boundingBox())!.width).toEqual(wide!.width);
-  for(const [width,height] of [[1900,1200],[1387,866]]){
+  for(const [width,height] of [[1900,1200],[1387,866],[800,900]]){
     await page.setViewportSize({width,height});
     await page.evaluate(()=>document.fonts.ready);
     await expect(drawer.locator("[data-history-chart-id]")).toBeVisible();
+    expect(Math.abs((await drawer.boundingBox())!.y - ((await header.boundingBox())!.y + (await header.boundingBox())!.height))).toBeLessThan(2);
     expect(await drawer.evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
     await testInfo.attach("chart-search-"+width,{body:await page.screenshot({path:testInfo.outputPath("chart-search-"+width+".png"),animations:"disabled"}),contentType:"image/png"});
   }
@@ -165,7 +170,15 @@ test("검색 결과에서 방문 환자와 보호자의 기존 프로필을 열�
   await page.goto("/w/clair-demo/chart-search?modulePanel=closed");
   const card = page.locator("[data-chart-id=profile-source]");
   for (const [kind, name] of [["patient","코코 환자 프로필"], ["guardian","이지은 보호자 프로필"]]) {
-    await card.getByRole("button",{name,exact:true}).click();
+    const trigger = card.getByRole("button",{name,exact:true});
+    if (kind === "patient") {
+      await expect(trigger).toHaveText("코코 (6세)");
+      const box = (await trigger.boundingBox())!;
+      await trigger.click({position:{x:box.width - 8,y:box.height / 2}});
+    } else {
+      await trigger.click();
+    }
+    await expect(page.getByRole("complementary", {name:"차트 원본"})).toHaveCount(0);
     const profile = page.getByTestId("profile-side-panel");
     await expect(profile).toHaveAttribute("data-profile-kind",kind);
     const close = profile.getByRole("button",{name:/닫기/}).first();
@@ -174,4 +187,53 @@ test("검색 결과에서 방문 환자와 보호자의 기존 프로필을 열�
     await expect(page).not.toHaveURL(/[?&]drawer=/);
     await expect(card).toBeVisible();
   }
+});
+
+
+test("복사·더보기 메뉴를 사용하는 동안 결과 버튼을 유지하고 즐겨찾기는 숨긴다", async ({page}) => {
+  await setup(page, true);
+  await rail(page).getByRole("link", {name:"차트 상세 검색", exact:true}).click();
+  const card = page.locator('[data-chart-id="search-source"]');
+  for (const view of ["리스트", "카드"]) {
+    await page.getByRole("button", {name:view + " 보기", exact:true}).click();
+    for (const action of ["복사", "더보기"]) {
+      await card.hover();
+      const trigger = card.getByRole("button", {name:"모카 차트 " + action, exact:true});
+      await trigger.click();
+      const item = page.getByRole("menuitem", {name:action === "복사" ? "기존 차트에 복사" : "원본 보기", exact:true});
+      await item.hover();
+      await expect.poll(() => trigger.evaluate(el => {
+        for (let node: Element | null = el; node; node = node.parentElement) {
+          if (getComputedStyle(node).opacity === "0") return false;
+        }
+        return true;
+      })).toBe(true);
+      await expect(card.getByRole("button", {name:/즐겨찾기/})).toHaveCount(0);
+      await page.keyboard.press("Escape");
+      await expect(item).toBeHidden();
+      await expect(trigger).toBeFocused();
+      await page.locator('[data-emr-table-workspace-header]').click({position:{x:10,y:10}});
+      await expect.poll(() => trigger.evaluate(el => {
+        for (let node: Element | null = el; node; node = node.parentElement) {
+          if (getComputedStyle(node).opacity === "0") return true;
+        }
+        return false;
+      })).toBe(true);
+    }
+  }
+});
+
+test("선택 해제는 작은 보조 버튼으로 선택 상태를 초기화한다", async ({page}) => {
+  await setup(page, true);
+  await rail(page).getByRole("link", {name:"차트 상세 검색", exact:true}).click();
+  const all = page.getByRole("checkbox", {name:"현재 결과 모두 선택"});
+  await all.click();
+  const clear = page.getByRole("button", {name:"선택 해제", exact:true});
+  await expect(clear).toBeVisible();
+  expect((await clear.boundingBox())!.height).toBe(24);
+  const center = (box:{y:number;height:number}) => box.y + box.height/2;
+  expect(Math.abs(center((await clear.boundingBox())!) - center((await all.boundingBox())!))).toBeLessThan(1);
+  await clear.click();
+  await expect(all).not.toBeChecked();
+  await expect(clear).toHaveCount(0);
 });

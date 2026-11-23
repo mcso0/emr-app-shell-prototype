@@ -602,166 +602,172 @@ export function ChartSearchWorkspace({
           }
         />
       </header>
-      <div className={styles.listhead} data-narrow={narrow}>
-        <Checkbox
-          aria-label="현재 결과 모두 선택"
-          disabled={!page?.items.length || busy}
-          checked={!!page?.items.length && checked.length === page.total}
-          indeterminate={
-            !!checked.length && checked.length !== (page?.total ?? 0)
-          }
-          onCheckedChange={(v) => void selectResults(v)}
-        />
-        <span>{checked.length ? checked.length + "건 선택" : "전체 선택"}</span>
-        {!!checked.length && (
-          <Button variant="ghost" onClick={() => setChecked([])}>
-            선택 해제
-          </Button>
-        )}
-        {changed && (
-          <Button variant="ghost" onClick={reset}>
-            조건 초기화
-          </Button>
-        )}
-        <label>
-          <Switch size="sm" checked={drafts} onCheckedChange={setDrafts} />
-          작성 중 차트 포함
-        </label>
-      </div>
-      <ScrollArea viewportRef={scroll} className={styles.resultsScroll}>
-        <div className={styles.list} data-narrow={narrow}>
-          {error && (
-            <div className={styles.empty} role="alert">
-              {error}
-              <Button
-                variant="outline"
-                onClick={
-                  page?.nextCursor ? more : () => setAttempt((a) => a + 1)
-                }
-              >
-                다시 시도
-              </Button>
-            </div>
-          )}
-          {!visiblePage && !error && (
-            <div
-              role="status"
-              aria-label="차트를 불러오는 중입니다"
-              className="grid gap-3"
-            >
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-6 rounded-xl border bg-card p-4"
-                >
-                  <Skeleton className="h-48 w-1/4" />
-                  <div className="grid flex-1 gap-4">
-                    <Skeleton className="h-6 w-1/3" />
-                    <Skeleton className="h-5 w-4/5" />
-                    <Skeleton className="h-5 w-2/3" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          {!!visiblePage?.items.length && (
-            <section
-              aria-label="차트 검색 결과"
-              aria-busy={!page}
-              inert={!page}
-              ref={listRef}
-              className={styles.results}
-              data-view={view}
-            >
-              {visiblePage.items.map((chart) => (
-                <ChartRow
-                  key={chart.id}
-                  chart={chart}
-                  query={loaded?.params.query ?? q}
-                  active={selected?.id === chart.id}
-                  checked={checked.includes(chart.id)}
-                  favorite={favorites.ids.includes(chart.id)}
-                  onOpen={() => void showSource(chart)}
-                  onOpenProfile={onOpenProfile}
-                  onCheck={() =>
-                    setChecked((ids) =>
-                      ids.includes(chart.id)
-                        ? ids.filter((id) => id !== chart.id)
-                        : [...ids, chart.id],
-                    )
-                  }
-                  onFavorite={() => toggleFavorite(chart.id)}
-                  onCopy={(mode) => void showSource(chart, mode)}
-                  onViewChart={() => viewDocument(chart)}
-                />
-              ))}
-            </section>
-          )}
-          {!busy && !error && page?.total === 0 && (
-            <EmrTableFeedbackSurface className="min-h-52 flex-1" role="status">
-              <EmrEmptyState
-                surface="content"
-                kind={
-                  q
-                    ? "no-search-results"
-                    : mine
-                      ? "no-scope-result"
-                      : changed
-                        ? "no-filter-results"
-                        : "no-data"
-                }
-                title={
-                  q
-                    ? "검색 결과가 없습니다"
-                    : mine && !doctor && !count
-                      ? "담당하거나 작성한 차트가 없습니다"
-                      : changed
-                        ? "조건에 맞는 차트가 없습니다"
-                        : "등록된 완료 차트가 없습니다"
-                }
-                primaryAction={
-                  changed ? (
-                    <Button
-                      variant="outline"
-                      onClick={q ? () => setQ("") : reset}
-                    >
-                      {q
-                        ? "검색어 초기화"
-                        : mine && !doctor && !count
-                          ? "전체 차트 보기"
-                          : "검색 조건 초기화"}
-                    </Button>
-                  ) : undefined
-                }
-              />
-            </EmrTableFeedbackSurface>
-          )}
-          {page?.nextCursor && (
+      <div className={styles.resultsBody}>
+        <div className={styles.listhead} data-narrow={narrow}>
+          <Checkbox
+            aria-label="현재 결과 모두 선택"
+            disabled={!page?.items.length || busy}
+            checked={!!page?.items.length && checked.length === page.total}
+            indeterminate={
+              !!checked.length && checked.length !== (page?.total ?? 0)
+            }
+            onCheckedChange={(v) => void selectResults(v)}
+          />
+          <span>{checked.length ? checked.length + "건 선택" : "전체 선택"}</span>
+          {!!checked.length && (
             <Button
-              className="my-4 self-center"
-              disabled={busy}
-              variant="outline"
-              onClick={more}
+              variant="secondary"
+              size="xs"
+              onClick={() => setChecked([])}
             >
-              더 보기
+              선택 해제
             </Button>
           )}
+          {changed && (
+            <Button variant="ghost" onClick={reset}>
+              조건 초기화
+            </Button>
+          )}
+          <label>
+            <Switch size="sm" checked={drafts} onCheckedChange={setDrafts} />
+            작성 중 차트 포함
+          </label>
         </div>
-      </ScrollArea>
-      {selected && (
-        <aside aria-label="차트 원본" className={styles.drawer}>
-          <PatientHistory
-            key={selected.patientId}
-            source={selected}
-            api={api}
-            onClose={closeSource}
-            favorites={favorites.ids}
-            onFavorite={toggleFavorite}
-            onCopy={(chart, mode) => void showSource(chart, mode)}
-            onViewChart={viewDocument}
-          />
-        </aside>
-      )}
+        <ScrollArea viewportRef={scroll} className={styles.resultsScroll}>
+          <div className={styles.list} data-narrow={narrow}>
+            {error && (
+              <div className={styles.empty} role="alert">
+                {error}
+                <Button
+                  variant="outline"
+                  onClick={
+                    page?.nextCursor ? more : () => setAttempt((a) => a + 1)
+                  }
+                >
+                  다시 시도
+                </Button>
+              </div>
+            )}
+            {!visiblePage && !error && (
+              <div
+                role="status"
+                aria-label="차트를 불러오는 중입니다"
+                className="grid gap-3"
+              >
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-6 rounded-xl border bg-card p-4"
+                  >
+                    <Skeleton className="h-48 w-1/4" />
+                    <div className="grid flex-1 gap-4">
+                      <Skeleton className="h-6 w-1/3" />
+                      <Skeleton className="h-5 w-4/5" />
+                      <Skeleton className="h-5 w-2/3" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {!!visiblePage?.items.length && (
+              <section
+                aria-label="차트 검색 결과"
+                aria-busy={!page}
+                inert={!page}
+                ref={listRef}
+                className={styles.results}
+                data-view={view}
+              >
+                {visiblePage.items.map((chart) => (
+                  <ChartRow
+                    key={chart.id}
+                    chart={chart}
+                    query={loaded?.params.query ?? q}
+                    active={selected?.id === chart.id}
+                    checked={checked.includes(chart.id)}
+                    favorite={favorites.ids.includes(chart.id)}
+                    onOpen={() => void showSource(chart)}
+                    onOpenProfile={onOpenProfile}
+                    onCheck={() =>
+                      setChecked((ids) =>
+                        ids.includes(chart.id)
+                          ? ids.filter((id) => id !== chart.id)
+                          : [...ids, chart.id],
+                      )
+                    }
+                    onFavorite={() => toggleFavorite(chart.id)}
+                    onCopy={(mode) => void showSource(chart, mode)}
+                    onViewChart={() => viewDocument(chart)}
+                  />
+                ))}
+              </section>
+            )}
+            {!busy && !error && page?.total === 0 && (
+              <EmrTableFeedbackSurface className="min-h-52 flex-1" role="status">
+                <EmrEmptyState
+                  surface="content"
+                  kind={
+                    q
+                      ? "no-search-results"
+                      : mine
+                        ? "no-scope-result"
+                        : changed
+                          ? "no-filter-results"
+                          : "no-data"
+                  }
+                  title={
+                    q
+                      ? "검색 결과가 없습니다"
+                      : mine && !doctor && !count
+                        ? "담당하거나 작성한 차트가 없습니다"
+                        : changed
+                          ? "조건에 맞는 차트가 없습니다"
+                          : "등록된 완료 차트가 없습니다"
+                  }
+                  primaryAction={
+                    changed ? (
+                      <Button
+                        variant="outline"
+                        onClick={q ? () => setQ("") : reset}
+                      >
+                        {q
+                          ? "검색어 초기화"
+                          : mine && !doctor && !count
+                            ? "전체 차트 보기"
+                            : "검색 조건 초기화"}
+                      </Button>
+                    ) : undefined
+                  }
+                />
+              </EmrTableFeedbackSurface>
+            )}
+            {page?.nextCursor && (
+              <Button
+                className="my-4 self-center"
+                disabled={busy}
+                variant="outline"
+                onClick={more}
+              >
+                더 보기
+              </Button>
+            )}
+          </div>
+        </ScrollArea>
+        {selected && (
+          <aside aria-label="차트 원본" className={styles.drawer}>
+            <PatientHistory
+              key={selected.patientId}
+              source={selected}
+              api={api}
+              onClose={closeSource}
+              favorites={favorites.ids}
+              onFavorite={toggleFavorite}
+              onCopy={(chart, mode) => void showSource(chart, mode)}
+              onViewChart={viewDocument}
+            />
+          </aside>
+        )}
+      </div>
       {notice && (
         <div className={styles.notice} role="status">
           {notice}

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { expect, fn, within } from "storybook/test";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { ChartRow } from "./result-card";
 import { exampleChart } from "./search.stories.fixture";
 import styles from "./workspace.module.css";
@@ -121,5 +121,39 @@ export const Overflow: Story = {
       canvas.getByRole("button", { name: "진료의 외 2명" }),
     ).toBeVisible();
     await expect(canvas.getByText("최근 수정", { exact: false })).toBeVisible();
+  },
+};
+
+
+export const ProfileTargets: Story = {
+  args: {
+    query: "",
+    chart: exampleChart("profile-targets", { guardianId: "synthetic-guardian" }),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const patient = canvas.getByRole("button", { name: "모카 환자 프로필" });
+    await expect(patient).toHaveTextContent("모카 (6세)");
+    await userEvent.click(patient);
+    await expect(args.onOpenProfile).toHaveBeenCalledWith({type:"patient", id:"synthetic-patient-profile-targets"});
+    await userEvent.click(canvas.getByRole("button", { name: "보호자 가 보호자 프로필" }));
+    await expect(args.onOpenProfile).toHaveBeenCalledWith({type:"guardian", id:"synthetic-guardian"});
+    await expect(args.onOpen).not.toHaveBeenCalled();
+    await expect(canvas.queryByRole("button", {name:/즐겨찾기/})).not.toBeInTheDocument();
+  },
+};
+
+export const OpenCopyMenu: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const trigger = canvas.getByRole("button", {name:"모카 차트 복사"});
+    trigger.focus();
+    await userEvent.keyboard("{Enter}");
+    const menu = within(canvasElement.ownerDocument.body).getByRole("menuitem", {name:"기존 차트에 복사"});
+    await userEvent.hover(menu);
+    await expect(trigger).toBeVisible();
+    await expect(canvas.queryByRole("button", {name:/즐겨찾기/})).not.toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(trigger).toHaveFocus());
   },
 };
