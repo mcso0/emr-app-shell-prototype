@@ -121,10 +121,11 @@
   box-shadow: none;
   cursor: pointer;
 }
-.resultCard:is([data-active="true"], [data-checked="true"]) {
+.resultCard[data-active="true"] {
   border-color: var(--emr-state-selected-border);
 }
 .resultCard[data-checked="true"] {
+  border-color: var(--clair-color-atomic-neutral-400);
   background:
     linear-gradient(var(--emr-state-selected), var(--emr-state-selected)),
     var(--card);
