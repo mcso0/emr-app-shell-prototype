@@ -96,7 +96,7 @@ import {
   CdsFilesMoreHorizontalIcon,
 } from "@/components/cds-icons/files-and-layout";
 import { CdsContentEdit2Icon } from "@/components/cds-icons/content-and-editor";
-import { CdsMedicalFileSearchIcon } from "@/components/cds-icons/medical-and-domain";
+import { CdsMedicalChartSearchIcon } from "@/components/cds-icons/medical-and-domain";
 import { CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import {
   EmrContentAsideHeader,
@@ -9820,7 +9820,7 @@ function ChartOrderTable({
                   onClick={() => openDetail(order.id)}
                   type="button"
                 >
-                  <CdsMedicalFileSearchIcon aria-hidden="true" />
+                  <CdsMedicalChartSearchIcon aria-hidden="true" />
                 </EmrIconButton>
                 <ChartOrderDisabledAction reason={editReason}>
                   <EmrIconButton

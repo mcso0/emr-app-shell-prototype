@@ -58,6 +58,28 @@ export const CdsMedicalBedIcon = React.forwardRef<SVGSVGElement, CdsIconProps>(
 );
 CdsMedicalBedIcon.displayName = "CdsMedicalBedIcon";
 
+export const CdsMedicalChartSearchIcon = React.forwardRef<SVGSVGElement, CdsIconProps>(
+  ({ color, size = 16, style, ...props }, ref) => (
+    <svg
+      {...props}
+      ref={ref}
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ color, ...style }}
+    >
+      <g stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M11 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v5"/>
+        <circle cx="16" cy="16" r="4"/>
+        <path d="m19 19 3 3"/>
+      </g>
+    </svg>
+  ),
+);
+CdsMedicalChartSearchIcon.displayName = "CdsMedicalChartSearchIcon";
+
 export const CdsMedicalClipboardCheckIcon = React.forwardRef<SVGSVGElement, CdsIconProps>(
   ({ color, size = 16, style, ...props }, ref) => (
     <svg
