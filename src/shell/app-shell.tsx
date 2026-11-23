@@ -406,8 +406,8 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     const nextSearch = params.toString();
     if (search !== nextSearch) {
       if (window.location.pathname !== pathname) return;
-      if (moduleDefinition.documentLayout) {
-        // Layout-only URL state must not replace the mounted document or race a later close.
+      if (moduleDefinition.documentLayout || moduleDefinition.id === "chart-search") {
+        // Layout-only URL state must not replace the mounted workspace or race a later close.
         window.history.replaceState(null, "", `${pathname}?${nextSearch}`);
       } else {
         router.replace(`${pathname}?${nextSearch}`, { scroll: false });

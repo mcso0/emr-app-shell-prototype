@@ -170,6 +170,7 @@ test("검색 결과에서 방문 환자와 보호자의 기존 프로필을 열�
     const close = profile.getByRole("button",{name:/닫기/}).first();
     await close.click();
     await expect(profile).toBeHidden();
+    await expect(page).not.toHaveURL(/[?&]drawer=/);
     await expect(card).toBeVisible();
   }
 });
