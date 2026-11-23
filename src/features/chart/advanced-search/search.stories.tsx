@@ -7,8 +7,8 @@ const meta = {
   title: "Features/Chart/차트 상세 검색/검색 결과",
   component: ChartRow,
   decorators: [
-    (Story) => (
-      <section className={styles.results} data-view="list">
+    (Story, context) => (
+      <section className={styles.results} data-view={context.parameters.resultView ?? "list"}>
         <Story />
       </section>
     ),
@@ -156,4 +156,9 @@ export const OpenCopyMenu: Story = {
     await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(trigger).toHaveFocus());
   },
+};
+
+export const CardOverflow: Story = {
+  ...Overflow,
+  parameters: { resultView: "card" },
 };

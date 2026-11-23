@@ -297,6 +297,13 @@ test("결과의 전문과 배지를 확인해도 목록과 카드의 썸네일 �
   const other = results.locator("[data-chart-id]").nth(1);
   await expect(other.getByText("표시할 부가 정보가 없습니다")).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
+  for (const narrow of [false, true, false]) {
+    if (narrow) await page.getByRole("button", { name: "좁게 보기", exact: true }).click();
+    else if (await page.getByRole("button", { name: "넓게 보기", exact: true }).count())
+      await page.getByRole("button", { name: "넓게 보기", exact: true }).click();
+    const tops = await first.locator("dt").evaluateAll(rows => rows.map(row => row.getBoundingClientRect().top));
+    for (const index of [1, 2, 4, 5]) expect(tops[index] - tops[index - 1]).toBeCloseTo(26, 0);
+  }
   const square = await media.boundingBox();
   expect(square).not.toBeNull();
   expect(square!.width).toBeCloseTo(square!.height, 0);

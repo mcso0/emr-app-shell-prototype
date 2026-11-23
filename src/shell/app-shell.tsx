@@ -121,6 +121,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const urlStateReadyRef = useRef(false);
   const { hydrated: authHydrated, session: authSession, hydrate: hydrateAuth } = useAuthClient();
   const workspaceSwitchScopeRef = useRef<object | null>(null);
+  const tabNavigationScopeRef = useRef<object | null>(null);
   const workspaceSwitchPendingRef = useRef<{
     scope: object;
     discardUnsavedWorkspaceWork: boolean;
@@ -205,6 +206,16 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     markRead: handleMarkNotificationRead,
     onNavigateModule: handleNavigateModule,
   });
+
+  useLayoutEffect(() => {
+    // A previous tab's route may finish while the next navigation waits for editors.
+    // Only a new workspace/session owner invalidates that pending navigation here.
+    const scope = { workspaceId, sessionId: authSession?.id, role: authSession?.role };
+    tabNavigationScopeRef.current = scope;
+    return () => {
+      if (tabNavigationScopeRef.current === scope) tabNavigationScopeRef.current = null;
+    };
+  }, [workspaceId, authSession?.id, authSession?.role]);
 
   useLayoutEffect(() => {
     const scope = { workspaceId, sessionId: authSession?.id, role: authSession?.role, moduleId: moduleDefinition.id };
@@ -467,7 +478,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
 
   async function runWithSavedEditors(navigate: () => void) {
     if (tabNavigationPendingRef.current || workspaceSwitchPendingRef.current) return;
-    const scope = workspaceSwitchScopeRef.current;
+    const scope = tabNavigationScopeRef.current;
     const state = useWorkspaceTabsStore.getState();
     const tab = state.tabs.find((item) => item.id === state.activeTabId);
     const route = tab?.history[tab.historyIndex];
@@ -476,10 +487,10 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
       if (!await useChartStore.getState().flushEditors()) return;
       const latest = useWorkspaceTabsStore.getState();
       const currentTab = latest.tabs.find((item) => item.id === latest.activeTabId);
-      if (scope !== workspaceSwitchScopeRef.current || latest.activeTabId !== state.activeTabId || currentTab?.history[currentTab.historyIndex] !== route) return;
+      if (scope !== tabNavigationScopeRef.current || latest.activeTabId !== state.activeTabId || currentTab?.history[currentTab.historyIndex] !== route) return;
       navigate();
     } catch {
-      if (scope === workspaceSwitchScopeRef.current) toast.error("작업 내용을 저장하지 못했습니다. 다시 시도해주세요.");
+      if (scope === tabNavigationScopeRef.current) toast.error("작업 내용을 저장하지 못했습니다. 다시 시도해주세요.");
     } finally {
       tabNavigationPendingRef.current = false;
     }

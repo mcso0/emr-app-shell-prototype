@@ -77,6 +77,10 @@
   gap: 16px;
 }
 .resultHeader {
+  display: grid;
+  flex-shrink: 0;
+  min-height: var(--emr-calendar-toolbar-height);
+  align-items: center;
   padding: 8px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--card);
@@ -301,7 +305,7 @@
   min-width: 0;
   display: grid;
   align-content: start;
-  gap: 6px;
+  gap: 2px;
   margin: 0;
 }
 .infoLine {
@@ -328,10 +332,10 @@
   white-space: nowrap;
 }
 .clinical .infoLine {
-  min-height: 20px;
+  min-height: 24px;
   grid-template-columns: 90px minmax(0, 420px);
   gap: 6px;
-  align-items: baseline;
+  align-items: center;
   font-size: 14px;
   line-height: 20px;
   font-weight: 400;

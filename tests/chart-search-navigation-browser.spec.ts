@@ -26,6 +26,30 @@ const searchTab = (page: Page) => page.getByRole("tab", { name: "차트 상세 �
 const editor = (page: Page) => page.getByLabel("SOAP 블록 문서");
 const query = (page: Page) => page.getByRole("textbox", { name: "차트 검색어" });
 
+for (const timing of ["immediate", "settled"] as const) {
+  test(`search close and ${timing} reopen keeps URL, tab and screen aligned`, async ({ page }) => {
+    const session = await setup(page, true);
+    const link = rail(page).getByRole("link", { name: "차트 상세 검색", exact: true });
+    await link.click();
+    await expect(searchTab(page)).toHaveAttribute("aria-selected", "true");
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await searchTab(page).hover();
+      await page.getByRole("button", { name: "차트 상세 검색 탭 닫기" }).click();
+      await expect(searchTab(page)).toHaveCount(0);
+      if (timing === "settled") {
+        await expect(page).toHaveURL(/\/treatment(?:\?|$)/);
+        await expect(page.getByRole("tab", { name: "진료/차트", exact: true })).toHaveAttribute("aria-selected", "true");
+      }
+      await link.click();
+      await expect(page).toHaveURL(/\/chart-search(?:\?|$)/);
+      await expect(searchTab(page)).toHaveAttribute("aria-selected", "true");
+      await expect(link).toHaveAttribute("aria-current", "page");
+      await expect(page.getByRole("region", { name: "차트 검색 결과" })).toBeVisible();
+    }
+    session.assertNoUnexpectedTraffic();
+  });
+}
+
 test("rail and global search share one independent tab, and closing starts a fresh search", async ({ page }) => {
   const session = await setup(page);
   const link = rail(page).getByRole("link", { name: "차트 상세 검색", exact: true });
@@ -137,6 +161,9 @@ test("검색 결과의 너비를 바꿔도 상단과 스크롤 위치가 유지�
   await page.evaluate(async()=>{await document.fonts.ready;await Promise.allSettled(document.getAnimations().filter(a=>a.effect?.getTiming().iterations!==Infinity).map(a=>a.finished));});
   await page.screenshot({animations:"disabled"});
   const before=await header.boundingBox(),wide=await result.boundingBox();
+  const receptionToolbarHeight = await page.evaluate(() =>
+    parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--emr-calendar-toolbar-height")));
+  expect(before!.height).toBe(receptionToolbarHeight);
   await page.getByRole("button",{name:"좁게 보기"}).click();
   expect(await header.boundingBox()).toEqual(before);
   expect((await result.boundingBox())!.width).toBeLessThan(wide!.width);
