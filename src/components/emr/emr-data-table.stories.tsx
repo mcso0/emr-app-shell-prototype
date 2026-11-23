@@ -13,7 +13,7 @@ import {
 import { useCallback, useMemo, useState } from "react";
 
 import { CdsContentEdit2Icon } from "@/components/cds-icons/content-and-editor";
-import { CdsMedicalFileSearchIcon } from "@/components/cds-icons/medical-and-domain";
+import { CdsMedicalChartSearchIcon } from "@/components/cds-icons/medical-and-domain";
 import { EmrIconButton } from "@/components/emr/icon-button";
 import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
 import { Button } from "@/components/ui/button";
@@ -356,7 +356,7 @@ export function useEmrDataTableStoryProps({
               disabled={row.original.rowState === "disabled"}
               onClick={() => onAction(`${row.original.name}: 상세`)}
             >
-              <CdsMedicalFileSearchIcon aria-hidden="true" />
+              <CdsMedicalChartSearchIcon aria-hidden="true" />
             </EmrIconButton>
             <EmrIconButton
               aria-label={`${row.original.name} 수정`}
