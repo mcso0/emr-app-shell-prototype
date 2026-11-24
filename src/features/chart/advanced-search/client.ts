@@ -1,5 +1,5 @@
 import type {
-  ChartExportFormat, ChartExportSummary, SearchChart,
+  ChartExportFormat, ChartExportRecord, SearchChart,
   CopyHistoryItem,
   CopyIntent,
   CopyResult,
@@ -34,8 +34,8 @@ export const chartSearchApi = (workspace: string) => ({
     chartRequest<SearchPage>(workspace, "search", input, signal),
   patientCharts: (patientId: string, cursor: string | null, signal?: AbortSignal) =>
     chartRequest<{ items: SearchChart[]; nextCursor: string | null }>(workspace, "patientCharts", { patientId, cursor }, signal),
-  exportSummaries: (ids: string[], format: ChartExportFormat) =>
-    chartRequest<ChartExportSummary[]>(workspace, "export", { ids, format }),
+  exportRecords: (ids: string[], format: ChartExportFormat) =>
+    chartRequest<ChartExportRecord[]>(workspace, "export", { ids, format }),
   history: (chartId: string, signal?: AbortSignal) =>
     chartRequest<CopyHistoryItem[]>(workspace, "history", { chartId }, signal),
   visits: () => chartRequest<SearchVisit[]>(workspace, "visits", {}),
@@ -54,6 +54,8 @@ export const orderCopyPermissionMessage =
   "오더를 복사하려면 병원 오더 목록 조회 권한이 필요합니다.";
 export function errorMessage(error: unknown) {
   const key = error instanceof Error ? error.message : "";
+  if (key === "chart_export_too_large")
+    return "파일에 담을 기록이 너무 많습니다. 선택한 차트 수를 줄여 다시 내보내 주세요.";
   if (key === "target_patient_deleted")
     return "선택한 환자가 삭제되어 복사할 수 없습니다. 다른 대상을 선택해 주세요.";
   if (key === "catalog_permission_missing")

@@ -1,16 +1,19 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { SearchChart, SearchMedia } from "./contract";
+import { CdsActionsCopyIcon } from "@/components/cds-icons/actions-and-controls";
+import { Button } from "@/components/ui/button";
+import type { ReactNode } from "react";
+import { diagnosisLabels, orderDescription, sectionNames, type ChartHistoryContent, type SearchMedia, type SearchParagraph } from "./contract";
 import { SourceMedia } from "./presentation";
-import { chartTitle, diagnosesText } from "./result-card";
+import { chartTitle, ChartStaff, diagnosesText } from "./result-card";
 
-type SoapGroup = { paragraphs: string[]; media: SearchMedia[] };
+type SoapGroup = { paragraphs: SearchParagraph[]; media: SearchMedia[] };
 
 export function ChartSummary({
   chart,
   visitType,
 }: {
-  chart: SearchChart;
+  chart: ChartHistoryContent;
   visitType: string | null;
 }) {
   const diagnosis = diagnosesText(chart);
@@ -73,9 +76,11 @@ function SoapNote({ text }: { text: string }) {
 export function SoapGroups({
   chart,
   query,
+  print = false,
 }: {
-  chart: SearchChart;
+  chart: ChartHistoryContent;
   query: string;
+  print?: boolean;
 }) {
   const groups = new Map<string, SoapGroup>();
   function group(scope: string): SoapGroup {
@@ -89,7 +94,7 @@ export function SoapGroups({
 
   for (const entry of chart.paragraphs) {
     if (entry.section === "subjective" || entry.section === "objective") {
-      group(entry.scope || "기본").paragraphs.push(entry.text);
+      group(entry.scope || "기본").paragraphs.push(entry);
     }
   }
   for (const media of chart.media) {
@@ -119,12 +124,15 @@ export function SoapGroups({
             </CardTitle>
           </CardHeader>
           <CardContent className="grid min-w-0 gap-[var(--clair-spacing-10)] py-3 text-xs leading-normal font-medium whitespace-pre-wrap wrap-anywhere">
-            {record.paragraphs.map((text, index) => (
-              <SoapNote key={index} text={text} />
-            ))}
+            {record.paragraphs.map((entry, index) => print ? (
+              <div key={index} data-history-paragraph>
+                {entry.section && <strong data-print-paragraph-label>{sectionNames[entry.section]}</strong>}
+                <SoapNote text={entry.text} />
+              </div>
+            ) : <SoapNote key={index} text={entry.text} />)}
             {record.media.length > 0 && (
               <SourceMedia
-                chart={{ ...chart, media: record.media }}
+                chart={{ media: record.media }}
                 query={query}
               />
             )}
@@ -132,5 +140,99 @@ export function SoapGroups({
         </Card>
       ))}
     </div>
+  );
+}
+
+export const visitLabel = (c: { visitType?: string }) =>
+  c.visitType === "walk_in"
+    ? "외래"
+    : c.visitType === "appointment"
+      ? "예약"
+      : null;
+export function documentSections(c: ChartHistoryContent, print = false) {
+  const blocks = (records: SearchParagraph[]) =>
+    records.map((p) =>
+      [p.scope, p.section && sectionNames[p.section], p.text]
+        .filter(Boolean)
+        .join(" · "),
+    );
+  return [
+    {
+      title: "Subjective/Objective",
+      lines: blocks(
+        c.paragraphs.filter(
+          (p) => p.section === "subjective" || p.section === "objective",
+        ),
+      ),
+    },
+    ...(!c.paragraphs.some((p) => !p.section)
+      ? []
+      : [
+          {
+            title: "자유 기록",
+            lines: blocks(c.paragraphs.filter((p) => !p.section)),
+          },
+        ]),
+    {
+      title: "Assessment",
+      lines: [
+        ...(print ? c.diagnoses.map(d => [d.system, diagnosisLabels[d.kind], d.name, d.primary && "주진단"].filter(Boolean).join(" · "))
+          : [diagnosesText(c)]),
+        ...blocks(c.paragraphs.filter((p) => p.section === "assessment")),
+      ].filter(Boolean),
+    },
+    {
+      title: "Plan",
+      lines: [
+        ...blocks(c.paragraphs.filter((p) => p.section === "plan")),
+        ...(!print ? c.orders.map(orderDescription) : []),
+      ],
+    },
+    ...(print ? [{ title: "처방·오더", lines: c.orders.map(o => `${orderDescription(o)} · 수량 ${o.quantity}`) }] : []),
+  ];
+}
+
+/** The expanded history card body; print uses the same structure without controls. */
+export function ChartHistoryRecord({ chart, id, visitType, query = "", onCopySection, print = false, children }: {
+  chart: ChartHistoryContent; id?: string; visitType: string | null; query?: string;
+  onCopySection?: (lines: string[]) => void; print?: boolean; children?: ReactNode;
+}) {
+  return (
+    <CardContent id={id} data-record-body className="emr-text-body grid min-w-0 gap-4 border-t py-6">
+      <ChartSummary chart={chart} visitType={visitType} />
+      <div data-chart-people className="min-w-0 pb-2"><ChartStaff chart={chart} /></div>
+      {documentSections(chart, print).map(section => (
+        <ChartHistorySection key={section.title} title={section.title} action={onCopySection && (
+          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground"
+            disabled={!section.lines.length} aria-label={chartTitle(chart) + " " + section.title + " 전체 복사"}
+            onClick={() => onCopySection(section.lines)}><CdsActionsCopyIcon />전체 복사</Button>
+        )}>
+          {section.title === "Subjective/Objective" ? <SoapGroups chart={chart} query={query} print={print} /> : (
+            <ChartHistoryTextCard lines={section.lines} />
+          )}
+        </ChartHistorySection>
+      ))}
+      {children}
+    </CardContent>
+  );
+}
+export function ChartHistorySection({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
+  return (
+    <section data-history-section className="grid min-w-0 gap-[var(--clair-spacing-10)] border-t pt-4 pb-1.5">
+      <div data-history-section-heading className="flex min-h-8 flex-wrap items-center justify-between gap-2">
+        <h4 className="emr-text-section font-semibold">{title}</h4>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+export function ChartHistoryTextCard({ lines, keepTogether = false }: { lines: string[]; keepTogether?: boolean }) {
+  return (
+    <Card className="border py-3 ring-0" data-history-keep-together={keepTogether || undefined}>
+      <CardContent className="grid gap-2 text-xs leading-normal font-medium whitespace-pre-wrap wrap-anywhere">
+        {lines.length ? lines.map((line, i) => <p key={i}>{line}</p>) : "기록 없음"}
+      </CardContent>
+    </Card>
   );
 }

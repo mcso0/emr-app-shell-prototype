@@ -1,28 +1,63 @@
-import { getOperatingDateFromIso } from "@/lib/emr-domain/demo-date";
-import type { ChartExportFormat, ChartExportSummary } from "./contract";
+import { diagnosisLabels, orderDescription, type ChartExportRecord, type ChartExportResult, type Section } from "./contract";
 import { speciesLabel } from "./ranking";
 
-const headings = [
-  "차트",
-  "환자명",
-  "동물종",
-  "진료일",
-  "담당의",
-  "작성자",
-  "진단",
-];
-function cells(row: ChartExportSummary) {
-  return [
-    row.title,
-    row.patient,
-    speciesLabel(row.species),
-    getOperatingDateFromIso(row.visitAt),
-    row.doctor,
-    row.author,
-    row.diagnosis,
-  ].map((v) => v ?? "");
+export function exportDateTime(value: string) {
+  const date = new Date(value);
+  return Number.isFinite(date.valueOf()) ? new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+  }).format(date) : "시각 미기록";
 }
-export function summaryCsv(rows: ChartExportSummary[]) {
+
+const labStatus: Record<string, string> = { entered: "입력 완료", reviewed: "검토 완료", corrected: "정정" };
+const resultKind: Record<string, string> = { lab: "임상병리", clinical_lab: "임상병리", external_lab: "원외검사", imaging: "영상검사" };
+const judgment: Record<string, string> = { low: "낮음", normal: "정상", high: "높음", critical: "위험", abnormal: "이상" };
+
+export function recordedResultLines(result: ChartExportResult) {
+  const tag = [resultKind[result.kind], result.attempt && `${result.attempt}회차`, result.status && labStatus[result.status]].filter(Boolean).join(" · ");
+  return [
+    [result.order, tag].filter(Boolean).join(" / "),
+    result.performedAt && `수행 시각 · ${exportDateTime(result.performedAt)}`,
+    result.protocol && `검사 방법 · ${result.protocol}`,
+    result.views?.length && `촬영 방향 · ${result.views.join(", ")}`,
+    ...(result.rows ?? []).map(row => {
+      const value = row.presence === "instrument_no_result" ? "측정 불가" : row.value == null ? "미기록" :
+        [row.qualifier === "less_than" ? "<" : row.qualifier === "greater_than" ? ">" : "", row.value, row.unit].filter(Boolean).join(" ");
+      return [`${row.name} · ${value}`, row.reference && `참고범위 ${row.reference}`, judgment[row.judgment], row.deviceFlag, row.note && `소견: ${row.note}`].filter(Boolean).join(" · ");
+    }),
+    result.finding && `${result.kind === "imaging" ? "검사 소견" : "종합소견"} · ${result.finding}`,
+    result.interpretation && `판독 · ${result.interpretation}`,
+    result.note && `비고 · ${result.note}`,
+  ].filter((line): line is string => typeof line === "string" && line.length > 0);
+}
+
+const headings = [
+  "차트", "환자명", "동물종", "진료 일시", "차트 상태", "담당의", "작성자", "주호소",
+  "S · 문진", "O · 관찰", "A · 평가", "진단", "P · 계획", "자유 기록",
+  "처방·오더", "연결된 검사 결과 및 소견", "첨부 자료 목록", "검사 결과 열람 범위",
+];
+function cells(row: ChartExportRecord) {
+  const notes = (section: Section | null) => row.paragraphs
+    .filter(paragraph => paragraph.section === section)
+    .map(paragraph => paragraph.scope ? `[${paragraph.scope}]\n${paragraph.text}` : paragraph.text)
+    .join("\n\n");
+  return [
+    row.purpose || row.complaint || row.patient + " 진료",
+    row.patient, speciesLabel(row.species), exportDateTime(row.visitAt),
+    row.status === "signed" ? "완료" : row.status === "amended" ? "정정" : "작성 중",
+    row.doctor, row.author, row.complaint,
+    notes("subjective"), notes("objective"), notes("assessment"),
+    row.diagnoses.map(d => [d.system, diagnosisLabels[d.kind], d.name, d.primary && "주진단"].filter(Boolean).join(" · ")).join("\n"),
+    notes("plan"), notes(null),
+    row.orders.map(o => `${orderDescription(o)} · 수량 ${o.quantity}`).join("\n"),
+    row.results.map(result => recordedResultLines(result).join("\n")).join("\n\n"),
+    row.attachments.map(item => [item.name, item.caption].filter(Boolean).join(" · ")).join("\n"),
+    [!row.resultAccess.lab && "임상·원외검사 제외 (조회 권한 없음)",
+      !row.resultAccess.imaging && "영상검사 제외 (조회 권한 없음)"].filter(Boolean).join("\n"),
+  ];
+}
+
+export function chartCsv(rows: ChartExportRecord[]) {
   return (
     "\uFEFF" +
     [headings, ...rows.map(cells)]
@@ -39,53 +74,13 @@ export function summaryCsv(rows: ChartExportSummary[]) {
       .join("\r\n")
   );
 }
-export function deliverSummary(
-  format: ChartExportFormat,
-  rows: ChartExportSummary[],
-) {
-  if (format === "csv") {
-    const url = URL.createObjectURL(
-      new Blob([summaryCsv(rows)], { type: "text/csv;charset=utf-8" }),
-    );
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "차트-요약.csv";
-    link.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    return;
-  }
-  // Isolate the print document so neither the app nor other patient records can appear.
-  const frame = document.createElement("iframe");
-  frame.title = "선택한 차트 요약 인쇄";
-  frame.style.cssText =
-    "position:fixed;width:1px;height:1px;right:0;bottom:0;border:0";
-  document.body.appendChild(frame);
-  const doc = frame.contentDocument,
-    win = frame.contentWindow;
-  if (!doc || !win) {
-    frame.remove();
-    throw new Error("print_unavailable");
-  }
-  doc.documentElement.lang = "ko";
-  doc.title = "선택한 차트 요약";
-  const title = doc.createElement("h1");
-  title.textContent = doc.title;
-  doc.body.appendChild(title);
-  for (const row of rows) {
-    const section = doc.createElement("section");
-    section.style.breakInside = "avoid";
-    cells(row).forEach((value, i) => {
-      const line = doc.createElement("p");
-      line.textContent = headings[i] + " · " + (value || "미기록");
-      section.appendChild(line);
-    });
-    doc.body.appendChild(section);
-  }
-  win.addEventListener("afterprint", () => frame.remove(), { once: true });
-  try {
-    win.print();
-  } catch (error) {
-    frame.remove();
-    throw error;
-  }
+export function downloadChartCsv(rows: ChartExportRecord[]) {
+  const url = URL.createObjectURL(
+    new Blob([chartCsv(rows)], { type: "text/csv;charset=utf-8" }),
+  );
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "차트-기록.csv";
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

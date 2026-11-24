@@ -27,7 +27,7 @@ import {
   StethoscopeIcon,
 } from "@/components/icons";
 import { getOperatingDateFromIso } from "@/lib/emr-domain/demo-date";
-import { diagnosisLabels, type SearchChart } from "./contract";
+import { diagnosisLabels, type ChartHistoryContent, type SearchChart } from "./contract";
 import { evidence, searchWords, speciesLabel } from "./ranking";
 import { Highlight, stateText, Thumbnail, type CopyMode } from "./presentation";
 import { CdsMedicalClipboardPenIcon, CdsMedicalStethoscopeIcon } from "@/components/cds-icons/medical-and-domain";
@@ -37,11 +37,11 @@ import styles from "./workspace.module.css";
 
 export const dateText = (value?: string) =>
   getOperatingDateFromIso(value)?.replaceAll("-", ".") ?? "미기록";
-export const diagnosesText = (c: SearchChart) =>
+export const diagnosesText = (c: Pick<ChartHistoryContent, "diagnoses">) =>
   c.diagnoses
     .map((d) => [diagnosisLabels[d.kind], d.name].filter(Boolean).join(" · "))
     .join(", ");
-export const chartTitle = (c: SearchChart) =>
+export const chartTitle = (c: Pick<ChartHistoryContent, "purpose" | "complaint" | "patient">) =>
   c.purpose || c.complaint || c.patient + " 진료";
 export function ChartActions({
   label,
@@ -164,7 +164,7 @@ const taskLabels: Record<string, string> = {
   complete: "완료",
   cancelled: "취소",
 };
-export function ChartStaff({ chart }: { chart: SearchChart }) {
+export function ChartStaff({ chart }: { chart: Pick<ChartHistoryContent, "primaryVet" | "doctor" | "taskStatuses"> }) {
   return (
     <dl className="grid min-w-0 content-start gap-1">
       <InfoLine icon={<CdsMedicalStethoscopeIcon />} label="주치의">

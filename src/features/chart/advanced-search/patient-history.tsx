@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
@@ -29,11 +29,10 @@ import { AnimalPatientAvatar } from "@/components/emr/animal-patient-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { CdsNavigationArrowDropDownIcon } from "@/components/cds-icons/navigation";
-import { ChartSummary, SoapGroups } from "./history-detail";
+import { ChartHistoryRecord, documentSections, visitLabel } from "./history-detail";
 import { CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
 import type { OpenChartProfile } from "./result-card";
 import { CdsFilesCalendarIcon } from "@/components/cds-icons/files-and-layout";
-import { CdsActionsCopyIcon } from "@/components/cds-icons/actions-and-controls";
 import { CloseIcon, SearchIcon } from "@/components/icons";
 import {
   emptyHistoryDateRange,
@@ -42,15 +41,11 @@ import {
 import { getOperatingDateFromIso } from "@/lib/emr-domain/demo-date";
 import { errorMessage, type ChartSearchApi } from "./client";
 import {
-  sectionNames,
-  orderDescription,
   type SearchChart,
-  type SearchParagraph,
 } from "./contract";
 import {
   ChartActions,
   chartTitle,
-  ChartStaff,
   diagnosesText,
 } from "./result-card";
 import { Pick, stateText, type CopyMode } from "./presentation";
@@ -66,54 +61,8 @@ const clock = new Intl.DateTimeFormat("ko-KR", {
   minute: "2-digit",
   hourCycle: "h23",
 });
-const visitLabel = (c: SearchChart) =>
-  c.visitType === "walk_in"
-    ? "외래"
-    : c.visitType === "appointment"
-      ? "예약"
-      : null;
 const toggled = (ids: string[], id: string) =>
   ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id];
-function documentSections(c: SearchChart) {
-  const blocks = (records: SearchParagraph[]) =>
-    records.map((p) =>
-      [p.scope, p.section && sectionNames[p.section], p.text]
-        .filter(Boolean)
-        .join(" · "),
-    );
-  return [
-    {
-      title: "Subjective/Objective",
-      lines: blocks(
-        c.paragraphs.filter(
-          (p) => p.section === "subjective" || p.section === "objective",
-        ),
-      ),
-    },
-    ...(!c.paragraphs.some((p) => !p.section)
-      ? []
-      : [
-          {
-            title: "자유 기록",
-            lines: blocks(c.paragraphs.filter((p) => !p.section)),
-          },
-        ]),
-    {
-      title: "Assessment",
-      lines: [
-        diagnosesText(c),
-        ...blocks(c.paragraphs.filter((p) => p.section === "assessment")),
-      ].filter(Boolean),
-    },
-    {
-      title: "Plan",
-      lines: [
-        ...blocks(c.paragraphs.filter((p) => p.section === "plan")),
-        ...c.orders.map(orderDescription),
-      ],
-    },
-  ];
-}
 export function PatientHistory({
   source,
   api,
@@ -592,56 +541,9 @@ export function PatientHistory({
                         />
                       </div>
                       {open && (
-                        <CardContent
-                          id={"history-" + c.id}
-                          data-record-body
-                          className="emr-text-body grid min-w-0 gap-4 border-t py-6"
-                        >
-                          <ChartSummary chart={c} visitType={visitType} />
-                          <div data-chart-people className="min-w-0 pb-2">
-                            <ChartStaff chart={c} />
-                          </div>
-                          {sections.map((section) => (
-                            <section
-                              key={section.title}
-                              className="grid min-w-0 gap-[var(--clair-spacing-10)] border-t pt-4 pb-1.5"
-                            >
-                              <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
-                                <h4 className="emr-text-section font-semibold">
-                                  {section.title}
-                                </h4>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-muted-foreground hover:text-foreground"
-                                  disabled={!section.lines.length}
-                                  aria-label={
-                                    title + " " + section.title + " 전체 복사"
-                                  }
-                                  onClick={() =>
-                                    void clip(section.lines.join("\n"))
-                                  }
-                                >
-                                  <CdsActionsCopyIcon />
-                                  전체 복사
-                                </Button>
-                              </div>
-                              {section.title === "Subjective/Objective" ? (
-                                <SoapGroups chart={c} query={search.query} />
-                              ) : (
-                                <Card className="border py-3 ring-0">
-                                  <CardContent className="grid gap-2 text-xs leading-normal font-medium whitespace-pre-wrap wrap-anywhere">
-                                    {section.lines.length
-                                      ? section.lines.map((line, i) => (
-                                          <p key={i}>{line}</p>
-                                        ))
-                                      : "기록 없음"}
-                                  </CardContent>
-                                </Card>
-                              )}
-                            </section>
-                          ))}
-                        </CardContent>
+                        <ChartHistoryRecord chart={c} id={"history-" + c.id}
+                          visitType={visitType} query={search.query}
+                          onCopySection={(lines) => void clip(lines.join("\n"))} />
                       )}
                     </Card>
                   );
