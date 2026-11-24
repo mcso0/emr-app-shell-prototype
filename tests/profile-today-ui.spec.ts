@@ -156,3 +156,39 @@ test("KST midnight refresh clears yesterday's cards before the new day response"
   release();
   await expect(section.getByRole("status")).toHaveText("접수/예약 일정이 없습니다");
 });
+
+test("Cheongdam archived history is discoverable for an existing patient with no visits and disappears on denial", async ({ page }) => {
+  await setup(page);
+  await page.route("**/profile-overview/history?**", (route) => route.fulfill({
+    json: { ok: true, section: "history", items: [], nextCursor: null },
+  }));
+  await page.route(todayPath, (route) => route.fulfill({ json: payload("patient", []) }));
+  let denied = false;
+  let writes = 0;
+  const item = {
+    id: "de000001-0000-4000-8000-000000000001", patientId: subjectId, patient: "예시 환자", species: "개",
+    visitAt: "2026-06-13T09:20:00+09:00", title: "이전 귀 상태 확인",
+    soap: { S: "밤에 귀를 긁었어요.", O: "우측 귀 분비물 관찰.", A: "귀 염증", P: "재진 때 확인." },
+    diagnosis: { name: "귀 염증", kind: "confirmed" },
+    orders: [{ module: "lab", name: "귀 분비물 세포검사", catalogId: "test-order", interpretation: "재진과 비교할 소견" }],
+  };
+  await page.route(`**/api/workspaces/${workspaceId}/chart/demo-history**`, (route) => {
+    if (route.request().method() !== "GET") writes++;
+    expect(new URL(route.request().url()).searchParams.get("patientId")).toBe(subjectId);
+    return route.fulfill(denied ? { status: 403, json: {} } : { json: { items: [item] } });
+  });
+  await open(page, "patient");
+  const profile = page.getByTestId("profile-side-panel");
+  await profile.getByText("진료 이력", { exact: true }).click();
+  const archived = profile.getByTestId("cheongdam-demo-history");
+  await expect(archived).toBeVisible();
+  await expect(archived.getByText(/09:20/)).toBeVisible();
+  await archived.getByText(item.title, { exact: true }).click();
+  await expect(archived.getByText(item.soap.S)).toBeVisible();
+  await expect(archived.getByText("재진과 비교할 소견")).toBeVisible();
+  await expect(archived.getByRole("button", { name: /복사|처방|완료|저장/ })).toHaveCount(0);
+  denied = true;
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(archived).toHaveCount(0);
+  expect(writes).toBe(0);
+});

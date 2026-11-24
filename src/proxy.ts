@@ -11,11 +11,7 @@ export async function proxy(request: NextRequest) {
   ) {
     return NextResponse.next();
   }
-  const response = await updateSession(request);
-  if (path === "/review/cheongdam") {
-    response.headers.set("Cache-Control", "private, no-store");
-  }
-  return response;
+  return updateSession(request);
 }
 
 export const config = {
