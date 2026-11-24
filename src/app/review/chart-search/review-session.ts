@@ -10,6 +10,7 @@ import type {
 import { hasSameDiagnosis } from "@/features/chart/advanced-search/contract";
 import { searchPage } from "@/features/chart/advanced-search/ranking";
 import { cases } from "./cases";
+import { reviewExportData } from "./export-fixture";
 
 export function createReviewSession(onChange: () => void) {
   const rows: SearchChart[] = structuredClone(cases.rows).map((row) => ({
@@ -101,11 +102,24 @@ export function createReviewSession(onChange: () => void) {
     async patientCharts(patientId) {
       return { items: structuredClone(rows.filter(row => row.patientId === patientId)), nextCursor: null };
     },
-    async exportSummaries(ids) {
-      return rows.filter(row => ids.includes(row.id)).map(row => ({
-        title: row.purpose, patient: row.patient, species: row.species, visitAt: row.visitAt ?? row.clinicalAt,
-        doctor: row.doctor, author: row.author, diagnosis: row.diagnoses.map(d => d.name).join(", ")
-      }));
+    async exportRecords(ids) {
+      // Exercise a server-side permission loss after the chart is visible in synthetic review.
+      if (new URLSearchParams(window.location.search).get("export-denied") === "1")
+        throw new Error("permission_missing");
+      return ids.flatMap(id => {
+        const row = rows.find(item => item.id === id);
+        if (!row) return [];
+        const details = reviewExportData(id);
+        return [{
+          chartId: row.id, status: row.status, title: row.purpose, purpose: row.purpose,
+          complaint: row.complaint, patient: row.patient, species: row.species,
+          visitAt: row.visitAt ?? row.clinicalAt, visitType: row.visitType,
+          doctor: row.doctor, author: row.author, diagnosis: row.diagnoses.map(d => d.name).join(", "),
+          paragraphs: [...row.paragraphs, ...details.paragraphs], diagnoses: row.diagnoses, orders: row.orders,
+          attachments: row.media.map(({ name, caption, video }) => ({ name, caption, video })),
+          results: details.results, resultAccess: { lab: true, imaging: true },
+        }];
+      });
     },
     async visits() {
       return structuredClone(visits);

@@ -34,8 +34,9 @@ begin
   assert items#>>'{0,createdAt}' is not null and items#>'{0,taskStatuses}'='[]'::jsonb;
   items:=public.clair_export_chart_summaries(w,array[c],'csv');
   assert jsonb_array_length(items)=1 and items#>>'{0,patient}'='qa patient';
-  assert not (items->0 ?| array['guardian','paragraphs','media','orders']);
-  perform public.clair_export_chart_summaries(w,array[c],'pdf');
+  -- A DB-first rollout must not broaden or otherwise change the old client's response.
+  assert not (items->0 ?| array['guardian','paragraphs','media','orders','chartId','results']);
+  assert public.clair_export_chart_summaries(w,array[c],'pdf')=items;
   begin
     perform public.clair_export_chart_summaries(w,array[c,gen_random_uuid()],'csv');
     raise exception 'partial export accepted';
@@ -101,5 +102,70 @@ begin
   delete from public.lab_result_entries where workspace_id=w and order_id=lab_order;
   delete from public.orders where id=lab_order;
   assert (select edited_at>stamp from private.chart_content_edits where chart_id=chart);
+end $$;
+-- The two formats use one exact, ordered result contract. Other recorded charts
+-- in the same encounter and other patients must never bleed into it.
+do $$
+declare
+  w constant text := 'synthetic-chart-search-history-v2';
+  c constant uuid := 'aac27300-0000-4000-8000-000000000005';
+  sibling constant uuid := 'aac27300-0000-4000-8000-000000000007';
+  other constant uuid := 'aac27300-0000-4000-8000-000000000006';
+  visit constant uuid := 'aac27300-0000-4000-8000-000000000002';
+  lab_order uuid;
+  sibling_order uuid;
+  results jsonb;
+begin
+  insert into public.soap_notes(id,workspace_id,encounter_id,author_user_id,status,
+    subjective,objective,assessment,plan)
+  values(sibling,w,visit,'aac27000-0000-4000-8000-000000000009','draft',
+    'sibling only sentinel','sibling observation','sibling assessment','sibling plan');
+  perform set_config('clair.order_origin_chart_id',sibling::text,true);
+  insert into public.orders(workspace_id,encounter_id,origin_chart_id,order_type,clinical_order_type,display_name)
+    values(w,visit,sibling,'lab','clinical_lab','sibling order sentinel') returning id into sibling_order;
+  insert into public.lab_result_entries(workspace_id,encounter_id,order_id,result_id,result_status,result_definition_origin,result_definition_snapshot)
+    values(w,visit,sibling_order,'qa-sibling-export','reviewed','legacy','{}');
+  insert into public.lab_result_overall_findings(workspace_id,lab_result_entry_id,finding)
+    select w,id,'sibling finding sentinel' from public.lab_result_entries where workspace_id=w and result_id='qa-sibling-export';
+  perform set_config('clair.order_origin_chart_id',c::text,true);
+  insert into public.orders(workspace_id,encounter_id,origin_chart_id,order_type,clinical_order_type,display_name)
+    values(w,visit,c,'lab','clinical_lab','Selected synthetic lab') returning id into lab_order;
+  insert into public.lab_result_entries(workspace_id,encounter_id,order_id,result_id,result_status,result_definition_origin,result_definition_snapshot)
+    values(w,visit,lab_order,'qa-final-export','reviewed','legacy','{}'),(w,visit,lab_order,'qa-draft-export','received','legacy','{}');
+  insert into public.lab_result_overall_findings(workspace_id,lab_result_entry_id,finding)
+    select w,id,E'합성 종합소견\n기록 둘째 줄' from public.lab_result_entries where workspace_id=w and result_id='qa-final-export';
+
+  results:=public.clair_export_chart_records(w,array[other,c],'pdf');
+  assert results#>>'{0,chartId}'=other::text and results#>>'{1,chartId}'=c::text;
+  assert results#>>'{1,paragraphs,0,text}'='source plain';
+  assert not (results->1 ?| array['guardian','media','patientId']);
+  begin
+    perform public.clair_export_chart_records(w,array[c,gen_random_uuid()],'csv');
+    raise exception 'partial export accepted';
+  exception when raise_exception then if sqlerrm<>'source_unavailable' then raise; end if; end;
+  begin
+    perform public.clair_export_chart_records('unrelated-workspace',array[c],'csv');
+    raise exception 'wrong workspace accepted';
+  exception when insufficient_privilege then null; end;
+  assert results::text not like '%sibling%';
+  assert results#>>'{1,orders,0,name}'='Selected synthetic lab';
+  assert jsonb_array_length(results#>'{1,results}')=1;
+  assert results#>>'{1,results,0,finding}'=E'합성 종합소견\n기록 둘째 줄';
+  assert results#>>'{1,resultAccess,lab}'='true' and results#>>'{1,resultAccess,imaging}'='false';
+  assert public.clair_export_chart_records(w,array[other,c],'csv')=results;
+  update public.workspace_permission_roles set permissions=jsonb_set(permissions,'{allowed}',(permissions->'allowed')-'lab:view')
+    where workspace_id=w and role_key='qa';
+  results:=public.clair_export_chart_records(w,array[c],'pdf');
+  assert results#>'{0,results}'='[]'::jsonb and results#>>'{0,resultAccess,lab}'='false';
+  assert not has_function_privilege('authenticated','private.clair_chart_export_record(public.soap_notes)','EXECUTE');
+  update public.soap_notes set subjective=repeat('길',1400000) where workspace_id=w and id=c;
+  begin
+    perform public.clair_export_chart_records(w,array[c],'pdf');
+    raise exception 'oversized export accepted';
+  exception when raise_exception then if sqlerrm<>'chart_export_too_large' then raise; end if; end;
+  assert (select count(*) from private.clair_chart_export_receipts where workspace_id=w)=5;
+  assert public.clair_export_chart_summaries(w,array[c],'pdf')#>>'{0,patient}'='qa patient';
+  assert not has_function_privilege('anon','public.clair_export_chart_records(text,uuid[],text)','EXECUTE');
+  assert not has_function_privilege('service_role','public.clair_export_chart_records(text,uuid[],text)','EXECUTE');
 end $$;
 rollback;

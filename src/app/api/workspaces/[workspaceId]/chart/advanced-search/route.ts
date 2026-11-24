@@ -63,6 +63,7 @@ const json = (body: unknown, status = 200) =>
     headers: { "Cache-Control": "private, no-store" },
   });
 function dbError(message: string) {
+  if (message === "chart_export_too_large") return json({ error: message }, 413);
   if (message === "target_patient_deleted")
     return json({ error: message }, 409);
   if (message === "catalog_permission_missing")
@@ -239,7 +240,7 @@ export async function POST(
     if (!parsed.success) return json({ error: "invalid_selection" }, 400);
     const limited = enforceWorkspaceMutationRateLimit({ request, actorUserId: identity.actorUserId, workspaceId, operation: "chart_summary_export" });
     if (limited) return limited;
-    const result = await client.rpc("clair_export_chart_summaries", {
+    const result = await client.rpc("clair_export_chart_records", {
       p_workspace_id: workspaceId, p_ids: parsed.data.ids, p_format: parsed.data.format,
     });
     return result.error ? dbError(result.error.message) : json(result.data);

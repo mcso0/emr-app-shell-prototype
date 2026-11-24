@@ -23,7 +23,7 @@ function WorkspaceExample({ fail = false, slow = false }: { fail?: boolean; slow
       },
       patientCharts: async () => ({ items: [], nextCursor: null }),
       history: async () => [], visits: async () => [], pending: async () => null,
-      apply: unavailable, park: unavailable, discard: unavailable, exportSummaries: unavailable,
+      apply: unavailable, park: unavailable, discard: unavailable, exportRecords: unavailable,
     };
   }, [fail, slow]);
   return <div style={{ height: 800 }}><ChartSearchWorkspace entry={{ workspaceId: "synthetic-story" }} api={api} independent onClose={() => {}} /></div>;

@@ -81,6 +81,24 @@ export type SearchChart = {
   orders: SearchOrder[];
   media: SearchMedia[];
 };
+export type ChartHistoryContent = Pick<SearchChart,
+  "purpose" | "complaint" | "patient" | "doctor" | "primaryVet" | "taskStatuses" |
+  "extraTags" | "paragraphs" | "media"> & {
+  diagnoses: Pick<SearchDiagnosis, "name" | "kind" | "system" | "primary">[];
+  orders: Pick<SearchOrder, "name" | "kind" | "quantity" | "inputs">[];
+};
+export type ChartExportResult = {
+  order: string; kind: string; attempt?: number; status?: string; performedAt?: string;
+  finding?: string; interpretation?: string; note?: string; protocol?: string; views?: string[];
+  rows?: { name: string; value: string | null; unit: string | null; reference: string | null; judgment: string;
+    note: string | null; presence: string; qualifier: string; deviceFlag: string | null }[];
+};
+export type ChartExportRecord = ChartExportSummary & Omit<ChartHistoryContent, "media"> & {
+  chartId: string; status: string; visitType?: string;
+  attachments: Pick<SearchMedia, "name" | "caption" | "video">[];
+  results: ChartExportResult[];
+  resultAccess: { lab: boolean; imaging: boolean };
+};
 export type SearchVisit = {
   visitAt?: string;
   purpose?: string;
@@ -190,7 +208,7 @@ export function prescriptionUnit(inputs: SearchOrder["inputs"]) {
   return unit;
 }
 
-export function orderDescription(order: SearchOrder) {
+export function orderDescription<T extends Pick<SearchOrder, "name" | "inputs">>(order: T) {
   const { dose, frequency, durationDays } = order.inputs;
   return [
     order.name,

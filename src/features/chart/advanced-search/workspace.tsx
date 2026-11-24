@@ -27,7 +27,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { deliverSummary } from "./export";
+import { downloadChartCsv } from "./export";
+import { printChartRecords } from "./print-record";
 import { useChartFavorites } from "./favorites";
 import { ChartRow, type OpenChartProfile } from "./result-card";
 import { PatientHistory } from "./patient-history";
@@ -181,11 +182,17 @@ export function ChartSearchWorkspace({
     exportingRef.current = true;
     setExporting(true);
     try {
-      const rows = await api.exportSummaries(checked, format);
-      if (rows.length !== checked.length) throw new Error("source_unavailable");
-      deliverSummary(format, rows);
+      const rows = await api.exportRecords(checked, format);
+      if (rows.length !== checked.length || rows.some((row, i) => row.chartId !== checked[i] ||
+        !Array.isArray(row.paragraphs) || !Array.isArray(row.orders) || !Array.isArray(row.diagnoses) ||
+        !Array.isArray(row.results) || !Array.isArray(row.attachments) || !row.resultAccess)) throw new Error("source_unavailable");
+      if (format === "pdf") await printChartRecords(rows);
+      else downloadChartCsv(rows);
     } catch (e) {
-      setNotice(errorMessage(e));
+      const code = e instanceof Error ? e.message : "";
+      setNotice(code === "permission_missing" || code === "unauthenticated"
+        ? "차트를 내보낼 권한이 없어요."
+        : errorMessage(e));
     } finally {
       exportingRef.current = false;
       setExporting(false);

@@ -290,7 +290,7 @@ export function SourceMedia({
   chart,
   query,
 }: {
-  chart: SearchChart;
+  chart: Pick<SearchChart, "media">;
   query: string;
 }) {
   const [enlarged, setEnlarged] = useState<SearchMedia | null>(null);
