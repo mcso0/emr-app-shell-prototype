@@ -57,7 +57,7 @@ export function ChartActions({
   label: string;
   favorite: boolean;
   onFavorite: () => void;
-  onCopy: (mode: CopyMode) => void;
+  onCopy?: (mode: CopyMode) => void;
   menu: ReactNode;
   onCopyText?: () => void;
   onViewHistoryChart?: () => void;
@@ -85,7 +85,7 @@ export function ChartActions({
   return (
     <div data-chart-actions className="relative flex shrink-0 items-center gap-1">
       {!copyFirst && moreMenu}
-      <DropdownMenu>
+      {(onCopy || onCopyText) && <DropdownMenu>
         <DropdownMenuTrigger
           render={
             <Button
@@ -105,17 +105,17 @@ export function ChartActions({
               텍스트 전체 복사하기
             </DropdownMenuItem>
           )}
-          <DropdownMenuItem onClick={() => onCopy("existing")}>
+          {onCopy && <DropdownMenuItem onClick={() => onCopy("existing")}>
             {onViewHistoryChart && <CdsMedicalClipboardPenIcon />}
             {onViewHistoryChart ? "기존 차트에 복사하기" : "기존 차트에 복사"}
-          </DropdownMenuItem>
-          {onViewHistoryChart && <DropdownMenuSeparator />}
-          <DropdownMenuItem onClick={() => onCopy("new")}>
+          </DropdownMenuItem>}
+          {onCopy && onViewHistoryChart && <DropdownMenuSeparator />}
+          {onCopy && <DropdownMenuItem onClick={() => onCopy("new")}>
             {onViewHistoryChart && <CdsFilesFilePlusIcon />}
             새 차트로 만들기
-          </DropdownMenuItem>
+          </DropdownMenuItem>}
         </DropdownMenuContent>
-      </DropdownMenu>
+      </DropdownMenu>}
       {onViewHistoryChart && (
         <Button variant="ghost" size={size} aria-label={label + " 차트 보러가기"} title="차트 보러가기" onClick={onViewHistoryChart}>
           <CdsNavigationExternalLinkIcon />
@@ -205,9 +205,9 @@ export function ChartRow({
   checked: boolean;
   favorite: boolean;
   onOpen: () => void;
-  onCheck: () => void;
+  onCheck?: () => void;
   onFavorite: () => void;
-  onCopy: (mode: CopyMode) => void;
+  onCopy?: (mode: CopyMode) => void;
   onViewChart: () => void;
 }) {
   const hit = evidence(chart, searchWords(query)).matches[0];
@@ -277,11 +277,11 @@ export function ChartRow({
       }}
     >
       <CardContent className={styles.resultContent}>
-        <Checkbox
+        {onCheck && <Checkbox
           aria-label={chart.patient + " 차트 선택"}
           checked={checked}
           onCheckedChange={onCheck}
-        />
+        />}
         <div data-media="">
           <Thumbnail
             key={chart.id + query + chart.version}

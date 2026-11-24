@@ -87,6 +87,7 @@ export function ChartSearchWorkspace({
   userId,
   independent = false,
   active = true,
+  readOnly = false,
 }: {
   entry: SearchEntry;
   userId?: string;
@@ -95,6 +96,7 @@ export function ChartSearchWorkspace({
   onReturnToChart?: () => void;
   independent?: boolean;
   active?: boolean;
+  readOnly?: boolean;
   onViewChart?: (chart: ChartLocation) => void;
   onOpenProfile?: OpenChartProfile;
 }) {
@@ -679,6 +681,7 @@ export function ChartSearchWorkspace({
                   {narrow ? "넓게 보기" : "좁게 보기"}
                 </Button>
               </div>
+              {!readOnly && <>
               <span aria-hidden className="h-4 w-px bg-border" />
               <DropdownMenu>
                 <DropdownMenuTrigger
@@ -702,13 +705,14 @@ export function ChartSearchWorkspace({
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              </>}
             </>
           }
         />
       </header>
       <div className={styles.resultsBody}>
         <div className={styles.listhead} data-narrow={narrow}>
-          <div role="group" aria-label="차트 선택" className="flex shrink-0 items-center gap-2">
+          {!readOnly && <div role="group" aria-label="차트 선택" className="flex shrink-0 items-center gap-2">
             <Checkbox
               aria-label="현재 결과 모두 선택"
               disabled={!page?.items.length || loadingFirst || loadingMore || selecting}
@@ -729,7 +733,7 @@ export function ChartSearchWorkspace({
                 선택 해제
               </Button>
             )}
-          </div>
+          </div>}
           <label>
             <Switch size="sm" checked={drafts} onCheckedChange={setDrafts} />
             작성 중 차트 포함
@@ -788,7 +792,7 @@ export function ChartSearchWorkspace({
                     favorite={favorites.ids.includes(chart.id)}
                     onOpen={() => void showSource(chart)}
                     onOpenProfile={onOpenProfile}
-                    onCheck={() => {
+                    onCheck={readOnly ? undefined : () => {
                       if (selecting) return;
                       if (!checked.includes(chart.id) && checked.length >= 500) {
                         setNotice("한 번에 최대 500건까지 선택할 수 있습니다. 검색 조건을 좁혀 주세요.");
@@ -801,7 +805,7 @@ export function ChartSearchWorkspace({
                       );
                     }}
                     onFavorite={() => toggleFavorite(chart.id)}
-                    onCopy={(mode) => void showSource(chart, mode)}
+                    onCopy={readOnly ? undefined : (mode) => void showSource(chart, mode)}
                     onViewChart={() => viewDocument(chart)}
                   />
                 ))}
@@ -883,7 +887,7 @@ export function ChartSearchWorkspace({
               onClose={closeSource}
               favorites={favorites.ids}
               onFavorite={toggleFavorite}
-              onCopy={(chart, mode) => void showSource(chart, mode)}
+              onCopy={readOnly ? undefined : (chart, mode) => void showSource(chart, mode)}
               onOpenProfile={onOpenProfile}
               onViewChart={viewDocument}
             />

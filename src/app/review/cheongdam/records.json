@@ -1,0 +1,349 @@
+[
+  {
+    "id": "preview-case-1-1",
+    "patientId": "preview-patient-1",
+    "patient": "콩이",
+    "species": "개",
+    "visitAt": "2026-06-15T10:30:00+09:00",
+    "title": "우측 외이염 진료",
+    "soap": {
+      "S": "사흘 전부터 오른쪽 귀를 긁고 머리를 흔듦.",
+      "O": "우측 외이도 붉은 기와 분비물 관찰.",
+      "A": "우측 외이염.",
+      "P": "귀 검사 결과를 확인한 뒤 귀 상태를 관리하고 재진에서 확인."
+    },
+    "orders": [
+      {
+        "name": "귀 분비물 세포검사",
+        "module": "lab",
+        "interpretation": "분비물에서 염증성 배경이 관찰됨. 초진 소견과 함께 기록."
+      },
+      {
+        "name": "귀 세정",
+        "module": "treatment",
+        "interpretation": null
+      },
+      {
+        "name": "귀 세정제",
+        "module": "dispensing",
+        "interpretation": null
+      }
+    ],
+    "diagnosis": {
+      "name": "우측 외이염",
+      "kind": "confirmed"
+    }
+  },
+  {
+    "id": "preview-case-1-2",
+    "patientId": "preview-patient-1",
+    "patient": "콩이",
+    "species": "개",
+    "visitAt": "2026-06-23T11:30:00+09:00",
+    "title": "귀 증상 재진",
+    "soap": {
+      "S": "첫 방문에 비해 긁는 횟수가 줄었다고 함.",
+      "O": "분비물과 붉은 기가 감소함.",
+      "A": "우측 외이염 호전 중.",
+      "P": "남은 불편이 사라지는지 다음 방문에서 확인."
+    },
+    "orders": [],
+    "diagnosis": {
+      "name": "우측 외이염",
+      "kind": "confirmed"
+    }
+  },
+  {
+    "id": "preview-case-1-3",
+    "patientId": "preview-patient-1",
+    "patient": "콩이",
+    "species": "개",
+    "visitAt": "2026-07-07T16:00:00+09:00",
+    "title": "귀 상태 경과 확인",
+    "soap": {
+      "S": "최근 머리를 흔들거나 귀를 긁는 모습이 없었음.",
+      "O": "뚜렷한 붉은 기나 분비물이 보이지 않음.",
+      "A": "우측 외이염 증상 소실. 이번 경과 종료.",
+      "P": "추가 처치 없이 마무리."
+    },
+    "orders": [],
+    "diagnosis": {
+      "name": "우측 외이염",
+      "kind": "confirmed"
+    }
+  },
+  {
+    "id": "preview-case-1-4",
+    "patientId": "preview-patient-1",
+    "patient": "콩이",
+    "species": "개",
+    "visitAt": "2026-08-10T10:00:00+09:00",
+    "title": "좌측 앞발 발바닥 자극",
+    "soap": {
+      "S": "산책 후 왼쪽 앞발을 가끔 핥음. 귀 증상은 재발하지 않음.",
+      "O": "좌측 앞발 패드에 옅은 표재성 자극 소견.",
+      "A": "좌측 앞발 패드 표재성 자극. 앞선 외이염과 별개.",
+      "P": "국소 상태만 확인하고 새 문제로 독립 기록."
+    },
+    "orders": [],
+    "diagnosis": {
+      "name": "좌측 앞발 패드 표재성 자극",
+      "kind": "confirmed"
+    }
+  },
+  {
+    "id": "preview-case-2-1",
+    "patientId": "preview-patient-2",
+    "patient": "레오",
+    "species": "고양이",
+    "visitAt": "2026-06-16T11:00:00+09:00",
+    "title": "식욕 감소 평가",
+    "soap": {
+      "S": "며칠간 식사량이 줄었다고 함.",
+      "O": "진찰 중 반응 유지. 보호자가 식사량 변화를 기록해 옴.",
+      "A": "식욕저하. 초진에서 뚜렷한 원인은 특정하지 못함.",
+      "P": "혈액도말 결과를 기록하고 식사량 경과를 재진에서 확인."
+    },
+    "orders": [
+      {
+        "name": "혈액도말 형태 검토",
+        "module": "lab",
+        "interpretation": "형태 판독 범위에서 특이 소견은 기록되지 않음. 결과만으로 식욕저하 원인을 배제하지 않음."
+      }
+    ]
+  },
+  {
+    "id": "preview-case-2-2",
+    "patientId": "preview-patient-2",
+    "patient": "레오",
+    "species": "고양이",
+    "visitAt": "2026-06-19T16:00:00+09:00",
+    "title": "식사량 중간 확인",
+    "soap": {
+      "S": "평소 먹던 음식의 섭취량이 조금 늘었음.",
+      "O": "보호자 식사 기록에서 증가 추세 확인.",
+      "A": "식욕저하 호전 중.",
+      "P": "추가 방문에서 일상 섭취 수준으로 회복되는지 확인."
+    },
+    "orders": []
+  },
+  {
+    "id": "preview-case-2-3",
+    "patientId": "preview-patient-2",
+    "patient": "레오",
+    "species": "고양이",
+    "visitAt": "2026-06-29T10:00:00+09:00",
+    "title": "식욕 회복 재진",
+    "soap": {
+      "S": "지난주와 달리 식사를 대부분 마친다고 함.",
+      "O": "이전과 같은 방식으로 작성한 식사 기록 확인.",
+      "A": "일상 식사량에 근접함.",
+      "P": "한 번 더 변화 여부를 확인한 뒤 마무리."
+    },
+    "orders": []
+  },
+  {
+    "id": "preview-case-2-4",
+    "patientId": "preview-patient-2",
+    "patient": "레오",
+    "species": "고양이",
+    "visitAt": "2026-07-13T14:30:00+09:00",
+    "title": "정상 식사 회복 확인",
+    "soap": {
+      "S": "기존 식사 습관으로 돌아왔으며 최근 다시 감소한 날이 없었음.",
+      "O": "보호자 기록에서 최근 식사량 안정.",
+      "A": "식욕저하가 해소되어 이번 경과 종료.",
+      "P": "추가 오더 없이 종료."
+    },
+    "orders": []
+  },
+  {
+    "id": "preview-case-3-1",
+    "patientId": "preview-patient-3",
+    "patient": "초코",
+    "species": "개",
+    "visitAt": "2026-06-17T15:00:00+09:00",
+    "title": "복부 표재성 피부염 진료",
+    "soap": {
+      "S": "최근 배를 긁는 모습이 늘었음.",
+      "O": "복부 피부에 국소적인 붉은 기가 보임.",
+      "A": "복부 표재성 피부염으로 평가.",
+      "P": "피부 검사 소견을 함께 기록하고 처치 후 변화 확인."
+    },
+    "orders": [
+      {
+        "name": "피부 세포검사",
+        "module": "lab",
+        "interpretation": "관찰 범위에서 각질과 염증성 배경이 보임. 관찰 소견으로 남김."
+      },
+      {
+        "name": "피부 약욕 처치",
+        "module": "treatment",
+        "interpretation": null
+      }
+    ],
+    "diagnosis": {
+      "name": "복부 표재성 피부염",
+      "kind": "confirmed"
+    }
+  },
+  {
+    "id": "preview-case-3-2",
+    "patientId": "preview-patient-3",
+    "patient": "초코",
+    "species": "개",
+    "visitAt": "2026-06-25T10:30:00+09:00",
+    "title": "복부 피부 경과 확인",
+    "soap": {
+      "S": "긁는 빈도는 줄었지만 가끔 다시 긁음.",
+      "O": "붉은 범위가 초진에 비해 줄어듦.",
+      "A": "피부염 호전 중.",
+      "P": "같은 부위의 잔여 증상을 재진에서 확인."
+    },
+    "orders": [],
+    "diagnosis": {
+      "name": "복부 표재성 피부염",
+      "kind": "confirmed"
+    }
+  },
+  {
+    "id": "preview-case-3-3",
+    "patientId": "preview-patient-3",
+    "patient": "초코",
+    "species": "개",
+    "visitAt": "2026-07-02T15:30:00+09:00",
+    "title": "가려움 재진",
+    "soap": {
+      "S": "지난 며칠간 긁는 동작이 거의 없었음.",
+      "O": "복부 피부의 붉은 기가 대부분 가라앉음.",
+      "A": "잔여 불편이 드문 상태.",
+      "P": "최종 확인 후 이번 경과를 마무리."
+    },
+    "orders": [],
+    "diagnosis": {
+      "name": "복부 표재성 피부염",
+      "kind": "confirmed"
+    }
+  },
+  {
+    "id": "preview-case-3-4",
+    "patientId": "preview-patient-3",
+    "patient": "초코",
+    "species": "개",
+    "visitAt": "2026-07-16T11:00:00+09:00",
+    "title": "복부 피부염 경과 종료",
+    "soap": {
+      "S": "이전과 같은 부위를 긁는 모습이 관찰되지 않음.",
+      "O": "활성 피부 병변이 보이지 않음.",
+      "A": "복부 피부염 증상 소실.",
+      "P": "추가 오더 없이 종료."
+    },
+    "orders": [],
+    "diagnosis": {
+      "name": "복부 표재성 피부염",
+      "kind": "confirmed"
+    }
+  },
+  {
+    "id": "preview-case-4-1",
+    "patientId": "preview-patient-4",
+    "patient": "보리",
+    "species": "개",
+    "visitAt": "2026-06-13T09:00:00+09:00",
+    "title": "정기 건강 상태 확인",
+    "soap": {
+      "S": "식사와 산책에 변화 없음.",
+      "O": "기본 진찰에서 문진과 다른 변화는 확인되지 않음.",
+      "A": "특이 호소 없는 정기 확인.",
+      "P": "별도 오더 없이 방문 종료."
+    },
+    "orders": []
+  },
+  {
+    "id": "preview-case-5-1",
+    "patientId": "preview-patient-5",
+    "patient": "라떼",
+    "species": "고양이",
+    "visitAt": "2026-06-13T09:20:00+09:00",
+    "title": "털 엉킴 상담",
+    "soap": {
+      "S": "빗질할 때 한 부위에서 불편해함.",
+      "O": "엉킨 털이 확인되며 노출된 피부에 뚜렷한 병변이 보이지 않음.",
+      "A": "국소 털 엉킴.",
+      "P": "피부 변화가 생기는지 짧게 경과 확인."
+    },
+    "orders": []
+  },
+  {
+    "id": "preview-case-5-2",
+    "patientId": "preview-patient-5",
+    "patient": "라떼",
+    "species": "고양이",
+    "visitAt": "2026-07-06T14:00:00+09:00",
+    "title": "털 엉킴 경과 확인",
+    "soap": {
+      "S": "최근 빗질 시 불편한 반응은 없었음.",
+      "O": "이전 자리의 털과 피부 상태 확인.",
+      "A": "국소 불편 해소.",
+      "P": "추가 오더 없이 종료."
+    },
+    "orders": []
+  },
+  {
+    "id": "preview-case-6-1",
+    "patientId": "preview-patient-6",
+    "patient": "호두",
+    "species": "개",
+    "visitAt": "2026-06-13T09:40:00+09:00",
+    "title": "우측 앞발 발톱 불편",
+    "soap": {
+      "S": "산책 뒤 오른쪽 앞발을 한 차례 들었음.",
+      "O": "발톱 끝에 작은 마모가 확인됨.",
+      "A": "발톱의 표재성 자극으로 평가.",
+      "P": "다음 방문에서 걷는 모습과 해당 부위 상태 확인."
+    },
+    "orders": [],
+    "diagnosis": {
+      "name": "우측 앞발 발톱 표재성 자극",
+      "kind": "suspected"
+    }
+  },
+  {
+    "id": "preview-case-6-2",
+    "patientId": "preview-patient-6",
+    "patient": "호두",
+    "species": "개",
+    "visitAt": "2026-06-30T11:00:00+09:00",
+    "title": "앞발 보행 재진",
+    "soap": {
+      "S": "산책 때 앞발을 드는 모습이 줄었음.",
+      "O": "진찰실에서 네 발을 고르게 디딤.",
+      "A": "이전 불편 호전.",
+      "P": "증상 소실 여부를 최종 확인."
+    },
+    "orders": [],
+    "diagnosis": {
+      "name": "우측 앞발 발톱 표재성 자극",
+      "kind": "suspected"
+    }
+  },
+  {
+    "id": "preview-case-6-3",
+    "patientId": "preview-patient-6",
+    "patient": "호두",
+    "species": "개",
+    "visitAt": "2026-07-14T16:30:00+09:00",
+    "title": "앞발 불편 경과 종료",
+    "soap": {
+      "S": "일상 보행과 산책에 불편이 없었음.",
+      "O": "해당 발톱 주위에 더 이상 불편 반응이 보이지 않음.",
+      "A": "앞발 불편 해소.",
+      "P": "추가 오더 없이 방문 종료."
+    },
+    "orders": [],
+    "diagnosis": {
+      "name": "우측 앞발 발톱 표재성 자극",
+      "kind": "suspected"
+    }
+  }
+]

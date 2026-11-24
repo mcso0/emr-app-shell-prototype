@@ -129,7 +129,7 @@ export function PatientHistory({
   favorites: string[];
   onFavorite: (id: string) => void;
   onClose: () => void;
-  onCopy: (chart: SearchChart, mode: CopyMode) => void;
+  onCopy?: (chart: SearchChart, mode: CopyMode) => void;
   onViewChart: (chart: SearchChart) => void;
   onOpenProfile?: OpenChartProfile;
 }) {
@@ -551,7 +551,7 @@ export function PatientHistory({
                           showFavorite={false}
                           favorite={favorites.includes(c.id)}
                           onFavorite={() => onFavorite(c.id)}
-                          onCopy={(mode) => onCopy(c, mode)}
+                          onCopy={onCopy && ((mode) => onCopy(c, mode))}
                           onCopyText={() =>
                             void clip(
                               [
