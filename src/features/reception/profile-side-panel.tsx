@@ -1,5 +1,7 @@
 "use client";
 
+import { DemoHistorySection } from "@/features/chart/demo-history";
+import type { DemoHistoryItem } from "@/features/chart/demo-history-contract";
 import {
   useEffect,
   useId,
@@ -176,7 +178,10 @@ export type ProfileSidePanelModel = {
   upcoming?: ProfileReservationItem;
 };
 
+type ArchivedHistory = { items: DemoHistoryItem[]; unavailable: boolean };
+
 type ProfileSidePanelProps = {
+  archivedHistory?: ArchivedHistory;
   defaultTab?: ProfileSidePanelTab;
   editContent?: ReactNode;
   embedded?: boolean;
@@ -887,6 +892,7 @@ function ActivityCard({ item }: { item: ProfileHistoryItem }) {
 }
 
 function HistoryTab({
+  archivedHistory,
   items,
   kind,
   onFilterChange,
@@ -894,6 +900,7 @@ function HistoryTab({
   onRetry,
   state,
 }: {
+  archivedHistory?: ArchivedHistory;
   items: ProfileHistoryItem[];
   kind: ProfileSidePanelModel["kind"];
   onFilterChange?: (filter: ProfileTabFilter) => void;
@@ -917,6 +924,9 @@ function HistoryTab({
     [items, months, patientId],
   );
   const groups = useMemo(() => getDateGroups(visibleItems), [visibleItems]);
+  const archived = getPeriodItems(
+    (archivedHistory?.items ?? []).map((item) => ({ ...item, dateAt: item.visitAt })), months,
+  );
 
   if (state?.status === "loading" || state?.status === "idle") {
     return <EmrProfilePanelBody className={styles.scrollContent}><ProfileActivityLoading kind="history" /></EmrProfilePanelBody>;
@@ -1009,8 +1019,13 @@ function HistoryTab({
           ))}
           {state?.nextCursor ? <LoadMoreButton pending={Boolean(state?.pending)} failed={state?.readError === "append"} onClick={() => onLoadMore?.({ months: months as 6 | 12, patientId: patientId === "all" ? undefined : patientId })} /> : null}
         </div>
-      ) : (
+      ) : archived.length ? null : (
         <EmptyTab kind="history" />
+      )}
+      {(archived.length > 0 || archivedHistory?.unavailable) && (
+        <div className={styles.activityList}>
+          <DemoHistorySection items={archived} unavailable={archivedHistory?.unavailable} patientScoped />
+        </div>
       )}
     </EmrProfilePanelBody>
   );
@@ -1181,6 +1196,7 @@ function BillingTab({
 }
 
 export function ProfileSidePanel({
+  archivedHistory,
   defaultTab = "info",
   editContent,
   embedded = false,
@@ -1281,6 +1297,7 @@ export function ProfileSidePanel({
         ) : null}
         {activeTab === "history" ? (
           <HistoryTab
+            archivedHistory={archivedHistory}
             items={model.history}
             kind={model.kind}
             onFilterChange={(filter) => onLoadSection?.("history", filter)}

@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { CdsNavigationArrowDropDownIcon } from "@/components/cds-icons/navigation";
 import { ChartSummary, SoapGroups } from "./history-detail";
+import { DemoHistorySection, filterDemoHistory, useDemoHistory } from "../demo-history";
 import { CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
 import type { OpenChartProfile } from "./result-card";
 import { CdsFilesCalendarIcon } from "@/components/cds-icons/files-and-layout";
@@ -116,6 +117,8 @@ function documentSections(c: SearchChart) {
 }
 export function PatientHistory({
   source,
+  workspaceId,
+  viewerKey,
   api,
   favorites,
   onFavorite,
@@ -125,6 +128,8 @@ export function PatientHistory({
   onOpenProfile,
 }: {
   source: SearchChart;
+  workspaceId?: string;
+  viewerKey?: string;
   api: ChartSearchApi;
   favorites: string[];
   onFavorite: (id: string) => void;
@@ -154,6 +159,11 @@ export function PatientHistory({
     search.clear();
   }
   const patientId = source.patientId;
+  const demo = useDemoHistory(workspaceId, viewerKey, patientId);
+  const demoMatches = filters.statuses.length ? [] : filterDemoHistory(demo.items, {
+    query: search.query, from: filters.dates.start, to: filters.dates.end,
+    sort: direction === "oldest" ? "oldest" : "recent",
+  });
   useEffect(() => {
     const abort = new AbortController();
     async function load() {
@@ -648,7 +658,8 @@ export function PatientHistory({
                 })}
               </EmrContentHistoryGroup>
             ))}
-            {!visible.length && history !== null && (
+            <DemoHistorySection items={demoMatches} unavailable={demo.unavailable} query={search.query} patientScoped />
+            {!demoMatches.length && !visible.length && history !== null && (
               <EmrEmptyState
                 kind="no-search-results"
                 surface="content"
