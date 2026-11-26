@@ -5,7 +5,7 @@
 - Use `docs/agent-start-here.md` when choosing a reading path. A typo, local explanation, or isolated fix does not require the full startup stack.
 - Read `docs/engineering/current-status.md` when product scope, module status, mock/live boundaries, data, permissions, or release readiness affect the task. Use the active work item for exact current evidence.
 - For changes that depend on Next.js APIs, configuration, routing, rendering, caching, or framework behavior, read the relevant installed guide in `node_modules/next/dist/docs/`. Unrelated copy or styling edits do not require it.
-- Search `docs/work/index.md` before PR-sized work and reuse an existing item. Do not create work items for ordinary questions or tiny one-off fixes.
+- Search `docs/work/index.md` before PR-sized work and reuse an existing item. Ordinary questions and small, low-impact fixes do not require a new work item unless a project rule requires one for that work. All applicable data, permission, and release rules still apply.
 - Use `docs/_meta/agent-rag-map.md` only when the owning source docs are unclear. Read the relevant sections, not every link.
 
 ## Project Boundaries
@@ -23,9 +23,11 @@
 
 ## Implementation And Completion
 
+- Existing shared UI components are the mandatory default for application changes and local/HTML prototypes. Inspect their APIs and actual app usage first, then reuse their layout, controls, icons, filters, menus, dialogs, feedback and empty states with existing variants, sizes and tokens. Do not replace an available component with a lookalike or custom styling. When no suitable component exists, identify the gap and keep any new composition limited to that gap.
 - Use `docs/_meta/coding-discipline.md` for non-trivial implementation; preserve focused checks for security, data integrity, accessibility, and release boundaries.
 - Complete the requested behavior, relevant verification, and fixes for failures caused by the change. Update owning docs only when behavior, contracts, status, or durable decisions changed.
 - When changing UI, update related Storybook stories, fixtures, and tests as needed in the same change, and verify the affected stories against actual app usage.
+- When UI behavior changes, verify the resulting state and available actions through the user's normal workflow. An automated check that exercises the workflow and confirms the outcome is sufficient for that behavior. Verify any remaining relevant interaction or visual detail directly in an authorized environment with authorized data.
 - Record unrelated findings separately in the existing work item or final report. Do not expand the task scope or fix them without separate authorization.
 - Use `docs/_meta/intake-rules.md` for documentation/work-structure or durable-guidance changes, and `docs/_meta/result-review-rules.md` for completion and report depth.
 - `Human Review` records pending human acceptance after authorized implementation and verification; it does not cancel remaining work already authorized in the same objective.
