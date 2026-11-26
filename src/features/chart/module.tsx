@@ -96,7 +96,7 @@ import {
   CdsFilesMoreHorizontalIcon,
 } from "@/components/cds-icons/files-and-layout";
 import { CdsContentEdit2Icon } from "@/components/cds-icons/content-and-editor";
-import { CdsMedicalFileSearchIcon } from "@/components/cds-icons/medical-and-domain";
+import { CdsMedicalChartSearchIcon } from "@/components/cds-icons/medical-and-domain";
 import { CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import {
   EmrContentAsideHeader,
@@ -224,6 +224,7 @@ import type {
   ChartLiveQueueResponse,
 } from "@/features/chart/chart-live-queue";
 import { loadCompleteChartPatientHistory } from "@/features/chart/chart-patient-history-client";
+import { DemoHistorySection, filterDemoHistory, useDemoHistory } from "@/features/chart/demo-history";
 import type { ChartPatientHistoryRecord } from "@/features/chart/chart-patient-history";
 import { useAuthClient, type AuthSession } from "@/features/auth/auth-client";
 import { useCurrentPersonalProfile } from "@/features/auth/use-current-personal-profile";
@@ -2291,6 +2292,13 @@ function ChartHistoryAside({ workspaceId, bundle }: { workspaceId: string; bundl
   >(() => new Set());
   const [historyDateMode, setHistoryDateMode] =
     useState<ChartHistoryDateMode>("visit");
+  const demo = useDemoHistory(workspaceId, session?.id, bundle.patient.id);
+  const demoMatches = historyDateMode !== "visit" || filters.statuses.length || filters.veterinarians.length
+    ? [] : filterDemoHistory(demo.items, {
+      query: search.searchQuery,
+      from: filters.dates.start, to: filters.dates.end,
+      sort: direction === "oldest" ? "oldest" : "recent",
+    });
   const [newChartEncounterId, setNewChartEncounterId] = useState("");
   const [pastWaitingRecord, setPastWaitingRecord] =
     useState<ChartHistoryRow | null>(null);
@@ -2620,7 +2628,9 @@ function ChartHistoryAside({ workspaceId, bundle }: { workspaceId: string; bundl
               ))}
             </EmrContentHistoryGroup>
           ))}
-          {!historyGroups.length && chartHistoryStatus !== "loading" && chartHistoryStatus !== "error" ? (
+          <DemoHistorySection items={demoMatches} unavailable={demo.unavailable}
+            query={search.searchQuery} patientScoped />
+          {!demoMatches.length && !historyGroups.length && chartHistoryStatus !== "loading" && chartHistoryStatus !== "error" ? (
             <div className="flex min-h-52 items-center justify-center">
               <EmrEmptyState
                 kind={!displayedHistoryRows.length ? "no-data" : search.searchQuery.trim() ? "no-search-results" : "no-filter-results"}
@@ -9820,7 +9830,7 @@ function ChartOrderTable({
                   onClick={() => openDetail(order.id)}
                   type="button"
                 >
-                  <CdsMedicalFileSearchIcon aria-hidden="true" />
+                  <CdsMedicalChartSearchIcon aria-hidden="true" />
                 </EmrIconButton>
                 <ChartOrderDisabledAction reason={editReason}>
                   <EmrIconButton

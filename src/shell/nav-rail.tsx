@@ -49,8 +49,8 @@ type RailNavItem = {
 
 const moduleSections = [
   ["home"],
-  ["reception", "treatment", "chart-search", "lab", "imaging", "dispensing", "billing", "inpatient"],
-  ["customer", "orders"],
+  ["reception", "treatment", "lab", "imaging", "dispensing", "billing", "inpatient"],
+  ["chart-search", "customer", "orders"],
 ] as const;
 
 const RAIL_LAYOUT_TRANSITION: Transition = {

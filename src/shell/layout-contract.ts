@@ -23,6 +23,7 @@ export const SHELL_LAYOUT = {
   },
   rightPanel: {
     defaultWidth: 316,
+    profileWidth: 380,
   },
   documentLayout: {
     rightPanelWidth: 280,

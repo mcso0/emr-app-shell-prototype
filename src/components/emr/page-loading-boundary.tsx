@@ -72,8 +72,12 @@ export function usePageReadiness(pending: boolean, scope: string) {
   usePageLoading(pending && (state.scope !== scope || !state.settled));
 }
 
+export function useIsPageLoading() {
+  return useContext(LoadingContext);
+}
+
 /** Portals must share the page's visibility and focus boundary. */
 export function usePagePortalVisibility() {
-  const hidden = useContext(LoadingContext);
+  const hidden = useIsPageLoading();
   return useMemo(() => hidden ? { hidden: true, inert: true, "aria-hidden": true as const, style: { display: "none" } } : {}, [hidden]);
 }

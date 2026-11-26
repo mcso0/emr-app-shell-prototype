@@ -35,13 +35,28 @@ export type SearchOrder = {
   inputs: Record<string, unknown>;
 };
 export type SearchMedia = {
+  scope?: string;
   id: string;
   name: string;
   caption: string;
   url: string;
   video: boolean;
 };
+export type ChartExportFormat = "csv" | "pdf";
+export type ChartExportSummary = {
+  title: string; patient: string; species: string; visitAt: string;
+  doctor: string; author: string; diagnosis: string | null;
+};
 export type SearchChart = {
+  patientPhotoUrl?: string | null;
+  guardianId?: string | null;
+  additionalVets?: { id: string; name: string }[];
+  lastContentEditedAt?: string;
+  extraTags?: { label: string; detail: string }[];
+  createdAt?: string;
+  visitType?: string;
+  primaryVet?: string | null;
+  taskStatuses?: string[];
   visitAt?: string;
   id: string;
   encounterId: string;
@@ -92,6 +107,8 @@ export type SearchParams = {
 export type SearchIndexRow = Pick<
   SearchChart,
   | "id"
+  | "createdAt"
+  | "visitAt"
   | "clinicalAt"
   | "editable"
   | "status"

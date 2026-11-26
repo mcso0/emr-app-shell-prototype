@@ -137,7 +137,7 @@ export function WorkspaceFrame({
   );
   const resolvedRightPanelWidth =
     hasCommonProfileRightPanel || hasFeatureRightPanel
-      ? 380
+      ? SHELL_LAYOUT.rightPanel.profileWidth
       : (activeDrawer?.rightPanelPresentation?.width ??
         moduleDefinition.rightPanelWidth ??
         rightPanelWidth);

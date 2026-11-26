@@ -1,4 +1,5 @@
 import type {
+  ChartExportFormat, ChartExportSummary, SearchChart,
   CopyHistoryItem,
   CopyIntent,
   CopyResult,
@@ -31,6 +32,10 @@ export async function chartRequest<T>(
 export const chartSearchApi = (workspace: string) => ({
   search: (input: SearchParams, signal?: AbortSignal) =>
     chartRequest<SearchPage>(workspace, "search", input, signal),
+  patientCharts: (patientId: string, cursor: string | null, signal?: AbortSignal) =>
+    chartRequest<{ items: SearchChart[]; nextCursor: string | null }>(workspace, "patientCharts", { patientId, cursor }, signal),
+  exportSummaries: (ids: string[], format: ChartExportFormat) =>
+    chartRequest<ChartExportSummary[]>(workspace, "export", { ids, format }),
   history: (chartId: string, signal?: AbortSignal) =>
     chartRequest<CopyHistoryItem[]>(workspace, "history", { chartId }, signal),
   visits: () => chartRequest<SearchVisit[]>(workspace, "visits", {}),

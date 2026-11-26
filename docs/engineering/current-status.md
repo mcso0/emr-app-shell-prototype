@@ -1,6 +1,6 @@
 # MVP Current Status
 
-Advanced chart search and reviewed copy (CHART-PR-042) shipped in PR #1105 with two migrations and a synthetic Production check. Its navigation follow-up adds a dedicated search tab and return to the originating chart. The [implementation plan](../design/screens/chart/planning/advanced-chart-search/implementation-plan.html#acceptance) records the search, handoff and audit policies. The PR records exact deployment evidence.
+Advanced chart search and reviewed copy (CHART-PR-042) shipped in PR #1105 with two migrations and a synthetic Production check. Open the dedicated search tab from the navigation rail or global search. To return after a general search, select the existing 진료/차트 tab. The chart header keeps the history toggle and offers copy actions when a pending copy exists. The [implementation plan](../design/screens/chart/planning/advanced-chart-search/implementation-plan.html#acceptance) records the search, handoff and audit policies. The release PR records exact deployment evidence.
 
 The 2026-11-17 local shared-workflow candidate connects clinical-lab, external-lab,
 imaging and unpaid billing to the dispensing/treatment editing and re-request

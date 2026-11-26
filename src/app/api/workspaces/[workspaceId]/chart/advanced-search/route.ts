@@ -16,7 +16,7 @@ const short = z.string().max(180);
 const combinator = z.enum(["and", "or"]);
 const rule = z.object({
   fieldId: short,
-  operatorId: z.enum(["is", "contains"]),
+  operatorId: z.enum(["is", "contains", "on", "from", "to"]),
   value: short,
 });
 const groups = z.object({
@@ -148,7 +148,7 @@ export async function POST(
       p_workspace_id: workspaceId,
       p_include_drafts: Boolean(input.includeDrafts || input.chartId),
       p_targets: !!input.targets,
-      p_mine: !!input.mine,
+      p_mine: Boolean(input.mine && input.targets),
       p_doctor: doctorId.success ? doctorId.data : null,
       p_from: input.from || null,
       p_to: input.to || null,
@@ -201,7 +201,7 @@ export async function POST(
             .rpc("clair_advanced_chart_search_batch", { ...scope, p_ids: ids })
             .abortSignal(request.signal)
         : null,
-      (scope.p_mine || scope.p_doctor || scope.p_from || scope.p_to) &&
+      (input.mine || scope.p_doctor || scope.p_from || scope.p_to) &&
       !input.targets &&
       !input.cursor
         ? client
@@ -225,6 +225,24 @@ export async function POST(
       doctors: roster?.data ?? page.doctors,
       items: ids.flatMap((id) => byId.get(id) ?? []),
     });
+  }
+  if (body.action === "patientCharts") {
+    const parsed = z.object({ patientId: z.string().uuid(), cursor: z.string().uuid().nullish() }).safeParse(body.input);
+    if (!parsed.success) return json({ error: "invalid_request" }, 400);
+    const read = await client.rpc("clair_search_patient_charts", {
+      p_workspace_id: workspaceId, p_patient_id: parsed.data.patientId, p_after: parsed.data.cursor ?? null,
+    }).abortSignal(request.signal);
+    return read.error ? dbError(read.error.message) : json(read.data);
+  }
+  if (body.action === "export") {
+    const parsed = z.object({ ids: z.array(z.string().uuid()).min(1).max(500), format: z.enum(["csv","pdf"]) }).safeParse(body.input);
+    if (!parsed.success) return json({ error: "invalid_selection" }, 400);
+    const limited = enforceWorkspaceMutationRateLimit({ request, actorUserId: identity.actorUserId, workspaceId, operation: "chart_summary_export" });
+    if (limited) return limited;
+    const result = await client.rpc("clair_export_chart_summaries", {
+      p_workspace_id: workspaceId, p_ids: parsed.data.ids, p_format: parsed.data.format,
+    });
+    return result.error ? dbError(result.error.message) : json(result.data);
   }
   if (body.action === "history") {
     const id = z.string().uuid().safeParse(body.input.chartId);
