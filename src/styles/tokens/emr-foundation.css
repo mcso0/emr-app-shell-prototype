@@ -390,7 +390,7 @@
   --emr-calendar-lane-header-action-size: var(--clair-spacing-24);
   --emr-calendar-lane-header-action-radius: var(--clair-radius-atomic-4);
   --emr-calendar-lane-header-action-gap: var(--clair-spacing-4);
-  --emr-calendar-lane-header-action-icon: var(--clair-spacing-14);
+  --emr-calendar-lane-header-action-icon: var(--emr-text-primary);
   --emr-calendar-lane-header-action-hover: var(--emr-state-hover);
   --emr-calendar-lane-avatar-size: var(--clair-spacing-24);
   --emr-calendar-lane-avatar-radius: var(--clair-radius-atomic-6);
@@ -477,7 +477,7 @@
   --emr-context-bar-inline-icon-size: var(--clair-spacing-12);
   --emr-context-bar-hover-bg: var(--clair-color-atomic-neutral-100);
   --emr-context-bar-hover-icon-bg: var(--clair-color-atomic-white-alpha-80);
-  --emr-context-bar-hover-action-icon-size: var(--clair-spacing-14);
+  --emr-context-bar-hover-action-icon-size: 14px;
   --emr-page-title-height: var(--clair-control-height-md);
   --emr-page-title-section-gap: var(--clair-spacing-24);
   --emr-page-title-left-gap: var(--clair-spacing-10);
@@ -607,6 +607,8 @@
   --emr-radius-control: var(--clair-radius-md);
   --emr-radius-panel: var(--clair-radius-lg);
 
+  /* Base table heights for tables outside EmrDataTable. [data-emr-data-table]
+     in globals.css scopes CDS V2 standard density to a 36px header and 40px row. */
   --emr-table-header-height-compact: 36px;
   --emr-table-header-height-standard: 40px;
   --emr-table-header-height-comfortable: 44px;

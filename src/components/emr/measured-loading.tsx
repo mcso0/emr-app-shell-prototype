@@ -29,7 +29,7 @@ export function EmrMeasuredLoading({
           label={label}
           style={{
             "--skullet-base": "var(--muted)",
-            "--skullet-highlight": "var(--emr-surface-canvas)",
+            "--skullet-highlight": "var(--emr-surface-workspace)",
           } as CSSProperties}
         >
           {children}
