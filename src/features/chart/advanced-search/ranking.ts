@@ -66,6 +66,21 @@ export const fields: EmrTableFilterBuilderField<SearchIndexRow>[] =
             }))
           : undefined,
   }));
+for (const [id, label] of [["visitDate", "진료일"], ["createdDate", "차트 작성일"]]) {
+  fields.push({
+    id, label, valueKind: "text", valuePlaceholder: "YYYY-MM-DD",
+    getValue: row => getOperatingDateFromIso(id === "visitDate" ? row.visitAt : row.createdAt) ?? "",
+    operators: ([["on", "같음"], ["from", "이후 (포함)"], ["to", "이전 (포함)"]]).map(([operator, name]) => ({
+      id: operator, label: name,
+      match(value, date) {
+        if (typeof value !== "string" || !value || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+        const parsed = Date.parse(date);
+        if (!Number.isFinite(parsed) || new Date(parsed).toISOString().slice(0, 10) !== date) return false;
+        return operator === "on" ? value === date : operator === "from" ? value >= date : value <= date;
+      }
+    }))
+  });
+}
 export function orderLabel(kind: string) {
   return (
     (
@@ -177,7 +192,7 @@ export function searchPage<T extends SearchIndexRow>(
         !params.targets &&
         !params.includeDrafts &&
         !["signed", "amended"].includes(chart.status)) ||
-      (params.mine && chart.authorId !== actor) ||
+      (params.mine && chart.authorId !== actor && (params.targets || chart.doctorId !== actor)) ||
       (params.doctor &&
         ![chart.doctorId, chart.doctor].includes(params.doctor)) ||
       (params.from && date < params.from) ||

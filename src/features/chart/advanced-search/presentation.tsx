@@ -1,25 +1,17 @@
 "use client";
 
-import { errorMessage, type ChartSearchApi } from "./client";
-import type { CopyHistoryItem } from "./contract";
-import { useEffect, useState } from "react";
-import { EmrStatusBadge } from "@/components/emr/status-badge";
-import { Dialog } from "@/components/ui/dialog";
-import { EmrDialogShell } from "@/components/emr/dialog-shell";
+import { useEffect, useRef, useState } from "react";
+import { EmrEmptyState } from "@/components/emr/empty-state";
+import { ImageOff } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
+  CdsActionsPlayIcon,
+  CdsActionsPauseIcon,
+} from "@/components/cds-icons/actions-and-controls";
+import { CloseIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
-import {
-  DocumentIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ClipboardListIcon,
-} from "@/components/icons";
-import { EmrRightPanelHeader } from "@/components/emr/right-panel-header";
+import { ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
+
 import {
   Select,
   SelectContent,
@@ -28,13 +20,11 @@ import {
   SelectTrigger,
 } from "@/components/ui/select";
 import {
-  diagnosisLabels,
   representativeMedia,
-  sectionNames,
   type SearchChart,
   type SearchMedia,
 } from "./contract";
-import { evidence, orderLabel, searchWords, speciesLabel } from "./ranking";
+import { searchWords, speciesLabel } from "./ranking";
 import styles from "./workspace.module.css";
 
 export function Pick({
@@ -42,7 +32,9 @@ export function Pick({
   value,
   options,
   onChange,
+  size = "sm",
 }: {
+  size?: "sm" | "default";
   label: string;
   value: string;
   options: [string, string][];
@@ -55,7 +47,7 @@ export function Pick({
         if (v !== null) onChange(v);
       }}
     >
-      <SelectTrigger size="sm" aria-label={label}>
+      <SelectTrigger size={size} aria-label={label}>
         {options.find(([key]) => key === value)?.[1] ?? label}
       </SelectTrigger>
       <SelectContent alignItemWithTrigger={false}>
@@ -113,22 +105,55 @@ export function Highlight({ value, query }: { value: string; query: string }) {
 function PreviewMedia({
   item,
   controls = false,
+  inlinePlayback = false,
 }: {
   item: SearchMedia;
   controls?: boolean;
+  inlinePlayback?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
-  if (failed) return <span className={styles.placeholder}>미리보기 없음</span>;
+  const video = useRef<HTMLVideoElement>(null);
+  const [playing, setPlaying] = useState(false);
+  if (failed)
+    return (
+      <EmrEmptyState
+        surface="widget"
+        kind="read-error"
+        title="미리보기를 열 수 없습니다"
+        reserveActionSpace={false}
+      />
+    );
   return item.video ? (
-    <video
-      controls={controls}
-      preload="metadata"
-      playsInline
-      muted={!controls}
-      aria-label={item.name}
-      src={item.url + "#t=0.1"}
-      onError={() => setFailed(true)}
-    />
+    <>
+      <video
+        ref={video}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => setPlaying(false)}
+        controls={controls}
+        preload="metadata"
+        playsInline
+        muted={!controls}
+        aria-label={item.name}
+        src={item.url + "#t=0.1"}
+        onError={() => setFailed(true)}
+      />
+      {inlinePlayback && (
+        <Button
+          variant="secondary"
+          size="icon"
+          className={styles.play}
+          aria-label={item.name + (playing ? " 일시정지" : " 재생")}
+          onClick={() => {
+            if (!video.current) return;
+            if (playing) video.current.pause();
+            else void video.current.play().catch(() => setFailed(true));
+          }}
+        >
+          {playing ? <CdsActionsPauseIcon /> : <CdsActionsPlayIcon />}
+        </Button>
+      )}
+    </>
   ) : (
     // Authenticated attachment route needs the current browser session.
     // eslint-disable-next-line @next/next/no-img-element
@@ -151,18 +176,77 @@ export function Thumbnail({
     representativeMedia(chart.media, query),
   );
   const item = chart.media[index];
+  const container = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const box = container.current;
+    const image = box?.querySelector("img");
+    if (!box || !image || item?.video || chart.media.length < 2) return;
+    const buttons = box.querySelectorAll<HTMLButtonElement>("button");
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 8;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    const sample = () => {
+      if (!ctx || !image.naturalWidth) return;
+      const rect = image.getBoundingClientRect();
+      const scale = Math.min(
+        rect.width / image.naturalWidth,
+        rect.height / image.naturalHeight,
+      );
+      const w = image.naturalWidth * scale,
+        h = image.naturalHeight * scale;
+      for (const button of buttons) {
+        const area = button.getBoundingClientRect();
+        if (!area.width || !area.height) continue;
+        ctx.fillStyle = "#101116";
+        ctx.fillRect(0, 0, 8, 8);
+        ctx.drawImage(
+          image,
+          ((rect.left + (rect.width - w) / 2 - area.left) * 8) / area.width,
+          ((rect.top + (rect.height - h) / 2 - area.top) * 8) / area.height,
+          (w * 8) / area.width,
+          (h * 8) / area.height,
+        );
+        try {
+          const pixels = ctx.getImageData(0, 0, 8, 8).data;
+          let light = 0;
+          for (let i = 0; i < pixels.length; i += 4)
+            light +=
+              pixels[i] * 0.2126 +
+              pixels[i + 1] * 0.7152 +
+              pixels[i + 2] * 0.0722;
+          button.dataset.backdrop = light / 64 >= 128 ? "light" : "dark";
+        } catch {
+          return;
+        } // Cross-origin media keeps the default control tone.
+      }
+    };
+    const observer = new ResizeObserver(sample);
+    observer.observe(box);
+    image.addEventListener("load", sample);
+    sample();
+    return () => {
+      observer.disconnect();
+      image.removeEventListener("load", sample);
+      buttons.forEach((b) => delete b.dataset.backdrop);
+    };
+  }, [item?.id, item?.url, item?.video, chart.media.length]);
   return (
-    <div className={styles.thumb}>
+    <div className={styles.thumb} ref={container}>
       {item ? (
         <>
-          <PreviewMedia key={item.id} item={item} />
-          <span className={styles.counter}>
-            {index + 1}/{chart.media.length}
-            {item.video ? " · 동영상" : ""}
-          </span>
+          <PreviewMedia key={item.id} item={item} inlinePlayback={item.video} />
           {chart.media.length > 1 && (
             <>
-              <button
+              <Badge
+                variant="secondary"
+                className={styles.counter}
+                aria-live="polite"
+              >
+                {index + 1} / {chart.media.length}
+              </Badge>
+              <Button
+                variant="secondary"
+                size="icon"
                 type="button"
                 aria-label="이전 첨부"
                 className={styles.previous}
@@ -173,378 +257,102 @@ export function Thumbnail({
                 }
               >
                 <ChevronLeftIcon />
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
+                size="icon"
                 type="button"
                 aria-label="다음 첨부"
                 className={styles.next}
                 onClick={() => setIndex((index + 1) % chart.media.length)}
               >
                 <ChevronRightIcon />
-              </button>
+              </Button>
             </>
           )}
         </>
       ) : (
         <div className={styles.placeholder}>
-          <DocumentIcon />
-          없음
+          <EmrEmptyState
+            surface="widget"
+            size="md"
+            reserveActionSpace={false}
+            kind="no-data"
+            icon={<ImageOff />}
+            title="첨부된 이미지가 없습니다"
+          />
         </div>
       )}
     </div>
   );
 }
-function matchingExcerpt(text: string, query: string) {
-  const lower = text.toLocaleLowerCase();
-  const hits = searchWords(query)
-    .map((word) => lower.indexOf(word))
-    .filter((index) => index >= 0);
-  const start = hits.length ? Math.max(0, Math.min(...hits) - 18) : 0;
+export function SourceMedia({
+  chart,
+  query,
+}: {
+  chart: SearchChart;
+  query: string;
+}) {
+  const [enlarged, setEnlarged] = useState<SearchMedia | null>(null);
+  const opener = useRef<HTMLButtonElement | null>(null);
+  const close = () => {
+    setEnlarged(null);
+    opener.current?.focus();
+  };
   return (
-    (start ? "…" : "") +
-    text.slice(start, start + 100) +
-    (text.length > start + 100 ? "…" : "")
+    <div
+      onKeyDown={(event) => {
+        if (enlarged && event.key === "Escape") {
+          event.preventDefault();
+          event.stopPropagation();
+          close();
+        }
+      }}
+    >
+      <div className="flex flex-wrap gap-2" aria-label="첨부 자료 목록">
+        {chart.media.map((m) => (
+          <Button
+            key={m.id}
+            variant="ghost"
+            className={styles.mediaButton}
+            aria-label={m.name + " 확대"}
+            aria-expanded={enlarged?.id === m.id}
+            onClick={(event) => {
+              opener.current = event.currentTarget;
+              setEnlarged(m);
+            }}
+          >
+            <PreviewMedia item={m} />
+            {m.video && (
+              <CdsActionsPlayIcon className="pointer-events-none absolute size-5 text-white" />
+            )}
+          </Button>
+        ))}
+      </div>
+      {enlarged && (
+        <section className={styles.enlarged} aria-label="선택한 첨부 미리보기">
+          <div className="flex items-center justify-between gap-2">
+            <span>
+              <Highlight value={enlarged.name} query={query} />
+            </span>
+            <Button
+              autoFocus
+              variant="ghost"
+              size="icon"
+              aria-label="첨부 미리보기 닫기"
+              onClick={close}
+            >
+              <CloseIcon />
+            </Button>
+          </div>
+          <PreviewMedia key={enlarged.id} item={enlarged} controls />
+          {enlarged.caption && (
+            <p className="emr-text-metadata">{enlarged.caption}</p>
+          )}
+        </section>
+      )}
+    </div>
   );
 }
 
 export type CopyMode = "existing" | "new";
-export function ChartRow({
-  chart,
-  query,
-  active,
-  onOpen,
-  onCopy,
-}: {
-  chart: SearchChart;
-  query: string;
-  active: boolean;
-  onOpen: () => void;
-  onCopy: (mode: CopyMode) => void;
-}) {
-  const matches = evidence(chart, searchWords(query)).matches;
-  const hit = matches[0];
-  const diagnoses = hit?.label === "진단"
-    ? [...chart.diagnoses].sort((a, b) => Number(b.name === hit.text) - Number(a.name === hit.text))
-    : chart.diagnoses;
-  const generic =
-    !chart.purpose.trim() ||
-    /^(현장 접수|방문|내원|진료|재진|초진)$/.test(chart.purpose.trim());
-  const clinicalName = hit?.label === "진단" || hit?.label === "오더";
-  const title =
-    hit && (generic || clinicalName)
-      ? hit.text
-      : chart.purpose || chart.complaint || chart.patient + " 진료";
-  let context: { label: string; text: string } | undefined = matches.find(
-    (match) => match.text !== title && !["오더", "진단"].includes(match.label),
-  );
-  if (!context && clinicalName) {
-    const note = chart.paragraphs.find(
-      (p) => p.section === "subjective" || p.section === "objective",
-    );
-    const fallback = !generic
-      ? { label: "방문 목적", text: chart.purpose }
-      : chart.complaint
-        ? { label: "주호소", text: chart.complaint }
-        : note
-          ? { label: sectionNames[note.section!], text: note.text }
-          : null;
-    if (fallback) context = fallback;
-  }
-  return (
-    <article className={styles.row} data-active={active}>
-      <Thumbnail
-        key={chart.id + query + chart.version}
-        chart={chart}
-        query={query}
-      />
-      <button
-        className={styles.summary}
-        onClick={onOpen}
-        aria-label={chart.patient + " 차트 원본 열기"}
-      >
-        <small>
-          {when(chart.clinicalAt)}　·　{stateText(chart.status)}
-        </small>
-        <strong>
-          <Highlight
-            value={query.trim() ? matchingExcerpt(title, query) : title}
-            query={query}
-          />
-        </strong>
-        {context && (
-          <span className={styles.snippet}>
-            {context.label}　
-            <Highlight
-              value={matchingExcerpt(context.text, query)}
-              query={query}
-            />
-          </span>
-        )}
-        <span>
-          {[
-            chart.patient,
-            animal(chart.species),
-            chart.breed,
-            chart.age !== null ? chart.age + "세" : "",
-            chart.guardian && chart.guardian + " 보호자",
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-        </span>
-        <span>
-          작성 {chart.author || "미기록"}　·　담당 {chart.doctor || "미배정"}
-        </span>
-        <span className={styles.chips}>
-          {[
-            ...diagnoses.map((d) =>
-              [diagnosisLabels[d.kind], d.name].filter(Boolean).join(" · "),
-            ),
-            ...chart.orders.map((o) => o.name),
-          ]
-            .slice(0, 5)
-            .map((n, i) => (
-              <em key={i}>
-                <Highlight value={n} query={query} />
-              </em>
-            ))}
-        </span>
-      </button>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="outline"
-              size="sm"
-              aria-label={chart.patient + " 차트 복사"}
-            >
-              복사
-            </Button>
-          }
-        />
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => onCopy("existing")}>
-            기존 차트에 복사
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onCopy("new")}>
-            새 차트로 만들기
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </article>
-  );
-}
-export function ChartSource({
-  chart,
-  query,
-  onClose,
-  onCopy,
-  api,
-  onOpenDocument,
-}: {
-  onOpenDocument: () => void;
-  api: ChartSearchApi;
-  chart: SearchChart;
-  query: string;
-  onClose: () => void;
-  onCopy: (mode: CopyMode) => void;
-}) {
-  const [enlarged, setEnlarged] = useState<SearchMedia | null>(null);
-  const highlight = (text: string) => <Highlight value={text} query={query} />;
-  return (
-    <aside
-      className={styles.drawer}
-      aria-label="차트 원본"
-      onKeyDown={(e) => {
-        if (e.key !== "Escape") return;
-        e.stopPropagation();
-        if (enlarged) setEnlarged(null);
-        else if (e.currentTarget.contains(e.target as Node)) onClose();
-      }}
-    >
-      <EmrRightPanelHeader className="justify-between border-b">
-        <span className="inline-flex items-center gap-2">
-          <ClipboardListIcon className="size-4" />
-          차트 원본
-        </span>
-        <div className={styles.controls}>
-          <Button size="sm" variant="ghost" onClick={onOpenDocument}>
-            진료 차트 열기
-          </Button>
-          <Button autoFocus variant="ghost" size="sm" onClick={onClose}>
-            닫기
-          </Button>
-        </div>
-      </EmrRightPanelHeader>
-      <div className={styles.detail}>
-        <h2>
-          {chart.patient} <EmrStatusBadge label={stateText(chart.status)} />
-        </h2>
-        <p>
-          {[animal(chart.species), chart.breed, chart.guardian]
-            .filter(Boolean)
-            .join(" · ")}
-        </p>
-        <p>
-          {when(chart.clinicalAt)}　·　작성 {chart.author}　·　담당{" "}
-          {chart.doctor || "미배정"}
-        </p>
-        <div className={styles.purpose}>
-          <small>방문 목적</small>
-          <h3>{highlight(chart.purpose || "미기록")}</h3>
-          {chart.complaint && <p>주호소　{highlight(chart.complaint)}</p>}
-        </div>
-        <h3>진료 기록</h3>
-        {chart.paragraphs.length ? (
-          chart.paragraphs.map((p) => (
-            <div className={styles.line} key={p.id}>
-              <b>
-                {p.section ? sectionNames[p.section] : "자유 기록"}{" "}
-                {p.scope && p.scope !== "기본 SOAP" ? p.scope : ""}
-              </b>
-              <p>{highlight(p.text)}</p>
-            </div>
-          ))
-        ) : (
-          <p>기록 없음</p>
-        )}
-        <h3>진단</h3>
-        {chart.diagnoses.length ? (
-          chart.diagnoses.map((d) => (
-            <p key={d.id}>
-              {diagnosisLabels[d.kind]}　{highlight(d.name)}{" "}
-              {d.primary && " · 주진단"}
-            </p>
-          ))
-        ) : (
-          <p>기록 없음</p>
-        )}
-        <h3>오더</h3>
-        {chart.orders.length ? (
-          chart.orders.map((o) => (
-            <p key={o.id}>
-              {orderLabel(o.kind)}　{highlight(o.name)}
-            </p>
-          ))
-        ) : (
-          <p>기록 없음</p>
-        )}
-        <h3>첨부 자료</h3>
-        {chart.media.length ? (
-          <div className={styles.gallery}>
-            {chart.media.map((m) => (
-              <figure key={m.id}>
-                <button
-                  className={styles.mediaButton}
-                  aria-label={m.name + " 확대"}
-                  onClick={() => setEnlarged(m)}
-                >
-                  <PreviewMedia item={m} />
-                </button>
-                <figcaption>
-                  {highlight(m.name)} {highlight(m.caption)}
-                </figcaption>
-              </figure>
-            ))}
-          </div>
-        ) : (
-          <p>없음</p>
-        )}
-        {enlarged && (
-          <Dialog
-            open
-            onOpenChange={(v) => {
-              if (!v) setEnlarged(null);
-            }}
-          >
-            <EmrDialogShell
-              title={enlarged.name}
-              description={enlarged.caption || "첨부 원본"}
-              variant="wide-form"
-            >
-              <div className={styles.enlarged}>
-                <PreviewMedia item={enlarged} controls />
-              </div>
-            </EmrDialogShell>
-          </Dialog>
-        )}
-        <CopyHistory key={chart.id} chartId={chart.id} api={api} />
-      </div>
-      <footer className={styles.footer}>
-        <Button variant="outline" onClick={() => onCopy("new")}>
-          새 차트로 만들기
-        </Button>
-        <Button onClick={() => onCopy("existing")}>기존 차트에 복사</Button>
-      </footer>
-    </aside>
-  );
-}
-
-export function CopyHistory({
-  chartId,
-  api,
-}: {
-  chartId: string;
-  api: ChartSearchApi;
-}) {
-  const [open, setOpen] = useState(false),
-    [records, setRecords] = useState<CopyHistoryItem[] | null>(null),
-    [error, setError] = useState("");
-  useEffect(() => {
-    if (!open) return;
-    const abort = new AbortController();
-    api
-      .history(chartId, abort.signal)
-      .then((rows) => {
-        if (!abort.signal.aborted) setRecords(rows);
-      })
-      .catch((e) => {
-        if (!abort.signal.aborted) setError(errorMessage(e));
-      });
-    return () => abort.abort();
-  }, [api, chartId, open]);
-  return (
-    <section>
-      <Button
-        variant="outline"
-        size="sm"
-        aria-expanded={open}
-        onClick={() => {
-          setOpen(!open);
-          setError("");
-        }}
-      >
-        복사 이력
-      </Button>
-      {open &&
-        (error ? (
-          <p role="alert">{error}</p>
-        ) : records === null ? (
-          <p>불러오는 중</p>
-        ) : !records.length ? (
-          <p>복사 이력 없음</p>
-        ) : (
-          records.map((r) => (
-            <div className={styles.line} key={r.id}>
-              <b>
-                {when(r.at)} · 선택 {r.selectedBy} · 적용 {r.actor}
-              </b>
-              <p>
-                원본　{r.source} · {r.sourceId}
-              </p>
-              {r.changes.map((c, i) => (
-                <div key={i}>
-                  {c.section
-                    ? sectionNames[c.section]
-                    : c.originalOrder
-                      ? "미확정 오더"
-                      : "진단"}
-                  　{c.before?.text && <del>{c.before.text}　</del>}
-                  {c.after?.text ?? c.after?.diagnosisText ?? c.name}
-                </div>
-              ))}
-            </div>
-          ))
-        ))}
-    </section>
-  );
-}

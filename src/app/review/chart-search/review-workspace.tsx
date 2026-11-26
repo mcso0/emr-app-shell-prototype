@@ -90,7 +90,7 @@ export function ReviewWorkspace() {
           className="relative min-h-0 flex-1"
           hidden={!!chart || registering}
         >
-          <ChartSearchWorkspace
+          <ChartSearchWorkspace userId="synthetic-review"
             key={entry.resume?.pending.id ?? "search"}
             entry={entry}
             api={session.api}

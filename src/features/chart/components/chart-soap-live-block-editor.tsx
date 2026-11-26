@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type KeyboardEvent } from "react";
+import { useIsPageLoading } from "@/components/emr/page-loading-boundary";
 import { ChartSearchEditorContext } from "@/features/chart/advanced-search/editor-position";
 import { ko } from "@blocknote/core/locales";
 import { useCreateBlockNote } from "@blocknote/react";
@@ -145,6 +146,7 @@ export function ChartSoapLiveBlockEditor({
     }
   }, [editor]);
   const bridge = useContext(ChartSearchEditorContext);
+  const pageLoading = useIsPageLoading();
   const editedHere = useRef(false);
   useEffect(() => {
     if (!bridge || !workspaceId || !encounterId || !chartId || !scopeKey) return;
@@ -164,23 +166,24 @@ export function ChartSoapLiveBlockEditor({
 
   useEffect(() => {
     const position = bridge?.pending();
-    if (!bridge || !position || disabled || !readyForReturn || position.workspaceId !== workspaceId ||
+    if (!bridge || !position || disabled || pageLoading || !readyForReturn || position.workspaceId !== workspaceId ||
       position.encounterId !== encounterId || position.chartId !== chartId || position.scope !== scopeKey) return;
     const frame = requestAnimationFrame(() => {
       if (bridge.pending() !== position || !editor.getBlock(position.blockId)) return;
-      bridge.restore(null);
       editor.setTextCursorPosition(position.blockId, "start");
       const view = editor.prosemirrorView;
       const start = view.state.selection.$head;
       editor._tiptapEditor.commands.setTextSelection(start.start() + Math.min(position.offset, start.parent.content.size));
       view.focus();
+      if (!view.hasFocus()) return;
+      bridge.restore(null);
       const scroller = view.dom.closest(".bn-container");
       const chart = view.dom.closest('[data-slot="chart-workspace"]');
       if (scroller) scroller.scrollTop = position.editorScroll;
       if (chart) chart.scrollTop = position.chartScroll;
     });
     return () => cancelAnimationFrame(frame);
-  }, [bridge, chartId, disabled, editor, encounterId, readyForReturn, scopeKey, workspaceId]);
+  }, [bridge, chartId, disabled, editor, encounterId, pageLoading, readyForReturn, scopeKey, workspaceId]);
   useEffect(() => { onReady(editor.document); }, [editor, onReady]);
   useEffect(() => { onNoticeRef.current = onNotice; }, [onNotice]);
   useLayoutEffect(() => {

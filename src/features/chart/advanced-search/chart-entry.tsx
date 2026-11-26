@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { SearchIcon } from "@/components/icons";
 import { Pick } from "./presentation";
 import { chartSearchApi, errorMessage } from "./client";
 import { copiedEvent, openChartSearch } from "./events";
@@ -91,18 +90,10 @@ export function ChartSearchEntry({
       setErr(errorMessage(e));
     }
   }
+  if (!pending && !err) return null;
+
   return (
     <span className="inline-flex items-center gap-1">
-      <Button
-        aria-label="차트 상세 검색"
-        title="차트 상세 검색"
-        variant="outline"
-        size="sm"
-        onClick={() => openChartSearch(entry)}
-      >
-        <SearchIcon />
-        차트 상세 검색
-      </Button>
       {pending && (
         <>
           {pending.choices && pending.choices.length > 1 && (

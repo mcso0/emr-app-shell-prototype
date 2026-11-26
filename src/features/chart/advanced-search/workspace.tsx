@@ -1,15 +1,45 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Button } from "@/components/ui/button";
+import { EmrMainContentHeader } from "@/components/emr/main-content-header";
+import { EmrPageHeader } from "@/components/emr/page-header";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { SearchIcon, CloseIcon } from "@/components/icons";
+import { EmrTableFeedbackSurface } from "@/components/emr/table-primitives";
+import { EmrInlineAlert } from "@/components/emr/inline-alert";
+import { EmrEmptyState } from "@/components/emr/empty-state";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import { deliverSummary } from "./export";
+import { useChartFavorites } from "./favorites";
+import { ChartRow, type OpenChartProfile } from "./result-card";
+import { PatientHistory } from "./patient-history";
+import { DemoHistorySection, filterDemoHistory, useDemoHistory } from "../demo-history";
 import { Switch } from "@/components/ui/switch";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { EmrInstructionTitleBar } from "@/components/emr/instruction-header-stack";
+
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { EmrFilterToggle } from "@/components/emr/filter-toggle";
 import { EmrTableFilterBuilder } from "@/components/emr/table-filter-builder";
 import {
@@ -17,8 +47,15 @@ import {
   getEmrTableFilterBuilderActiveCount,
 } from "@/components/emr/table-filter-builder-model";
 import { EmrTableFilterTrigger } from "@/components/emr/table-filter-trigger";
-import { ReceptionSearchInput } from "@/features/reception/reception-list-search";
-import { ChevronLeftIcon, CalendarIcon, SearchIcon } from "@/components/icons";
+
+import {
+  ChevronLeftIcon,
+  ChevronDownIcon,
+  GridIcon,
+  MenuIcon,
+  DownloadIcon,
+  DocumentIcon,
+} from "@/components/icons";
 import {
   CdsNavigationMaximize2Icon,
   CdsNavigationMinimize2Icon,
@@ -28,12 +65,13 @@ import { errorMessage, type ChartSearchApi } from "./client";
 import { copiedEvent, type SearchEntry } from "./events";
 import { fields } from "./ranking";
 import type {
+  ChartExportFormat,
   CopyResult,
   SearchChart,
   SearchPage,
   SearchParams,
 } from "./contract";
-import { ChartRow, ChartSource, Pick, type CopyMode } from "./presentation";
+import { Pick, type CopyMode } from "./presentation";
 import { Transfer } from "./transfer";
 import styles from "./workspace.module.css";
 
@@ -45,31 +83,47 @@ export function ChartSearchWorkspace({
   api,
   onClose,
   onViewChart = onClose,
+  onOpenProfile,
   onReturnToChart,
+  userId,
   independent = false,
   active = true,
+  readOnly = false,
 }: {
   entry: SearchEntry;
+  userId?: string;
   api: ChartSearchApi;
   onClose: () => void;
   onReturnToChart?: () => void;
   independent?: boolean;
   active?: boolean;
+  readOnly?: boolean;
   onViewChart?: (chart: ChartLocation) => void;
+  onOpenProfile?: OpenChartProfile;
 }) {
   const [q, setQ] = useState(""),
     [sort, setSort] = useState<SearchParams["sort"]>("relevance"),
     [mine, setMine] = useState(false),
     [drafts, setDrafts] = useState(false);
+  const [composingText, setComposingText] = useState<string | null>(null);
+  const composing = useRef(false);
   const [doctor, setDoctor] = useState(""),
-    [from, setFrom] = useState(""),
-    [to, setTo] = useState(""),
     [groups, setGroups] = useState(fresh),
     [popup, setPopup] = useState("");
   const [narrow, setNarrow] = useState(false),
-    [loaded, setLoaded] = useState<{ params: SearchParams; page: SearchPage } | null>(null),
+    [loaded, setLoaded] = useState<{
+      api: ChartSearchApi;
+      params: SearchParams;
+      page: SearchPage;
+    } | null>(null),
     [error, setError] = useState(""),
-    [busy, setBusy] = useState(true),
+    [loadingFirst, setLoadingFirst] = useState(true),
+    [loadingMore, setLoadingMore] = useState(false),
+    [selecting, setSelecting] = useState(false),
+    [moreError, setMoreError] = useState<{
+      message: string;
+      restart: boolean;
+    } | null>(null),
     [attempt, setAttempt] = useState(0);
   const [selected, setSelected] = useState<SearchChart | null>(null),
     [copy, setCopy] = useState<{
@@ -88,16 +142,68 @@ export function ChartSearchWorkspace({
   const [lastResume, setLastResume] = useState(entry.resume);
   if (lastResume !== entry.resume) {
     setLastResume(entry.resume);
-    if (entry.resume) setCopy({ source: entry.resume.source, mode: "existing", resume: entry.resume });
+    if (entry.resume)
+      setCopy({
+        source: entry.resume.source,
+        mode: "existing",
+        resume: entry.resume,
+      });
   }
-  const [result, setResult] = useState<(CopyResult & { patientName?: string }) | null>(null),
+  const [result, setResult] = useState<
+      (CopyResult & { patientName?: string }) | null
+    >(null),
     [notice, setNotice] = useState("");
+  const [view, setView] = useState("list");
+  const [checked, setChecked] = useState<string[]>([]);
+  const [exporting, setExporting] = useState(false);
+  const exportingRef = useRef(false);
+  const favorites = useChartFavorites(entry.workspaceId, userId);
+  function toggleFavorite(id: string) {
+    try {
+      favorites.toggle(id);
+    } catch {
+      setNotice(
+        "즐겨찾기를 저장할 수 없습니다. 브라우저 저장소를 확인해 주세요.",
+      );
+    }
+  }
+  function viewDocument(chart: SearchChart) {
+    onViewChart({
+      chartId: chart.id,
+      encounterId: chart.encounterId,
+      patientId: chart.patientId,
+      visitAt: chart.visitAt ?? chart.clinicalAt,
+    });
+  }
+  async function exportChecked(format: ChartExportFormat) {
+    if (exportingRef.current || !checked.length) return;
+    if (checked.length > 500) {
+      setNotice("한 번에 최대 500건까지 내보낼 수 있습니다.");
+      return;
+    }
+    exportingRef.current = true;
+    setExporting(true);
+    try {
+      const rows = await api.exportSummaries(checked, format);
+      if (rows.length !== checked.length) throw new Error("source_unavailable");
+      deliverSummary(format, rows);
+    } catch (e) {
+      setNotice(errorMessage(e));
+    } finally {
+      exportingRef.current = false;
+      setExporting(false);
+    }
+  }
   const registering = useLayoutStore(
     (s) => s.activeDrawer?.type === "reception-form",
   );
   const request = useRef<AbortController | null>(null),
     scroll = useRef<HTMLDivElement>(null),
     opener = useRef<HTMLElement | null>(null);
+  // The ref closes the gap before React commits a loading-state update.
+  const operation = useRef<"first" | "more" | "select" | null>(null);
+  const cursors = useRef(new Set<string>());
+  const sentinel = useRef<HTMLDivElement>(null);
   const detailRequest = useRef<AbortController | null>(null);
   useEffect(() => () => detailRequest.current?.abort(), []);
   const params = useMemo(
@@ -107,49 +213,71 @@ export function ChartSearchWorkspace({
       mine,
       includeDrafts: drafts,
       doctor,
-      from,
-      to,
       groups,
     }),
-    [q, sort, mine, drafts, doctor, from, to, groups],
+    [q, sort, mine, drafts, doctor, groups],
   );
-  const page = loaded?.params === params ? loaded.page : null;
+  const demo = useDemoHistory(entry.workspaceId, userId, undefined, active && !readOnly);
+  const demoMatches = useMemo(() => filterDemoHistory(demo.items, params), [demo.items, params]);
+  const sameSource = loaded?.api === api;
+  const page = sameSource && loaded.params === params ? loaded.page : null;
+  // Retain the previous geometry while the same search source refreshes.
+  const visiblePage = page ?? (sameSource && !error ? loaded.page : null);
+  const listRef = useRef<HTMLElement>(null);
+  const searchButton = useRef<HTMLButtonElement>(null);
+  const [editingSearch, setEditingSearch] = useState(false);
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list || view !== "list") return;
+    const bodies = Array.from(list.getElementsByClassName(styles.chartMain));
+    const measure = () => {
+      const height = Math.ceil(
+        Math.max(0, ...bodies.map((el) => el.getBoundingClientRect().height)),
+      );
+      if (height > 0) list.style.setProperty("--thumbnail-side", height + "px");
+    };
+    const observer = new ResizeObserver(measure);
+    bodies.forEach((body) => observer.observe(body));
+    measure();
+    return () => observer.disconnect();
+  }, [view, visiblePage]);
+  const closeSearch = () => {
+    setEditingSearch(false);
+    requestAnimationFrame(() => searchButton.current?.focus());
+  };
+
   const count = getEmrTableFilterBuilderActiveCount(groups, fields);
-  const changed = !!(
-    q.trim() ||
-    mine ||
-    drafts ||
-    doctor ||
-    from ||
-    to ||
-    count
-  );
+  const filterLabel = count ? `필터 · 조건 ${count}개 적용 중` : "필터";
+  const changed = !!(q.trim() || mine || drafts || doctor || count);
   useEffect(() => {
     const abort = new AbortController();
     detailRequest.current?.abort();
     request.current = abort;
+    operation.current = "first";
+    cursors.current = new Set();
     const timer = window.setTimeout(
       () => {
-        setBusy(true);
+        setLoadingFirst(true);
+        setLoadingMore(false);
+        setSelecting(false);
+        setMoreError(null);
         setError("");
-        setLoaded(null);
         setSelected(null);
+        setChecked([]);
         if (scroll.current) scroll.current.scrollTop = 0;
-        if (from && to && from > to) {
-          setBusy(false);
-          setError("종료일은 시작일 이후로 선택해 주세요.");
-          return;
-        }
         api
           .search(params, abort.signal)
           .then((data) => {
-            if (!abort.signal.aborted) setLoaded({ params, page: data });
+            if (!abort.signal.aborted) setLoaded({ api, params, page: data });
           })
           .catch((e) => {
             if (!abort.signal.aborted) setError(errorMessage(e));
           })
           .finally(() => {
-            if (!abort.signal.aborted) setBusy(false);
+            if (!abort.signal.aborted) {
+              operation.current = null;
+              setLoadingFirst(false);
+            }
           });
       },
       q ? 180 : 0,
@@ -158,27 +286,120 @@ export function ChartSearchWorkspace({
       clearTimeout(timer);
       abort.abort();
     };
-  }, [api, params, attempt, q, from, to]);
-  async function more() {
-    if (!page?.nextCursor || busy) return;
-    const signal = request.current?.signal;
-    setBusy(true);
-    setError("");
+  }, [api, params, attempt, q]);
+  const more = useCallback(async () => {
+    const abort = request.current;
+    const cursor = page?.nextCursor;
+    if (
+      !active || !page || !cursor || error || loadingFirst || operation.current ||
+      !abort || abort.signal.aborted
+    ) return;
+    operation.current = "more";
+    setLoadingMore(true);
+    setMoreError(null);
     try {
-      const next = await api.search(
-        { ...params, cursor: page.nextCursor },
-        signal,
-      );
-      if (!signal?.aborted)
-        setLoaded({ params, page: {
+      const next = await api.search({ ...params, cursor }, abort.signal);
+      if (abort.signal.aborted || request.current !== abort) return;
+      const existing = new Set(page.items.map((chart) => chart.id));
+      const additions = next.items.filter((chart) => {
+        if (existing.has(chart.id)) return false;
+        existing.add(chart.id);
+        return true;
+      });
+      if (
+        next.nextCursor && (
+          next.nextCursor === cursor ||
+          cursors.current.has(next.nextCursor) ||
+          !additions.length
+        )
+      )
+        throw new Error("invalid_cursor");
+      cursors.current.add(cursor);
+      setLoaded({
+        api,
+        params,
+        page: {
           ...next,
           doctors: page.doctors,
-          items: [...page.items, ...next.items],
-        } });
+          items: [...page.items, ...additions],
+        },
+      });
     } catch (e) {
-      if (!signal?.aborted) setError(errorMessage(e));
+      if (!abort.signal.aborted && request.current === abort) {
+        const restart = e instanceof Error && e.message === "invalid_cursor";
+        setMoreError({
+          restart,
+          message: restart
+            ? "검색 결과가 변경되어 이어서 불러올 수 없습니다. 검색을 다시 불러와 주세요."
+            : "다음 차트를 불러오지 못했습니다. 다시 시도해 주세요.",
+        });
+      }
     } finally {
-      if (!signal?.aborted) setBusy(false);
+      if (!abort.signal.aborted && request.current === abort) {
+        operation.current = null;
+        setLoadingMore(false);
+      }
+    }
+  }, [active, api, params, page, error, loadingFirst]);
+  useEffect(() => {
+    const root = scroll.current;
+    const target = sentinel.current;
+    if (
+      !active || !root || !target || !page?.nextCursor ||
+      error || loadingFirst || loadingMore || selecting || moreError
+    ) return;
+    let observing = true;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (observing && entry.isIntersecting) void more();
+      },
+      { root, rootMargin: "0px 0px 300px 0px" },
+    );
+    observer.observe(target);
+    return () => {
+      observing = false;
+      observer.disconnect();
+    };
+  }, [active, page, error, loadingFirst, loadingMore, selecting, moreError, more, view, narrow]);
+  async function selectResults(checkedAll: boolean) {
+    if (!checkedAll || !page) {
+      setChecked([]);
+      return;
+    }
+    if (operation.current || loadingFirst) return;
+    if (page.total > 500) {
+      setNotice(
+        "한 번에 최대 500건까지 선택할 수 있습니다. 검색 조건을 좁혀 주세요.",
+      );
+      return;
+    }
+    const signal = request.current?.signal;
+    const ids = new Set(page.items.map((chart) => chart.id));
+    let cursor = page.nextCursor;
+    const seen = new Set<string>();
+    operation.current = "select";
+    setSelecting(true);
+    try {
+      while (cursor) {
+        if (seen.has(cursor)) throw new Error("invalid_cursor");
+        seen.add(cursor);
+        const next = await api.search({ ...params, cursor }, signal);
+        if (signal?.aborted) return;
+        next.items.forEach((chart) => ids.add(chart.id));
+        if (ids.size > 500) throw new Error("selection_limit");
+        cursor = next.nextCursor;
+      }
+      if (!signal?.aborted) setChecked([...ids]);
+    } catch (e) {
+      if (!signal?.aborted)
+        setNotice(e instanceof Error && e.message === "selection_limit"
+          ? "한 번에 최대 500건까지 선택할 수 있습니다. 검색 조건을 좁혀 주세요."
+          : errorMessage(e));
+    } finally {
+      if (!signal?.aborted) {
+        operation.current = null;
+        setSelecting(false);
+      }
     }
   }
   function reset() {
@@ -186,8 +407,6 @@ export function ChartSearchWorkspace({
     setMine(false);
     setDrafts(false);
     setDoctor("");
-    setFrom("");
-    setTo("");
     setSort("relevance");
     setGroups(fresh());
   }
@@ -197,7 +416,7 @@ export function ChartSearchWorkspace({
     requestAnimationFrame(() => opener.current?.focus());
   }
   async function showSource(chart: SearchChart, mode?: CopyMode) {
-    opener.current = document.activeElement as HTMLElement;
+    if (!mode) opener.current = document.activeElement as HTMLElement;
     detailRequest.current?.abort();
     const abort = new AbortController();
     detailRequest.current = abort;
@@ -205,9 +424,14 @@ export function ChartSearchWorkspace({
       const detail = await api.search({ chartId: chart.id }, abort.signal);
       if (abort.signal.aborted) return;
       const current = detail.items[0];
-      if (!current) throw new Error("source_unavailable");
-      setSelected(current);
+      if (
+        !current ||
+        current.id !== chart.id ||
+        current.patientId !== chart.patientId
+      )
+        throw new Error("source_unavailable");
       if (mode) setCopy({ source: current, mode });
+      else setSelected(current);
     } catch (e) {
       if (!abort.signal.aborted) {
         setSelected(null);
@@ -235,6 +459,16 @@ export function ChartSearchWorkspace({
   const WidthIcon = narrow
     ? CdsNavigationMaximize2Icon
     : CdsNavigationMinimize2Icon;
+  const navigationAction = onReturnToChart && entry.patientName ? (
+    <Button variant="ghost" className="self-start" onClick={onReturnToChart}>
+      <ChevronLeftIcon />
+      {entry.patientName} 차트로 돌아가기
+    </Button>
+  ) : !independent ? (
+    <Button variant="ghost" size="icon" aria-label="검색 닫기" onClick={onClose}>
+      <ChevronLeftIcon />
+    </Button>
+  ) : null;
   return (
     <section
       className={styles.workspace}
@@ -249,256 +483,421 @@ export function ChartSearchWorkspace({
         }
       }}
     >
-      <EmrInstructionTitleBar
-        className={styles.header}
-        title="차트 상세 검색"
-        badge={onReturnToChart && entry.patientName ? (
-          <Button size="sm" variant="outline" onClick={onReturnToChart}>
-            <ChevronLeftIcon />{entry.patientName} 차트로 돌아가기
-          </Button>
-        ) : undefined}
-        icon={independent ? undefined : (
-          <Button
-            autoFocus
-            size="icon-sm"
-            variant="ghost"
-            aria-label="검색 닫기"
-            onClick={onClose}
-          >
-            <ChevronLeftIcon />
-          </Button>
-        )}
-        actions={
-          <div className={styles.controls}>
-            <Pick
-              label="정렬"
-              value={sort ?? "relevance"}
-              options={[
-                ["relevance", q ? "정렬 · 관련도순" : "정렬 · 최근순"],
-                ["recent", "최근 진료순"],
-                ["oldest", "오래된 진료순"],
-              ]}
-              onChange={(v) => setSort(v as SearchParams["sort"])}
-            />
-            <Popover
-              open={active && popup === "filter"}
-              onOpenChange={(v) => setPopup(v ? "filter" : "")}
-            >
-              <PopoverTrigger
-                render={<EmrTableFilterTrigger activeCount={count} />}
-              />
-              <PopoverContent
-                className="w-auto max-w-[96vw] p-0"
-                initialFocus={false}
-              >
-                <EmrTableFilterBuilder
-                  fields={fields}
-                  model={groups}
-                  onModelChange={setGroups}
-                  onClose={() => setPopup("")}
-                />
-              </PopoverContent>
-            </Popover>
-            <Pick
-              label="진료 담당의"
-              value={doctor || "any"}
-              options={[
-                ["any", "진료 담당의"],
-                ...(page?.doctors ?? []).map(
-                  (d) => [d.id, d.name] as [string, string],
-                ),
-                ...(doctor && !page?.doctors?.some((d) => d.id === doctor)
-                  ? [[doctor, "선택한 담당의"] as [string, string]]
-                  : []),
-              ]}
-              onChange={(v) => setDoctor(v === "any" ? "" : v)}
-            />
-            <EmrFilterToggle size="sm" pressed={mine} onPressedChange={setMine}>
-              내 차트
-            </EmrFilterToggle>
-            <Popover
-              open={active && popup === "date"}
-              onOpenChange={(v) => setPopup(v ? "date" : "")}
-            >
-              <PopoverTrigger
-                render={
-                  <Button variant="outline" size="sm">
-                    <CalendarIcon />
-                    {from || to ? "기간 설정됨" : "진료일"}
-                  </Button>
-                }
-              />
-              <PopoverContent>
-                <div className={styles.dates}>
-                  <label>
-                    시작일
-                    <Input type="date" value={from} onValueChange={setFrom} />
-                  </label>
-                  <label>
-                    종료일
-                    <Input
-                      type="date"
-                      min={from}
-                      value={to}
-                      onValueChange={setTo}
-                    />
-                  </label>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setFrom("");
-                      setTo("");
-                    }}
-                  >
-                    기간 해제
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-            <ReceptionSearchInput
-              aria-label="차트 검색어"
-              placeholder="증상·진단·오더 검색"
-              value={q}
-              onValueChange={(v) => {
-                setQ(v);
-                setSort("relevance");
-              }}
-            />
-            <Button
-              size="sm"
-              variant="outline"
-              data-workspace-width-toggle="true"
-              aria-pressed={narrow}
-              onClick={() => setNarrow(!narrow)}
-            >
-              <WidthIcon />
-              {narrow ? "넓게 보기" : "좁게 보기"}
-            </Button>
-          </div>
-        }
-      />
-      {count > 0 && (
-        <div className={styles.rules} aria-label="적용한 검색 조건">
-          {groups.groups
-            .flatMap((g) => {
-              const applied = g.rules.flatMap((r) =>
-                r.applied ? [r.applied] : [],
-              );
-              return applied.length
-                ? [
-                    applied
-                      .map(
-                        (r) =>
-                          (fields.find((f) => f.id === r.fieldId)?.label ??
-                            "") +
-                          " " +
-                          r.value,
-                      )
-                      .join(" " + g.combinator.toUpperCase() + " "),
-                  ]
-                : [];
-            })
-            .map((label, i) => (
-              <span key={i}>
-                {i > 0 && " " + groups.combinator.toUpperCase() + " "}
-                <button onClick={() => setPopup("filter")}>{label}</button>
-              </span>
-            ))}
-        </div>
+      {navigationAction && (
+        <EmrMainContentHeader heightMode="adaptive">
+          {navigationAction}
+        </EmrMainContentHeader>
       )}
-      <div className={styles.body}>
-        <div ref={scroll} className={styles.scroll}>
-          <div className={styles.list} data-narrow={narrow}>
-            <div className={styles.listhead}>
-              <b>
-                {changed ? "검색 결과" : "최근 완료 차트"}{" "}
-                {page && <small>{page.total}</small>}
-              </b>
-              {changed && (
-                <Button size="sm" variant="ghost" onClick={reset}>
-                  초기화
-                </Button>
-              )}
-              <label>
-                <Switch
-                  size="sm"
-                  checked={drafts}
-                  onCheckedChange={setDrafts}
+      <header className={styles.resultHeader} data-emr-table-workspace-header>
+        <EmrPageHeader
+          title="차트 상세 검색"
+          badge={
+            !page && !error ? (
+              <Skeleton aria-label="차트 수 불러오는 중" className="h-4 w-6" />
+            ) : (
+              <Badge variant="secondary">{page?.total ?? 0}</Badge>
+            )
+          }
+          className={styles.heading}
+          actionsClassName={styles.toolbar}
+          actions={
+            <>
+              <div
+                className={styles.searchControls}
+                onBlur={(e) => {
+                  if (
+                    !q &&
+                    popup !== "filter" &&
+                    !e.currentTarget.contains(e.relatedTarget as Node)
+                  )
+                    setEditingSearch(false);
+                }}
+              >
+                {editingSearch || q ? (
+                  <div className={styles.searchField}>
+                    <Input
+                      autoFocus
+                      aria-label="차트 검색어"
+                      placeholder="증상·진단·오더 검색"
+                      value={composingText ?? q}
+                      onCompositionStart={(e) => {
+                        composing.current = true;
+                        setComposingText(e.currentTarget.value);
+                      }}
+                      onCompositionEnd={(e) => {
+                        composing.current = false;
+                        setComposingText(null);
+                        setQ(e.currentTarget.value);
+                        setSort("relevance");
+                      }}
+                      onValueChange={(v) => {
+                        if (composing.current) setComposingText(v);
+                        else {
+                          setQ(v);
+                          setSort("relevance");
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape" && !e.nativeEvent.isComposing) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setQ("");
+                          closeSearch();
+                        }
+                      }}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      aria-label="검색어 지우기"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setQ("");
+                        closeSearch();
+                      }}
+                    >
+                      <CloseIcon />
+                    </Button>
+                  </div>
+                ) : (
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <Button
+                          ref={searchButton}
+                          variant="outline"
+                          size="icon"
+                          aria-label="검색"
+                          onClick={() => setEditingSearch(true)}
+                        />
+                      }
+                    >
+                      <SearchIcon aria-hidden="true" />
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">검색</TooltipContent>
+                  </Tooltip>
+                )}
+                <Popover
+                  open={active && popup === "filter"}
+                  onOpenChange={(v) => setPopup(v ? "filter" : "")}
+                >
+                  <Tooltip disabled={popup === "filter"}>
+                    <TooltipTrigger
+                      render={
+                        <PopoverTrigger
+                          render={
+                            <EmrTableFilterTrigger
+                              iconOnly
+                              activeCount={count}
+                              aria-label={filterLabel}
+                            />
+                          }
+                        />
+                      }
+                    />
+                    <TooltipContent side="bottom">{filterLabel}</TooltipContent>
+                  </Tooltip>
+                  <PopoverContent
+                    align="end"
+                    className="w-auto max-w-[96vw] p-0"
+                    initialFocus={false}
+                  >
+                    <EmrTableFilterBuilder
+                      autoOpenFirstField={false}
+                      fields={fields}
+                      model={groups}
+                      onModelChange={setGroups}
+                      onClose={() => setPopup("")}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className={styles.controls}>
+                <Pick
+                  size="default"
+                  label="진료 담당의"
+                  value={doctor || "any"}
+                  options={[
+                    ["any", "전체 수의사"],
+                    ...(page?.doctors ?? []).map(
+                      (d) => [d.id, d.name] as [string, string],
+                    ),
+                    ...(doctor && !page?.doctors?.some((d) => d.id === doctor)
+                      ? [[doctor, "선택한 담당의"] as [string, string]]
+                      : []),
+                  ]}
+                  onChange={(v) => setDoctor(v === "any" ? "" : v)}
                 />
-                작성 중 차트 포함
-              </label>
-            </div>
-            {error ? (
+                <EmrFilterToggle
+                  size="default"
+                  pressed={mine}
+                  onPressedChange={setMine}
+                  title="내가 담당하거나 작성한 차트"
+                >
+                  내 차트
+                </EmrFilterToggle>
+              </div>
+              <span aria-hidden className="h-4 w-px bg-border" />
+              <div className={styles.controls}>
+                <Pick
+                  size="default"
+                  label="정렬"
+                  value={sort ?? "relevance"}
+                  options={[
+                    ...(q.trim()
+                      ? [
+                          ["relevance", "관련도순"] as [string, string],
+                          ["recent", "최근순"] as [string, string],
+                        ]
+                      : [
+                          [
+                            sort === "recent" ? "recent" : "relevance",
+                            "최근순",
+                          ] as [string, string],
+                        ]),
+                    ["oldest", "오래된순"],
+                  ]}
+                  onChange={(v) => setSort(v as SearchParams["sort"])}
+                />
+                <ToggleGroup
+                  aria-label="차트 보기 방식"
+                  value={[view]}
+                  variant="outline"
+                  size="default"
+                  onValueChange={(v) => {
+                    if (v.length) setView(v[0]);
+                  }}
+                >
+                  <ToggleGroupItem value="list" aria-label="리스트 보기">
+                    <MenuIcon />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="card" aria-label="카드 보기">
+                    <GridIcon />
+                  </ToggleGroupItem>
+                </ToggleGroup>
+                <Button
+                  variant="outline"
+                  aria-pressed={narrow}
+                  onClick={() => setNarrow(!narrow)}
+                >
+                  <WidthIcon />
+                  {narrow ? "넓게 보기" : "좁게 보기"}
+                </Button>
+              </div>
+              {!readOnly && <>
+              <span aria-hidden className="h-4 w-px bg-border" />
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button disabled={!page || !checked.length || exporting}>
+                      <DownloadIcon />
+                      내보내기
+                      {checked.length ? " (" + checked.length + ")" : ""}
+                      <ChevronDownIcon />
+                    </Button>
+                  }
+                />
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => void exportChecked("pdf")}>
+                    <DocumentIcon />
+                    PDF로 내보내기
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void exportChecked("csv")}>
+                    <DownloadIcon />
+                    CSV로 내보내기
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              </>}
+            </>
+          }
+        />
+      </header>
+      <div className={styles.resultsBody}>
+        <div className={styles.listhead} data-narrow={narrow}>
+          {!readOnly && <div role="group" aria-label="차트 선택" className="flex shrink-0 items-center gap-2">
+            <Checkbox
+              aria-label="현재 결과 모두 선택"
+              disabled={!page?.items.length || loadingFirst || loadingMore || selecting}
+              checked={!!page?.items.length && checked.length === page.total}
+              indeterminate={
+                !!checked.length && checked.length !== (page?.total ?? 0)
+              }
+              onCheckedChange={(v) => void selectResults(v)}
+            />
+            <span className="emr-control-text-compact whitespace-nowrap">{checked.length ? checked.length + "건 선택" : "전체 선택"}</span>
+            {!!checked.length && (
+              <Button
+                variant="outline"
+                size="xs"
+                onClick={() => setChecked([])}
+                disabled={selecting}
+              >
+                선택 해제
+              </Button>
+            )}
+          </div>}
+          <label>
+            <Switch size="sm" checked={drafts} onCheckedChange={setDrafts} />
+            작성 중 차트 포함
+          </label>
+        </div>
+        <ScrollArea viewportRef={scroll} className={styles.resultsScroll}>
+          <div className={styles.list} data-narrow={narrow}>
+            {error && (
               <div className={styles.empty} role="alert">
                 {error}
                 <Button
                   variant="outline"
-                  size="sm"
-                  onClick={
-                    page?.nextCursor
-                      ? () => void more()
-                      : () => setAttempt((a) => a + 1)
-                  }
+                  onClick={() => setAttempt((a) => a + 1)}
                 >
                   다시 시도
                 </Button>
               </div>
-            ) : null}
-            {page?.items.map((chart) => (
-              <ChartRow
-                key={chart.id}
-                chart={chart}
-                active={selected?.id === chart.id}
-                query={q}
-                onOpen={() => showSource(chart)}
-                onCopy={(mode) => void showSource(chart, mode)}
-              />
-            ))}
-            {!busy && !error && page?.total === 0 && (
-              <div className={styles.empty}>
-                <SearchIcon />
-                조건에 맞는 차트가 없습니다.
-                {changed && (
-                  <Button variant="outline" size="sm" onClick={reset}>
-                    검색 조건 초기화
-                  </Button>
+            )}
+            {!visiblePage && !error && (
+              <div
+                role="status"
+                aria-label="차트를 불러오는 중입니다"
+                className="grid gap-3"
+              >
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-6 rounded-xl border bg-card p-4"
+                  >
+                    <Skeleton className="h-48 w-1/4" />
+                    <div className="grid flex-1 gap-4">
+                      <Skeleton className="h-6 w-1/3" />
+                      <Skeleton className="h-5 w-4/5" />
+                      <Skeleton className="h-5 w-2/3" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {!!visiblePage?.items.length && (
+              <section
+                aria-label="차트 검색 결과"
+                aria-busy={!page}
+                inert={!page}
+                ref={listRef}
+                className={styles.results}
+                data-view={view}
+              >
+                {visiblePage.items.map((chart) => (
+                  <ChartRow
+                    key={chart.id}
+                    chart={chart}
+                    query={loaded?.params.query ?? q}
+                    active={selected?.id === chart.id}
+                    checked={checked.includes(chart.id)}
+                    favorite={favorites.ids.includes(chart.id)}
+                    onOpen={() => void showSource(chart)}
+                    onOpenProfile={onOpenProfile}
+                    onCheck={readOnly ? undefined : () => {
+                      if (selecting) return;
+                      if (!checked.includes(chart.id) && checked.length >= 500) {
+                        setNotice("한 번에 최대 500건까지 선택할 수 있습니다. 검색 조건을 좁혀 주세요.");
+                        return;
+                      }
+                      setChecked((ids) =>
+                        ids.includes(chart.id)
+                          ? ids.filter((id) => id !== chart.id)
+                          : [...ids, chart.id],
+                      );
+                    }}
+                    onFavorite={() => toggleFavorite(chart.id)}
+                    onCopy={readOnly ? undefined : (mode) => void showSource(chart, mode)}
+                    onViewChart={() => viewDocument(chart)}
+                  />
+                ))}
+              </section>
+            )}
+            <DemoHistorySection items={demoMatches} unavailable={demo.unavailable} query={q} />
+            {!demoMatches.length && !loadingFirst && !error && page?.total === 0 && (
+              <EmrTableFeedbackSurface className="min-h-52 flex-1" role="status">
+                <EmrEmptyState
+                  surface="content"
+                  kind={
+                    q
+                      ? "no-search-results"
+                      : mine
+                        ? "no-scope-result"
+                        : changed
+                          ? "no-filter-results"
+                          : "no-data"
+                  }
+                  title={
+                    q
+                      ? "검색 결과가 없습니다"
+                      : mine && !doctor && !count
+                        ? "담당하거나 작성한 차트가 없습니다"
+                        : changed
+                          ? "조건에 맞는 차트가 없습니다"
+                          : "등록된 완료 차트가 없습니다"
+                  }
+                  primaryAction={
+                    changed ? (
+                      <Button
+                        variant="outline"
+                        onClick={q ? () => setQ("") : reset}
+                      >
+                        {q
+                          ? "검색어 초기화"
+                          : mine && !doctor && !count
+                            ? "전체 차트 보기"
+                            : "검색 조건 초기화"}
+                      </Button>
+                    ) : undefined
+                  }
+                />
+              </EmrTableFeedbackSurface>
+            )}
+            {page?.nextCursor && (
+              <div ref={sentinel} data-chart-search-sentinel className="min-h-px py-2">
+                {loadingMore && (
+                  <div role="status" className="py-2 text-center text-sm text-muted-foreground">
+                    차트 불러오는 중
+                  </div>
+                )}
+                {moreError && (
+                  <EmrInlineAlert
+                    severity="error"
+                    title={moreError.message}
+                    action={
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={moreError.restart
+                          ? () => setAttempt((a) => a + 1)
+                          : () => void more()}
+                      >
+                        {moreError.restart ? "검색 다시 불러오기" : "다시 시도"}
+                      </Button>
+                    }
+                  />
                 )}
               </div>
             )}
-            {busy && (
-              <p role="status" className={styles.empty}>
-                차트를 불러오는 중입니다.
-              </p>
-            )}
-            {page?.nextCursor && (
-              <Button
-                className="m-4"
-                disabled={busy}
-                variant="outline"
-                onClick={() => void more()}
-              >
-                더 보기
-              </Button>
-            )}
           </div>
-        </div>
+        </ScrollArea>
         {selected && (
-          <ChartSource
-            api={api}
-            chart={selected}
-            query={q}
-            onOpenDocument={() =>
-              onViewChart({
-                chartId: selected.id,
-                encounterId: selected.encounterId,
-                patientId: selected.patientId,
-                visitAt: selected.visitAt ?? selected.clinicalAt,
-              })
-            }
-            onClose={closeSource}
-            onCopy={(mode) => setCopy({ source: selected, mode })}
-          />
+          <aside aria-label="차트 원본" className={styles.drawer}>
+            <PatientHistory
+              key={selected.patientId}
+              source={selected}
+              workspaceId={entry.workspaceId}
+              viewerKey={userId}
+              api={api}
+              onClose={closeSource}
+              favorites={favorites.ids}
+              onFavorite={toggleFavorite}
+              onCopy={readOnly ? undefined : (chart, mode) => void showSource(chart, mode)}
+              onOpenProfile={onOpenProfile}
+              onViewChart={viewDocument}
+            />
+          </aside>
         )}
       </div>
       {notice && (
