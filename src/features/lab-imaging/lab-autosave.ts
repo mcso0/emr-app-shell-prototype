@@ -25,6 +25,7 @@ export class LabAutosaveCoordinator<T> {
   private pending: Job<T> | null = null;
   private failed: Job<T> | null = null;
   private inFlight = false;
+  private activeRequest: Promise<LabAutosaveOutcome> | null = null;
   private blocked: LabAutosaveState["value"] | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private ready = false;
@@ -89,6 +90,19 @@ export class LabAutosaveCoordinator<T> {
     void this.write();
   }
 
+  /** Drain the actual writes, including a newer draft queued behind a slow write. */
+  async flushForCompletion(): Promise<boolean> {
+    while (this.hasUnsavedChanges()) {
+      if (this.authorityRetired || !this.isAuthorized() || this.blocked || this.paused || this.superseded) return false;
+      this.flush();
+      const active = this.activeRequest;
+      if (!active) return false; // Validation failed synchronously; keep the draft.
+      // write() processes the outcome first and retains failed/conflicting jobs for the editor.
+      await active.catch(() => {});
+    }
+    return !this.authorityRetired && !this.superseded && this.isAuthorized();
+  }
+
   retry() {
     if (this.superseded || this.paused || !this.failed || !["error", "held"].includes(this.blocked ?? "")) return;
     this.blocked = null;
@@ -141,10 +155,12 @@ export class LabAutosaveCoordinator<T> {
     this.emit({ value: "saving", message: "저장 중" });
     let outcome: LabAutosaveOutcome;
     try {
-      outcome = await this.request(job.value, job.requestId, job.revision);
+      this.activeRequest = this.request(job.value, job.requestId, job.revision);
+      outcome = await this.activeRequest;
     } catch {
       outcome = { ok: false, reason: "error", message: "네트워크 오류로 저장하지 못했습니다.", retryable: true };
     }
+    this.activeRequest = null;
     this.inFlight = false;
     if (this.authorityRetired || !this.isAuthorized()) { this.retireAuthority(); return; }
     if (!outcome.ok) {
@@ -230,6 +246,35 @@ export function useLabAutosave<T>(resultScope: string, request: Request<T>, revi
   const flush = useCallback(() => coordinator.flush(), [coordinator]);
   const retry = useCallback(() => coordinator.retry(), [coordinator]);
   return { state, change, flush, retry };
+}
+
+/** A mounted result/actor/attempt owns its own lock; leaving invalidates even a later return to the same result. */
+export class LabCompletionGate {
+  private active = true;
+  private pending = false;
+
+  leave() { this.active = false; }
+
+  async run(drain: () => Promise<boolean>, complete: () => Promise<boolean>, pendingChanged: (pending: boolean) => void) {
+    if (!this.active || this.pending) return false;
+    this.pending = true;
+    pendingChanged(true);
+    try {
+      if (!await drain() || !this.active) return false;
+      return await complete();
+    } finally {
+      this.pending = false;
+      if (this.active) pendingChanged(false);
+    }
+  }
+}
+
+/** Only the current actor's two result editors participate; never mix attempts. */
+export async function flushLabResultForCompletion(actor: string | null, workspaceId: string, resultId: string) {
+  if (!actor || actor !== currentAutosaveActor()) return false;
+  const queues = ["rows", "overall"].map(kind => pendingResults.get(ownedScope(actor, `${workspaceId}:${resultId}:${kind}`)));
+  const saved = await Promise.all(queues.map(queue => queue?.flushForCompletion() ?? true));
+  return actor === currentAutosaveActor() && saved.every(Boolean) && queues.every(queue => !queue?.hasUnsavedChanges());
 }
 
 /** Superseded inputs remain recoverable in the previous result, never in a new attempt. */

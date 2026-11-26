@@ -49,6 +49,29 @@ completion, stale writes, assignment changes and edit/payment races. Run the
 applicable type/lint/build/docs checks. Record actual evidence and limitations
 here. The initial intake had no candidate evidence; the following record supersedes it.
 
+### Lab completion and pending corrections — 2026-11-18 local follow-up
+
+At the #1100 baseline, the client could send completion while autosave was
+still in flight. In the network-isolated release rehearsal, both clinical and
+external lab attempt 2 accepted completion with synthetic value 8; a delayed
+correction to 9 was then rejected as `lab_result_read_only`. The fixtures
+rolled back. This establishes a possible sequence, not a production incident.
+
+The local candidate drains the current actor's row and overall-finding queues
+after instruction review and before the lab completion request. It does not
+retry failed writes or discard editable drafts. Controls cannot accept another
+edit while completion is pending. Leaving the result, changing actor, or
+changing attempt invalidates its pending completion without blocking the next
+result. Checked-empty legacy results still use existing server completion rules.
+No API, schema, authorization, imaging, or deployment change is included.
+
+Verification: 25 synthetic Chromium lab-workspace stories, 16 autosave/gate
+tests, and seven shared-workflow contracts passed locally. The tests cover
+slow writes in both editors, row and finding failures, recovery, duplicate
+completion, failed completion requests and patient/actor/attempt changes.
+This is a same-tab editor safeguard, not cross-tab draft coordination or a
+claim about real patient records. No hosted operation was performed.
+
 ### Local implementation and verification — 2026-11-17
 
 Implemented the shared examination entry/re-request flow, per-attempt canonical
