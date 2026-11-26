@@ -880,7 +880,7 @@ export function HospitalScheduleV1Screen({ workspaceId }: { workspaceId: string 
   };
 
   return (
-    <main data-testid="hospital-admin-schedule-screen" className="flex min-h-full flex-col bg-[var(--emr-surface-canvas)]">
+    <main data-testid="hospital-admin-schedule-screen" className="flex min-h-full flex-col bg-[var(--emr-surface-workspace)]">
       <EmrMainContentHeader aria-hidden="true" heightMode="adaptive" />
       <div className="border-b bg-card px-4 py-4 md:px-6">
         <div className="flex flex-wrap items-start justify-between gap-4">

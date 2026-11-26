@@ -15,7 +15,7 @@ type Args = Omit<ComponentProps<typeof PatientHistoryAside>, "id" | "onCollapse"
 function Example(args: Args) {
   const [open, setOpen] = useState(true);
   const [selected, setSelected] = useState("synthetic-new");
-  return <div className="h-[680px] w-[340px] bg-[var(--emr-surface-canvas)]">
+  return <div className="h-[680px] w-[340px] bg-[var(--emr-surface-workspace)]">
     {open ? <PatientHistoryAside {...args} id="storybook-patient-history" onCollapse={() => setOpen(false)} entries={args.entries.map((entry) => ({ ...entry, selected: selected === entry.id, onSelect: () => setSelected(entry.id) }))} /> : <Button size="sm" variant="outline" onClick={() => setOpen(true)}>이력 다시 열기</Button>}
     <output className="sr-only" aria-label="합성 선택 이력">{selected}</output>
   </div>;

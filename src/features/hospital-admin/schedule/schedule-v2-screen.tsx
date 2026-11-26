@@ -291,7 +291,7 @@ export function HospitalScheduleV2Screen({ workspaceId }: { workspaceId: string 
   };
 
   return (
-    <main data-testid="hospital-admin-schedule-v2-screen" className="flex h-full min-h-0 flex-col overflow-y-auto bg-[var(--emr-surface-canvas)]">
+    <main data-testid="hospital-admin-schedule-v2-screen" className="flex h-full min-h-0 flex-col overflow-y-auto bg-[var(--emr-surface-workspace)]">
       <EmrMainContentHeader aria-hidden="true" heightMode="adaptive" />
       <SchedulePageHeader
         busy={pendingAction !== null}
