@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
-import { SearchParamsContext } from "next/dist/shared/lib/hooks-client-context.shared-runtime";
+import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import { PathnameContext, SearchParamsContext } from "next/dist/shared/lib/hooks-client-context.shared-runtime";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { Button } from "@/components/ui/button";
 import { useMockAuthStore } from "@/features/auth/session-store";
 import { getModule } from "@/modules/registry";
@@ -89,7 +90,10 @@ function Example(args: Args) {
     });
   }, [args.scenario, args.view, instance]);
   const props = { workspaceId: instance.result.workspaceId, moduleId: "lab", moduleLabel: "검사" };
-  return <div ref={ref} className="flex h-[920px] w-[1580px] max-w-full flex-col gap-2">
+  // Next 16.4 expects a render tree the Storybook app-directory decorator does not provide.
+  const [router] = useState(() => ({ bfcacheId: "synthetic-lab", back: fn(), forward: fn(), refresh: fn(), prefetch: fn(), push: fn(), replace: fn() }));
+  const [params] = useState(() => new URLSearchParams({ date: "2026-10-11" }));
+  return <AppRouterContext.Provider value={router}><PathnameContext.Provider value={`/w/${props.workspaceId}/lab`}><SearchParamsContext.Provider value={params}><div ref={ref} className="flex h-[920px] w-[1580px] max-w-full flex-col gap-2">
     {mounted ? <>
       <div className="flex items-center gap-2"><Button variant="outline">합성 입력 완료</Button><span className="text-xs text-muted-foreground">합성 기능 확인 값 · 임상 사용 금지</span></div>
       <div className="flex min-h-0 flex-1">
@@ -97,11 +101,11 @@ function Example(args: Args) {
         {args.view !== "queue" ? <main className="min-w-0 flex-1">{args.view === "workspace" ? <ActualDocument instance={instance} /> : <LabContent {...props} hasContentAside={false} hasRightPanel={false} />}</main> : null}
       </div>
     </> : null}
-  </div>;
+  </div></SearchParamsContext.Provider></PathnameContext.Provider></AppRouterContext.Provider>;
 }
 const meta = {
   title: "Features/Lab/Actual Workspace", component: Example, tags: ["autodocs"], args: { scenario: "ready" as Args["scenario"], view: "workspace" as Args["view"] }, argTypes: { scenario: { control: false }, view: { control: false } },
-  parameters: { nextjs: { appDirectory: true, navigation: { pathname: "/w/storybook-lab/lab", query: { date: "2026-10-11" } } }, layout: "fullscreen", docs: { story: { inline: false, height: "980px" }, description: { component: "실제 LabSidePanel, LabSlotAvailabilityProvider와 WorkspaceDocumentLayout을 연결해 LabContent 안의 결과 표, 종합소견, 이력, 수신함을 렌더합니다. 결과지는 실제 parser를 통과하는 합성 v2 프로필입니다. 큐·결과 항목·행 자동 저장·phase2·첨부 API를 정확한 경로에서 로컬로 가로챕니다. 결과값·소견·메타데이터는 합성 응답에 반영합니다. 기존 표 밀도 비교 예제는 그대로 유지합니다. 이동과 복사는 요청 URL을 기록하며 실제 앱 이동, 권한 검증, 검사·마스터·스토리지 저장은 하지 않습니다. 실제 수신함에 연결된 장비자료가 없는 상태입니다. 환자 컨텍스트 헤더와 전체 AppShell은 별도 범위입니다." } } },
+  parameters: { nextjs: { appDirectory: false, navigation: { pathname: "/w/storybook-lab/lab", query: { date: "2026-10-11" } } }, layout: "fullscreen", docs: { story: { inline: false, height: "980px" }, description: { component: "실제 LabSidePanel, LabSlotAvailabilityProvider와 WorkspaceDocumentLayout을 연결해 LabContent 안의 결과 표, 종합소견, 이력, 수신함을 렌더합니다. 결과지는 실제 parser를 통과하는 합성 v2 프로필입니다. 큐·결과 항목·행 자동 저장·phase2·첨부 API를 정확한 경로에서 로컬로 가로챕니다. 결과값·소견·메타데이터는 합성 응답에 반영합니다. 기존 표 밀도 비교 예제는 그대로 유지합니다. 이동과 복사는 요청 URL을 기록하며 실제 앱 이동, 권한 검증, 검사·마스터·스토리지 저장은 하지 않습니다. 실제 수신함에 연결된 장비자료가 없는 상태입니다. 환자 컨텍스트 헤더와 전체 AppShell은 별도 범위입니다." } } },
   beforeEach: ({ args }) => {
     fixture = createLabWorkspaceFixture(args.scenario);
     const previousUrl = window.location.href;
@@ -126,6 +130,86 @@ async function setNumeric(canvas: Canvas, value: string) {
   await ready(canvas); const input = canvas.getByRole("textbox", { name: "합성 수치 결과값" });
   await userEvent.click(input); await userEvent.clear(input); await userEvent.type(input, value); await userEvent.click(canvas.getByRole("button", { name: "합성 입력 완료" }));
 }
+async function requestCompletion(canvas: Canvas, canvasElement: HTMLElement) {
+  await userEvent.click(canvas.getByRole("button", { name: "검사 상태 액션 열기" }));
+  await userEvent.click(await within(canvasElement.ownerDocument.body).findByRole("menuitem", { name: "검사완료" }));
+}
+export const CompletionWaitsForBothEditors: Story = { play: async ({ canvas, canvasElement }) => {
+  const releaseRows = fixture.delaySave("rows"), releaseOverall = fixture.delaySave("overall");
+  try {
+    await setNumeric(canvas, "4");
+    const finding = canvas.getByRole("textbox", { name: "검사결과 종합소견" });
+    await userEvent.clear(finding); await userEvent.type(finding, "Synthetic correction");
+    await requestCompletion(canvas, canvasElement);
+    await waitFor(() => expect(canvasElement.querySelector("[inert][aria-busy='true']")).not.toBeNull());
+    await expect(fixture.lifecycle).toHaveLength(0);
+    releaseRows();
+    await waitFor(() => expect(fixture.result.rows[0].value).toBe("4"));
+    await expect(fixture.lifecycle).toHaveLength(0);
+    releaseOverall();
+    await waitFor(() => expect(fixture.lifecycle.map(event => event.action)).toEqual(["complete"]));
+    await expect(fixture.state.overallFinding).toBe("Synthetic correction");
+  } finally { releaseRows(); releaseOverall(); }
+} };
+export const FailedCorrectionBlocksCompletion: Story = { args: { scenario: "row-save-error" }, play: async ({ canvas, canvasElement }) => {
+  const release = fixture.delaySave("rows");
+  try {
+    await setNumeric(canvas, "4"); await requestCompletion(canvas, canvasElement);
+    await waitFor(() => expect(canvasElement.querySelector("[inert][aria-busy='true']")).not.toBeNull());
+    release();
+    await waitFor(() => expect(canvas.getByTestId("lab-result-save-status")).toHaveTextContent("저장하지 못했습니다"));
+    await expect(fixture.lifecycle).toHaveLength(0);
+    await expect(canvas.getByRole("textbox", { name: "합성 수치 결과값" })).toHaveValue("4");
+    await expect(fixture.result.rows[0].value).toBe("2");
+    await userEvent.click(canvas.getByTestId("lab-result-save-retry-button"));
+    await waitFor(() => expect(fixture.result.rows[0].value).toBe("4"));
+    await requestCompletion(canvas, canvasElement);
+    await waitFor(() => expect(fixture.lifecycle.map(event => event.action)).toEqual(["complete"]));
+  } finally { release(); }
+} };
+export const FailedFindingBlocksCompletion: Story = { args: { scenario: "overall-save-error" }, play: async ({ canvas, canvasElement }) => {
+  await ready(canvas);
+  const release = fixture.delaySave("overall");
+  try {
+    const finding = canvas.getByRole("textbox", { name: "검사결과 종합소견" });
+    await userEvent.clear(finding); await userEvent.type(finding, "Keep my finding");
+    await requestCompletion(canvas, canvasElement);
+    await waitFor(() => expect(canvasElement.querySelector("[inert][aria-busy='true']")).not.toBeNull());
+    release();
+    await waitFor(() => expect(canvas.getByTestId("lab-overall-save-status")).toHaveTextContent("저장하지 못했습니다"));
+    await expect(fixture.lifecycle).toHaveLength(0);
+    await expect(finding).toHaveValue("Keep my finding");
+    await expect(fixture.state.overallFinding).toBe("합성 종합소견");
+  } finally { release(); }
+} };
+async function leaveBeforeSaveSettles(kind: "patient" | "attempt" | "actor", canvas: Canvas, canvasElement: HTMLElement) {
+  const release = fixture.delaySave("rows");
+  const item = fixture.workItems[0];
+  const previous = { taskId: item.taskId, taskAttemptNo: item.taskAttemptNo, status: item.status };
+  const session = useMockAuthStore.getState().session!;
+  const refresh = () => window.dispatchEvent(new Event("focus"));
+  const busy = () => canvasElement.querySelector("[inert][aria-busy='true']");
+  try {
+    await setNumeric(canvas, "4"); await requestCompletion(canvas, canvasElement);
+    await waitFor(() => expect(busy()).not.toBeNull());
+    if (kind === "actor") useMockAuthStore.setState({ session: { ...session, id: "different-synthetic-actor" } });
+    else if (kind === "patient") useLabImagingStore.getState().selectLabResult(`live-lab-${fixture.workItems[1].id}`);
+    else {
+      Object.assign(item, { taskId: "97000000-0000-4000-8007-000000000002", taskAttemptNo: 2, status: "requested" });
+      refresh();
+    }
+    await waitFor(() => expect(busy()).toBeNull());
+    release();
+    await waitFor(() => expect(fixture.result.rows[0].value).toBe("4"));
+    await expect(fixture.lifecycle).toHaveLength(0);
+  } finally {
+    release(); useMockAuthStore.setState({ session }); Object.assign(item, previous);
+    useLabImagingStore.getState().selectLabResult(fixture.selectedLabResultId); refresh();
+  }
+}
+export const PatientChangeCancelsPendingCompletion: Story = { play: ({ canvas, canvasElement }) => leaveBeforeSaveSettles("patient", canvas, canvasElement) };
+export const AttemptChangeCancelsPendingCompletion: Story = { play: ({ canvas, canvasElement }) => leaveBeforeSaveSettles("attempt", canvas, canvasElement) };
+export const ActorChangeCancelsPendingCompletion: Story = { play: ({ canvas, canvasElement }) => leaveBeforeSaveSettles("actor", canvas, canvasElement) };
 export const ResultRowsAndDensity: Story = { play: async ({ canvas, canvasElement }) => {
   await ready(canvas); const table = canvas.getByRole("table", { name: "임상병리 검사 결과 입력" });
   for (const label of ["항목", "결과값", "측정 불가", "단위", "정상범위", "판정", "담당자"]) await expect(within(table).getByRole("columnheader", { name: label })).toBeVisible();
