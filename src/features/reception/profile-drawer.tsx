@@ -1,8 +1,5 @@
 "use client";
 
-import { useDemoHistory } from "@/features/chart/demo-history";
-import { useAuthClient as useDemoHistoryAuth } from "@/features/auth/auth-client";
-
 import { formatProfileDate, formatProfileSchedule, formatProfileTime, getProfileMemo, getProfileSexLabel, getProfileSpeciesLabel } from "./profile-side-panel-format";
 import { mapLivePatient, mapLiveGuardian, getLivePatientProfileSidePanelModel, getLiveGuardianProfileSidePanelModel, getLiveUnavailableProfileSidePanelModel, getLiveTabAccess } from "./profile-live-side-panel-model";
 
@@ -1447,11 +1444,6 @@ export function PatientProfileDrawer({
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<ProfileSidePanelTab>(defaultTab);
-  const { session: historyViewer, hydrate: hydrateHistoryViewer } = useDemoHistoryAuth();
-  useEffect(() => {
-    if (preparedWorkspace && activeTab === "history") hydrateHistoryViewer();
-  }, [preparedWorkspace, activeTab, hydrateHistoryViewer]);
-  const archivedHistory = useDemoHistory(workspaceId, historyViewer?.id, patientId, activeTab === "history");
   const [draft, setDraft] = useState<
     Pick<Patient, "allergyNote" | "breed" | "handlingCautionNote" | "microchipNo" | "name" | "specialNote">
   >({
@@ -1589,7 +1581,6 @@ export function PatientProfileDrawer({
 
   return (
     <ProfileSidePanel
-      archivedHistory={archivedHistory}
       defaultTab={defaultTab}
       embedded
       model={preparedWorkspace ? { ...model, todayItems: todayRead.items, todayState: { status: todayRead.status } } : model}

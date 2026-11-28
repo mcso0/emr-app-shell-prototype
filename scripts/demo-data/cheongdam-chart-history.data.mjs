@@ -1,0 +1,369 @@
+// DEMO-DATA-PR-003. Fictional past visits for the Cheongdam synthetic workspace.
+// Every name, finding, and image is invented. Patient numbers refer to the
+// existing CD-P-0xx seed patients; vet keys map to existing seed staff.
+//
+// Visit fields:
+//   p        seed patient number (CD-P-0xx)
+//   at       KST visit start, "YYYY-MM-DD HH:MM"
+//   vet      attending veterinarian key (see vets)
+//   first    true for a first visit of a problem, false for a revisit
+//   purpose  visit purpose shown on reception and chart search
+//   cc       chief complaint
+//   S/O/A/P  chart text by SOAP section
+//   dx       [name, kind] with kind confirmed | suspected | differential
+//   orders   order catalog keys (see catalog); all are completed
+//   img      [imageKey, caption] attachments shown in the objective section
+//   status   chart status, default "signed"
+
+export const vets = {
+  su: "49110000-0000-4000-8000-000000000003", // 이수지
+  doyun: "49110000-0000-4000-8000-000000000006", // 김도윤
+  seoyeon: "49110000-0000-4000-8000-000000000007", // 박서연
+  minjae: "49110000-0000-4000-8000-000000000008", // 정민재
+  jihoon: "49110000-0000-4000-8000-000000000010", // 오지훈
+  gayeon: "49110000-0000-4000-8000-000000000011", // 한가연
+};
+
+export const visits = [
+  // CD-P-001 루미 (Maltese puppy)
+  { p: 1, at: "2026-06-20 10:00", vet: "gayeon", first: true, purpose: "예방접종", cc: "2차 종합백신 접종",
+    S: "식욕과 활력 양호. 지난 접종 후 특이 반응 없었음.", O: "체중 1.4kg. 체온 38.6℃. 청진상 특이 소견 없음.",
+    A: "접종 가능한 건강 상태.", P: "종합백신 2차 접종. 3주 뒤 3차 접종 예정.",
+    dx: [["예방 검진", "confirmed"]], orders: ["consult-first", "vaccine-core"] },
+  { p: 1, at: "2026-07-11 10:30", vet: "gayeon", first: false, purpose: "예방접종", cc: "3차 종합백신 접종",
+    S: "2차 접종 후 하루 정도 졸려했으나 곧 회복함.", O: "체중 1.7kg. 체온 38.7℃. 접종 부위 이상 없음.",
+    A: "정상 성장. 접종 가능.", P: "종합백신 3차 접종. 접종 후 30분 관찰 뒤 귀가.",
+    dx: [["예방 검진", "confirmed"]], orders: ["consult-revisit", "vaccine-core"] },
+  { p: 1, at: "2026-10-10 15:00", vet: "su", first: true, purpose: "상담", cc: "중성화 수술 상담",
+    S: "보호자가 중성화 시기를 문의함. 최근 식욕과 배변 정상.", O: "체중 2.1kg. 유치 일부 잔존. 슬개골 촉진상 이상 없음.",
+    A: "수술 전 평가 가능한 건강 상태.", P: "수술 전 혈액검사를 시행하고 결과를 함께 설명. 잔존 유치는 수술 때 함께 평가.",
+    dx: [["예방 검진", "confirmed"]], orders: ["consult-revisit", "cbc", "chem10"] },
+
+  // CD-P-002 보리 (Poodle)
+  { p: 2, at: "2026-06-13 09:00", vet: "su", first: true, purpose: "정기 검진", cc: "정기 건강 상태 확인",
+    S: "식사와 산책에 변화 없음.", O: "기본 진찰에서 문진과 다른 변화는 확인되지 않음.",
+    A: "특이 호소 없는 정기 확인.", P: "별도 오더 없이 방문 종료.",
+    dx: [["예방 검진", "confirmed"]], orders: ["consult-revisit"] },
+  { p: 2, at: "2026-09-19 11:20", vet: "doyun", first: true, purpose: "진료", cc: "어제 저녁부터 구토 2회",
+    S: "어제 저녁 간식 후 구토 2회. 오늘 아침 사료는 절반 먹음. 설사 없음.", O: "체온 38.9℃. 복부 촉진 시 가벼운 불편감. 탈수 소견 경미.",
+    A: "급성 위장염 의심. 이물 가능성은 낮음.", P: "피하수액 처치. 위장 보호 경구약 3일분. 증상 지속 시 영상검사.",
+    dx: [["급성 위장염", "suspected"]], orders: ["consult-first", "fluid-sc", "oral-rx"] },
+  { p: 2, at: "2026-09-22 10:40", vet: "doyun", first: false, purpose: "재진", cc: "구토 재진",
+    S: "처치 후 구토 없음. 식욕 평소 수준으로 회복.", O: "복부 촉진상 불편감 없음. 체온 38.5℃.",
+    A: "급성 위장염 호전.", P: "남은 약 복용 후 종료. 간식 급여량 조절 안내.",
+    dx: [["급성 위장염", "confirmed"]], orders: ["consult-revisit"] },
+
+  // CD-P-003 나나 (Korean shorthair)
+  { p: 3, at: "2026-07-03 14:00", vet: "seoyeon", first: true, purpose: "진료", cc: "재채기와 맑은 콧물",
+    S: "4일 전부터 재채기. 맑은 콧물. 식욕은 약간 감소.", O: "체온 39.2℃. 양측 맑은 비루. 결막 경미한 충혈. 폐음 정상.",
+    A: "고양이 상부호흡기 증후군.", P: "경구약 5일분. 습도 관리와 식욕 기록 안내. 1주 뒤 재진.",
+    dx: [["고양이 상부호흡기 증후군", "confirmed"]], orders: ["consult-first", "oral-rx"] },
+  { p: 3, at: "2026-07-10 14:30", vet: "seoyeon", first: false, purpose: "재진", cc: "호흡기 증상 재진",
+    S: "재채기 빈도 크게 감소. 식욕 회복.", O: "체온 38.6℃. 비루 소실. 결막 정상.",
+    A: "상부호흡기 증상 호전.", P: "추가 처방 없이 종료. 재발 시 내원.",
+    dx: [["고양이 상부호흡기 증후군", "confirmed"]], orders: ["consult-revisit"] },
+
+  // CD-P-004 초코 (Pomeranian, senior)
+  { p: 4, at: "2026-06-17 15:00", vet: "su", first: true, purpose: "진료", cc: "복부를 자주 긁음",
+    S: "최근 배를 긁는 모습이 늘었음.", O: "복부 피부에 국소적인 붉은 기가 보임. 피부 세포검사에서 각질과 염증성 배경 관찰.",
+    A: "복부 표재성 피부염으로 평가.", P: "경구약 처방과 약욕 방법 안내. 1주 뒤 변화 확인.",
+    dx: [["복부 표재성 피부염", "confirmed"]], orders: ["consult-first", "oral-rx"] },
+  { p: 4, at: "2026-06-25 10:30", vet: "su", first: false, purpose: "재진", cc: "피부 경과 확인",
+    S: "긁는 빈도는 줄었지만 가끔 다시 긁음.", O: "붉은 범위가 초진에 비해 줄어듦.",
+    A: "피부염 호전 중.", P: "같은 부위의 잔여 증상을 재진에서 확인.",
+    dx: [["복부 표재성 피부염", "confirmed"]], orders: ["consult-revisit"] },
+  { p: 4, at: "2026-07-02 15:30", vet: "su", first: false, purpose: "재진", cc: "가려움 재진",
+    S: "지난 며칠간 긁는 동작이 거의 없었음.", O: "복부 피부의 붉은 기가 대부분 가라앉음.",
+    A: "잔여 불편이 드문 상태.", P: "최종 확인 후 이번 경과를 마무리.",
+    dx: [["복부 표재성 피부염", "confirmed"]], orders: ["consult-revisit"] },
+  { p: 4, at: "2026-07-16 11:00", vet: "su", first: false, purpose: "재진", cc: "피부염 경과 종료",
+    S: "이전과 같은 부위를 긁는 모습이 관찰되지 않음.", O: "활성 피부 병변이 보이지 않음.",
+    A: "복부 피부염 증상 소실.", P: "추가 오더 없이 종료.",
+    dx: [["복부 표재성 피부염", "confirmed"]], orders: ["consult-revisit"] },
+  { p: 4, at: "2026-10-17 16:00", vet: "minjae", first: true, purpose: "진료", cc: "왼쪽 뒷다리를 가끔 들고 걸음",
+    S: "산책 중 왼쪽 뒷다리를 들었다가 다시 디딤. 통증 반응은 뚜렷하지 않음.", O: "좌측 슬개골 내측 탈구 촉진(grade 2). 방사선상 골관절 변화 경미.",
+    A: "좌측 슬개골 내측 탈구.", P: "체중 관리와 미끄럼 방지 안내. 진통 경구약 5일분. 4주 뒤 재평가.",
+    dx: [["슬개골 탈구 의심", "suspected"]], orders: ["consult-first", "xray2", "oral-rx"],
+    img: [["xray-stifle", "좌측 슬관절 측면 방사선"]] },
+
+  // CD-P-005 모카 (Russian blue)
+  { p: 5, at: "2026-08-22 18:10", vet: "jihoon", first: true, purpose: "진료", cc: "화장실을 자주 감",
+    S: "하루 전부터 화장실을 자주 가고 소변량이 적음. 혈뇨는 보지 못함.", O: "방광 촉진 시 작고 예민함. 요검사에서 잠혈 양성, 결정 소량.",
+    A: "고양이 하부요로질환 의심.", P: "음수량 증가 방법 안내. 경구약 5일분. 요도 폐색 징후 시 즉시 내원 안내.",
+    dx: [["고양이 하부요로질환 의심", "suspected"]], orders: ["consult-first", "ua", "oral-rx"] },
+  { p: 5, at: "2026-08-29 18:30", vet: "jihoon", first: false, purpose: "재진", cc: "배뇨 증상 재진",
+    S: "화장실 횟수 평소 수준. 음수량 늘었음.", O: "방광 크기 정상. 요검사 잠혈 음성.",
+    A: "하부요로 증상 호전.", P: "습식 사료 비율 유지 안내 후 종료.",
+    dx: [["고양이 하부요로질환 의심", "suspected"]], orders: ["consult-revisit", "ua"] },
+
+  // CD-P-006 하루 (Jindo mix)
+  { p: 6, at: "2026-06-27 09:30", vet: "doyun", first: true, purpose: "정기 검진", cc: "연 1회 건강검진",
+    S: "특별한 증상 없음. 연례 검진 희망.", O: "체중 16.4kg. 신체검사 정상. CBC와 혈액화학 기준 범위.",
+    A: "건강 상태 양호.", P: "다음 검진은 1년 뒤. 심장사상충 예방 지속 안내.",
+    dx: [["예방 검진", "confirmed"]], orders: ["consult-first", "cbc", "chem10"] },
+  { p: 6, at: "2026-11-07 11:00", vet: "gayeon", first: true, purpose: "진료", cc: "오른쪽 귀를 긁고 냄새가 남",
+    S: "1주 전부터 오른쪽 귀를 긁음. 귀에서 냄새가 난다고 함.", O: "우측 외이도 갈색 분비물과 발적. 고막 확인 가능. 좌측 정상.",
+    A: "우측 외이염.", P: "귀 세정 후 점이제 사용법 안내. 10일 뒤 재진.",
+    dx: [["외이염", "confirmed"]], orders: ["consult-revisit", "ear-clean", "oral-rx"],
+    img: [["otoscope-ear", "우측 외이도 이경 사진"]] },
+
+  // CD-P-007 콩이 (Bichon frise)
+  { p: 7, at: "2026-06-15 10:30", vet: "su", first: true, purpose: "진료", cc: "오른쪽 귀를 긁고 머리를 흔듦",
+    S: "사흘 전부터 오른쪽 귀를 긁고 머리를 흔듦.", O: "우측 외이도 붉은 기와 분비물 관찰. 분비물 세포검사에서 염증성 배경.",
+    A: "우측 외이염.", P: "귀 세정과 경구약 처방. 재진에서 확인.",
+    dx: [["우측 외이염", "confirmed"]], orders: ["consult-first", "ear-clean", "oral-rx"],
+    img: [["otoscope-ear", "우측 외이도 초진 이경 사진"]] },
+  { p: 7, at: "2026-06-23 11:30", vet: "su", first: false, purpose: "재진", cc: "귀 증상 재진",
+    S: "첫 방문에 비해 긁는 횟수가 줄었다고 함.", O: "분비물과 붉은 기가 감소함.",
+    A: "우측 외이염 호전 중.", P: "남은 불편이 사라지는지 다음 방문에서 확인.",
+    dx: [["우측 외이염", "confirmed"]], orders: ["consult-revisit"] },
+  { p: 7, at: "2026-07-07 16:00", vet: "su", first: false, purpose: "재진", cc: "귀 상태 경과 확인",
+    S: "최근 머리를 흔들거나 귀를 긁는 모습이 없었음.", O: "뚜렷한 붉은 기나 분비물이 보이지 않음.",
+    A: "우측 외이염 증상 소실. 이번 경과 종료.", P: "추가 처치 없이 마무리.",
+    dx: [["우측 외이염", "confirmed"]], orders: ["consult-revisit"] },
+  { p: 7, at: "2026-08-10 10:00", vet: "seoyeon", first: true, purpose: "진료", cc: "왼쪽 앞발을 자주 핥음",
+    S: "산책 후 왼쪽 앞발을 가끔 핥음. 귀 증상은 재발하지 않음.", O: "좌측 앞발 패드에 옅은 표재성 자극 소견.",
+    A: "좌측 앞발 패드 표재성 자극. 앞선 외이염과 별개.", P: "산책 후 발 세척과 건조 안내. 악화 시 재진.",
+    dx: [["좌측 앞발 패드 표재성 자극", "confirmed"]], orders: ["consult-revisit"] },
+  { p: 7, at: "2026-09-26 15:20", vet: "seoyeon", first: true, purpose: "진료", cc: "겨드랑이와 배가 붉음",
+    S: "닭고기 간식을 먹은 뒤 이틀째 긁음. 겨드랑이가 붉어졌다고 함.", O: "양측 액와부와 복부에 홍반과 구진. 2차 감염 소견은 경미.",
+    A: "알레르기성 피부염 의심. 식이 관련 가능성.", P: "가려움 완화 경구약 7일분. 닭고기 성분 제외 식단 유지 안내.",
+    dx: [["알레르기성 피부염", "suspected"]], orders: ["consult-revisit", "oral-rx"],
+    img: [["skin-erythema", "액와부 홍반 사진"]] },
+
+  // CD-P-008 레오 (Persian, senior)
+  { p: 8, at: "2026-06-16 11:00", vet: "minjae", first: true, purpose: "진료", cc: "며칠간 식사량 감소",
+    S: "며칠간 식사량이 줄었다고 함.", O: "진찰 중 반응 유지. 보호자가 식사량 변화를 기록해 옴. CBC에서 특이 소견 없음.",
+    A: "식욕저하. 초진에서 뚜렷한 원인은 특정하지 못함.", P: "식사량 경과를 재진에서 확인.",
+    dx: [["식욕저하", "suspected"]], orders: ["consult-first", "cbc"] },
+  { p: 8, at: "2026-06-19 16:00", vet: "minjae", first: false, purpose: "재진", cc: "식사량 중간 확인",
+    S: "평소 먹던 음식의 섭취량이 조금 늘었음.", O: "보호자 식사 기록에서 증가 추세 확인.",
+    A: "식욕저하 호전 중.", P: "추가 방문에서 일상 섭취 수준으로 회복되는지 확인.",
+    dx: [["식욕저하", "suspected"]], orders: ["consult-revisit"] },
+  { p: 8, at: "2026-06-29 10:00", vet: "minjae", first: false, purpose: "재진", cc: "식욕 회복 재진",
+    S: "지난주와 달리 식사를 대부분 마친다고 함.", O: "이전과 같은 방식으로 작성한 식사 기록 확인.",
+    A: "일상 식사량에 근접함.", P: "한 번 더 변화 여부를 확인한 뒤 마무리.",
+    dx: [["식욕저하", "suspected"]], orders: ["consult-revisit"] },
+  { p: 8, at: "2026-07-13 14:30", vet: "minjae", first: false, purpose: "재진", cc: "정상 식사 회복 확인",
+    S: "기존 식사 습관으로 돌아왔으며 최근 다시 감소한 날이 없었음.", O: "보호자 기록에서 최근 식사량 안정.",
+    A: "식욕저하가 해소되어 이번 경과 종료.", P: "추가 오더 없이 종료.",
+    dx: [["식욕저하", "confirmed"]], orders: ["consult-revisit"] },
+  { p: 8, at: "2026-10-03 10:00", vet: "su", first: true, purpose: "정기 검진", cc: "노령묘 정기 검진",
+    S: "물을 예전보다 많이 마시는 것 같다고 함. 체중 변화는 모름.", O: "체중 4.6kg(4개월 전 5.0kg). BUN과 크레아티닌 경도 상승. 요비중 1.022.",
+    A: "고양이 만성 신장질환 의심. 초기 단계 추정.", P: "신장 처방식 전환 안내. 4주 뒤 혈액검사 재확인.",
+    dx: [["고양이 만성 신장질환 의심", "suspected"]], orders: ["consult-revisit", "cbc", "chem10", "ua"] },
+  { p: 8, at: "2026-10-31 10:30", vet: "su", first: false, purpose: "재진", cc: "신장 수치 재확인",
+    S: "처방식에 잘 적응함. 음수량은 여전히 많은 편.", O: "체중 4.7kg. 크레아티닌 이전과 비슷. 경도 탈수.",
+    A: "만성 신장질환 초기 단계로 평가.", P: "피하수액 처치. 2개월 간격 모니터링 계획.",
+    dx: [["고양이 만성 신장질환", "confirmed"]], orders: ["consult-revisit", "chem10", "fluid-sc"] },
+
+  // CD-P-009 두부 (Corgi)
+  { p: 9, at: "2026-07-25 13:00", vet: "jihoon", first: true, purpose: "상담", cc: "체중 증가 상담",
+    S: "최근 6개월 사이 체중이 늘었다고 함. 간식 급여가 많음.", O: "체중 13.2kg. 신체충실지수 7/9. 기타 신체검사 정상.",
+    A: "과체중.", P: "하루 급여 열량과 간식 비율 안내. 2개월 뒤 체중 확인.",
+    dx: [["과체중", "confirmed"]], orders: ["consult-first"] },
+  { p: 9, at: "2026-11-14 12:30", vet: "jihoon", first: false, purpose: "진료", cc: "계단을 오르기 싫어함",
+    S: "일주일 전부터 계단과 소파를 오르지 않으려 함. 체중은 조금 줄었음.", O: "체중 12.4kg. 흉요추 부위 촉진 시 통증 반응. 신경학적 결손 없음. 방사선상 추간 공간 경미한 협착.",
+    A: "흉요추부 통증. 추간판 질환 초기 의심.", P: "2주간 운동 제한. 진통 경구약 처방. 악화 시 정밀 영상 상담.",
+    dx: [["추간판 질환 의심", "suspected"]], orders: ["consult-revisit", "xray2", "oral-rx"],
+    img: [["xray-spine", "흉요추 측면 방사선"]] },
+
+  // CD-P-010 라떼 (Siamese)
+  { p: 10, at: "2026-06-13 09:20", vet: "doyun", first: true, purpose: "상담", cc: "털 엉킴 상담",
+    S: "빗질할 때 한 부위에서 불편해함.", O: "엉킨 털이 확인되며 노출된 피부에 뚜렷한 병변이 보이지 않음.",
+    A: "국소 털 엉킴.", P: "피부 변화가 생기는지 짧게 경과 확인.",
+    dx: [], orders: ["consult-first"] },
+  { p: 10, at: "2026-07-06 14:00", vet: "doyun", first: false, purpose: "재진", cc: "털 엉킴 경과 확인",
+    S: "최근 빗질 시 불편한 반응은 없었음.", O: "이전 자리의 털과 피부 상태 확인.",
+    A: "국소 불편 해소.", P: "추가 오더 없이 종료.",
+    dx: [], orders: ["consult-revisit"] },
+  { p: 10, at: "2026-09-12 11:00", vet: "gayeon", first: true, purpose: "진료", cc: "입 냄새가 심해짐",
+    S: "한 달 전부터 입 냄새가 심해짐. 건사료를 씹을 때 머뭇거림.", O: "상악 어금니 치석 2단계와 치은 발적. 하악 송곳니 주변 치은 퇴축.",
+    A: "치주질환.", P: "마취 전 혈액검사 후 스케일링 일정 상담. 양치 교육.",
+    dx: [["치주질환", "confirmed"]], orders: ["consult-revisit", "cbc", "chem10"],
+    img: [["dental-photo", "상악 어금니 치석 사진"]] },
+
+  // CD-P-011 마루 (Golden retriever)
+  { p: 11, at: "2026-06-06 10:00", vet: "minjae", first: true, purpose: "진료", cc: "일어날 때 뒷다리가 뻣뻣함",
+    S: "아침에 일어날 때 뒷다리가 뻣뻣하다가 걷고 나면 나아짐.", O: "양측 고관절 신전 시 불편감. 방사선상 고관절 경도 퇴행성 변화.",
+    A: "양측 고관절 퇴행성 관절질환.", P: "관절 보조제와 체중 관리 안내. 진통 경구약 7일분. 6주 뒤 재진.",
+    dx: [["고관절 퇴행성 관절질환", "confirmed"]], orders: ["consult-first", "xray2", "oral-rx"],
+    img: [["xray-hip", "골반 복배측 방사선"]] },
+  { p: 11, at: "2026-07-18 10:30", vet: "minjae", first: false, purpose: "재진", cc: "관절 재진",
+    S: "아침 뻣뻣함이 줄었고 산책 시간이 늘었음.", O: "고관절 신전 시 불편감 경미. 체중 28.1kg.",
+    A: "관절 통증 조절 양호.", P: "보조제 유지. 통증 재발 시 진통제 재처방.",
+    dx: [["고관절 퇴행성 관절질환", "confirmed"]], orders: ["consult-revisit"] },
+  { p: 11, at: "2026-11-21 15:00", vet: "doyun", first: true, purpose: "진료", cc: "옆구리에 혹이 만져짐",
+    S: "2주 전 목욕 중 왼쪽 옆구리에서 혹을 발견함. 크기 변화는 모름.", O: "좌측 흉벽 피하 2cm 연성 종괴. 경계 명확. 세침흡인 세포검사에서 지방세포 위주.",
+    A: "피하 지방종 의심.", P: "크기 기록 후 3개월 뒤 재측정. 급격한 증대 시 재진.",
+    dx: [["피하 지방종", "suspected"]], orders: ["consult-revisit"], status: "draft" },
+
+  // CD-P-012 달이 (Munchkin kitten)
+  { p: 12, at: "2026-06-12 16:00", vet: "seoyeon", first: true, purpose: "예방접종", cc: "종합백신 접종",
+    S: "입양 후 첫 내원. 식욕과 배변 정상.", O: "체중 1.6kg. 귀 진드기 소견 없음. 신체검사 정상.",
+    A: "건강한 아기 고양이.", P: "종합백신 1차 접종. 4주 뒤 추가 접종.",
+    dx: [["예방 검진", "confirmed"]], orders: ["consult-first", "vaccine-core"] },
+  { p: 12, at: "2026-07-10 16:30", vet: "seoyeon", first: false, purpose: "예방접종", cc: "추가 접종",
+    S: "지난 접종 후 특이 반응 없음.", O: "체중 2.1kg. 신체검사 정상.",
+    A: "정상 성장.", P: "종합백신 추가 접종. 내년 같은 시기 추가 접종 안내.",
+    dx: [["예방 검진", "confirmed"]], orders: ["consult-revisit", "vaccine-core"] },
+
+  // CD-P-013 루루 (Shiba inu)
+  { p: 13, at: "2026-08-01 17:00", vet: "jihoon", first: true, purpose: "진료", cc: "이틀째 묽은 변",
+    S: "이틀째 묽은 변을 하루 3회. 구토는 없음. 산책 중 풀을 먹었다고 함.", O: "체온 38.8℃. 장음 증가. 탈수 소견 없음.",
+    A: "급성 위장염.", P: "장 보호 경구약 3일분. 소화 쉬운 식단 안내.",
+    dx: [["급성 위장염", "confirmed"]], orders: ["consult-first", "oral-rx"] },
+  { p: 13, at: "2026-08-04 17:30", vet: "jihoon", first: false, purpose: "재진", cc: "설사 재진",
+    S: "변이 단단해짐. 식욕 정상.", O: "복부 촉진 정상. 장음 정상.",
+    A: "위장염 회복.", P: "기존 사료로 천천히 전환 후 종료.",
+    dx: [["급성 위장염", "confirmed"]], orders: ["consult-revisit"] },
+
+  // CD-P-014 소금 (British shorthair)
+  { p: 14, at: "2026-09-03 19:00", vet: "gayeon", first: true, purpose: "진료", cc: "일주일 사이 구토 3회",
+    S: "일주일 사이 사료를 먹은 직후 구토 3회. 털 뭉치가 섞인 적 있음.", O: "체온 38.4℃. 복부 촉진 정상. 활력 양호.",
+    A: "헤어볼 관련 구토 의심.", P: "빗질 빈도 증가와 헤어볼 관리 식이 안내. 지속 시 복부 초음파.",
+    dx: [["헤어볼 관련 구토", "suspected"]], orders: ["consult-first"] },
+  { p: 14, at: "2026-09-10 19:00", vet: "gayeon", first: false, purpose: "재진", cc: "구토 지속",
+    S: "관리 후에도 구토 2회. 식욕은 유지.", O: "복부 초음파에서 위벽 두께 정상. 장 내 이물 소견 없음. 장간막 림프절 정상 크기.",
+    A: "구조적 이상 없는 만성 간헐적 구토.", P: "식이 시험 4주. 구토 기록 요청.",
+    dx: [["만성 간헐적 구토", "suspected"]], orders: ["consult-revisit", "us-abdomen"],
+    img: [["us-abdomen", "위 장축 초음파"]] },
+
+  // CD-P-015 밤비 (Dachshund, senior)
+  { p: 15, at: "2026-07-11 09:10", vet: "minjae", first: true, purpose: "진료", cc: "뒷다리에 힘이 없음",
+    S: "어제 저녁부터 뒷다리를 끌듯이 걸음. 소변은 스스로 봄.", O: "후지 고유수용감각 지연. 심부통각 유지. 방사선상 T13-L1 추간 공간 협착.",
+    A: "흉요추 추간판 질환 의심.", P: "엄격한 케이지 휴식 4주. 진통 소염 경구약. 악화 시 즉시 내원.",
+    dx: [["흉요추 추간판 질환", "suspected"]], orders: ["consult-first", "xray2", "oral-rx"],
+    img: [["xray-spine", "흉요추 측면 방사선"]] },
+  { p: 15, at: "2026-07-18 09:30", vet: "minjae", first: false, purpose: "재진", cc: "보행 재평가",
+    S: "케이지 휴식 유지 중. 걷는 모습이 조금 안정됨.", O: "고유수용감각 일부 회복. 통증 반응 감소.",
+    A: "추간판 질환 보존적 관리에 반응.", P: "휴식 3주 더 유지. 짧은 배변 산책만 허용.",
+    dx: [["흉요추 추간판 질환", "suspected"]], orders: ["consult-revisit"] },
+  { p: 15, at: "2026-10-24 10:00", vet: "su", first: false, purpose: "정기 검진", cc: "노령견 정기 검진",
+    S: "보행 정상 회복. 최근 식욕과 활력 양호.", O: "신경학적 검사 정상. 혈액검사 기준 범위. 심잡음 1/6 청진.",
+    A: "추간판 질환 회복. 경미한 심잡음.", P: "체중 관리 지속. 6개월 뒤 심장 재평가.",
+    dx: [["예방 검진", "confirmed"]], orders: ["consult-revisit", "cbc", "chem10"] },
+
+  // CD-P-016 구름 (Samoyed)
+  { p: 16, at: "2026-06-19 13:30", vet: "doyun", first: true, purpose: "진료", cc: "목 뒤에 진물 나는 부위",
+    S: "이틀 전부터 목 뒤를 계속 긁고 핥음. 최근 날씨가 더워짐.", O: "후경부 4cm 습윤성 피부 병변. 주변 털 엉킴. 통증 반응.",
+    A: "급성 습윤성 피부염(핫스팟).", P: "병변 주변 삭모와 소독. 경구약 7일분. 넥카라 착용 안내.",
+    dx: [["급성 습윤성 피부염", "confirmed"]], orders: ["consult-first", "oral-rx"],
+    img: [["skin-hotspot", "후경부 병변 사진"]] },
+  { p: 16, at: "2026-06-26 14:00", vet: "doyun", first: false, purpose: "재진", cc: "피부 병변 재진",
+    S: "넥카라 착용 후 긁지 못함. 진물 멈춤.", O: "병변 건조. 가피 형성. 발적 감소.",
+    A: "핫스팟 회복 중.", P: "남은 약 복용 후 종료. 여름철 빗질 관리 안내.",
+    dx: [["급성 습윤성 피부염", "confirmed"]], orders: ["consult-revisit"] },
+
+  // CD-P-017 미미 (Ragdoll)
+  { p: 17, at: "2026-08-15 10:00", vet: "seoyeon", first: true, purpose: "정기 검진", cc: "정기 건강검진",
+    S: "특별한 증상 없음.", O: "체중 4.8kg. 신체검사 정상. 혈액검사 기준 범위.",
+    A: "건강 상태 양호.", P: "1년 뒤 정기 검진.",
+    dx: [["예방 검진", "confirmed"]], orders: ["consult-first", "cbc", "chem10"] },
+  { p: 17, at: "2026-11-01 11:40", vet: "seoyeon", first: false, purpose: "진료", cc: "아침에 노란 액체 구토",
+    S: "공복 시간이 긴 아침에 노란 액체를 2회 토함. 식욕 정상.", O: "신체검사 정상. 체온 38.5℃.",
+    A: "공복성 구토 의심.", P: "급여 횟수를 하루 3회로 나누도록 안내. 지속 시 재진.",
+    dx: [["공복성 구토", "suspected"]], orders: ["consult-revisit"] },
+
+  // CD-P-018 탄이 (French bulldog)
+  { p: 18, at: "2026-07-29 15:10", vet: "jihoon", first: true, purpose: "진료", cc: "숨소리가 거칠고 기침함",
+    S: "더운 날 산책 뒤 숨소리가 거칠어지고 마른기침을 함.", O: "흡기 시 협착음. 연구개 과장 소견. 흉부 방사선상 기관 직경 정상, 폐야 특이 소견 없음.",
+    A: "단두종 기도 증후군 관련 호흡 곤란. 기관지염 감별 필요.", P: "더운 시간대 산책 제한. 체중 관리. 진해 경구약 5일분.",
+    dx: [["단두종 기도 증후군", "suspected"], ["기관지염/기침 평가", "differential"]],
+    orders: ["consult-first", "xray2", "oral-rx"],
+    img: [["xray-thorax", "흉부 측면 방사선"]] },
+  { p: 18, at: "2026-08-05 15:30", vet: "jihoon", first: false, purpose: "재진", cc: "호흡 재진",
+    S: "기침 빈도 감소. 실내에서는 숨소리가 안정적.", O: "흡기 협착음 경미. 체온 정상.",
+    A: "증상 조절 양호.", P: "여름철 관리 지속. 수술적 교정 상담은 보호자가 추후 결정.",
+    dx: [["단두종 기도 증후군", "suspected"]], orders: ["consult-revisit"] },
+
+  // CD-P-019 별이 (Scottish fold)
+  { p: 19, at: "2026-09-17 14:00", vet: "minjae", first: true, purpose: "진료", cc: "점프를 하지 않음",
+    S: "한 달 전부터 높은 곳에 올라가지 않음. 걸음이 짧아짐.", O: "양측 족근관절 촉진 시 비후와 불편감. 방사선상 원위 사지 골증식.",
+    A: "스코티시폴드 골연골이형성증.", P: "통증 관리 경구약. 생활 환경 높이 조정 안내. 4주 뒤 재진.",
+    dx: [["골연골이형성증", "confirmed"]], orders: ["consult-first", "xray2", "oral-rx"],
+    img: [["xray-tarsus", "족근관절 방사선"]] },
+  { p: 19, at: "2026-10-15 14:30", vet: "minjae", first: false, purpose: "재진", cc: "관절 통증 재진",
+    S: "낮은 계단은 다시 이용함. 식욕 양호.", O: "족근관절 불편감 감소.",
+    A: "통증 관리에 반응.", P: "필요 시 진통제 사용. 3개월 뒤 재평가.",
+    dx: [["골연골이형성증", "confirmed"]], orders: ["consult-revisit"] },
+
+  // CD-P-020 호두 (Beagle)
+  { p: 20, at: "2026-06-13 09:40", vet: "gayeon", first: true, purpose: "진료", cc: "오른쪽 앞발을 한 차례 들었음",
+    S: "산책 뒤 오른쪽 앞발을 한 차례 들었음.", O: "발톱 끝에 작은 마모가 확인됨.",
+    A: "발톱의 표재성 자극으로 평가.", P: "다음 방문에서 걷는 모습과 해당 부위 상태 확인.",
+    dx: [["우측 앞발 발톱 표재성 자극", "suspected"]], orders: ["consult-first"] },
+  { p: 20, at: "2026-06-30 11:00", vet: "gayeon", first: false, purpose: "재진", cc: "앞발 보행 재진",
+    S: "산책 때 앞발을 드는 모습이 줄었음.", O: "진찰실에서 네 발을 고르게 디딤.",
+    A: "이전 불편 호전.", P: "증상 소실 여부를 최종 확인.",
+    dx: [["우측 앞발 발톱 표재성 자극", "suspected"]], orders: ["consult-revisit"] },
+  { p: 20, at: "2026-07-14 16:30", vet: "gayeon", first: false, purpose: "재진", cc: "앞발 불편 경과 종료",
+    S: "일상 보행과 산책에 불편이 없었음.", O: "해당 발톱 주위에 더 이상 불편 반응이 보이지 않음.",
+    A: "앞발 불편 해소.", P: "추가 오더 없이 방문 종료.",
+    dx: [["우측 앞발 발톱 표재성 자극", "confirmed"]], orders: ["consult-revisit"] },
+  { p: 20, at: "2026-10-08 17:40", vet: "doyun", first: true, purpose: "진료", cc: "양쪽 귀에서 냄새",
+    S: "목욕 후부터 양쪽 귀에서 냄새가 남. 머리를 자주 흔듦.", O: "양측 외이도 갈색 분비물. 좌측이 더 심함. 고막 확인 가능.",
+    A: "양측 외이염.", P: "귀 세정 후 점이제 처방. 목욕 후 귀 건조 안내. 2주 뒤 재진.",
+    dx: [["외이염", "confirmed"]], orders: ["consult-revisit", "ear-clean", "oral-rx"] },
+
+  // CD-P-021 망고 (Welsh corgi puppy)
+  { p: 21, at: "2026-06-05 11:00", vet: "su", first: true, purpose: "예방접종", cc: "종합백신 접종",
+    S: "입양 3주 차. 식욕과 배변 정상.", O: "체중 4.1kg. 체온 38.7℃. 신체검사 정상.",
+    A: "건강한 강아지.", P: "종합백신 접종. 4주 뒤 추가 접종.",
+    dx: [["예방 검진", "confirmed"]], orders: ["consult-first", "vaccine-core"] },
+  { p: 21, at: "2026-07-03 11:30", vet: "su", first: false, purpose: "예방접종", cc: "추가 접종",
+    S: "접종 후 특이 반응 없음. 활력 좋음.", O: "체중 5.6kg. 신체검사 정상.",
+    A: "정상 성장.", P: "종합백신 추가 접종. 심장사상충 예방 시작 안내.",
+    dx: [["예방 검진", "confirmed"]], orders: ["consult-revisit", "vaccine-core"] },
+  { p: 21, at: "2026-11-19 10:00", vet: "gayeon", first: true, purpose: "상담", cc: "중성화 수술 전 검사",
+    S: "중성화 수술 희망. 최근 식욕과 활력 양호.", O: "체중 7.4kg. 신체검사 정상. 혈액검사 기준 범위.",
+    A: "마취 가능한 건강 상태.", P: "수술 일정 상담. 수술 전날 밤부터 금식 안내.",
+    dx: [["예방 검진", "confirmed"]], orders: ["consult-revisit", "cbc", "chem10"], status: "draft" },
+
+  // CD-P-022 쿠키 (Abyssinian)
+  { p: 22, at: "2026-08-27 13:20", vet: "jihoon", first: true, purpose: "진료", cc: "재채기와 눈곱",
+    S: "3일 전부터 재채기와 눈곱. 식욕은 유지.", O: "체온 39.0℃. 양측 장액성 안분비물. 비루 경미.",
+    A: "고양이 상부호흡기 증후군.", P: "경구약 5일분. 눈곱 닦는 방법 안내.",
+    dx: [["고양이 상부호흡기 증후군", "confirmed"]], orders: ["consult-first", "oral-rx"] },
+
+  // CD-P-023 토리 (Mixed small dog, senior)
+  { p: 23, at: "2026-06-24 09:00", vet: "seoyeon", first: true, purpose: "정기 검진", cc: "노령견 종합검진",
+    S: "최근 잠이 늘었으나 식욕은 유지.", O: "체중 4.8kg. ALP 경도 상승. 복부 초음파에서 간 실질 에코 균질, 담낭 슬러지 소량.",
+    A: "담낭 슬러지. ALP 경도 상승.", P: "저지방 식이 안내. 3개월 뒤 혈액검사와 초음파 재확인.",
+    dx: [["담낭 슬러지", "confirmed"]], orders: ["consult-first", "cbc", "chem10", "us-abdomen"],
+    img: [["us-abdomen", "담낭 초음파"]] },
+  { p: 23, at: "2026-09-30 09:30", vet: "seoyeon", first: false, purpose: "진료", cc: "밤에 기침",
+    S: "2주 전부터 밤에 마른기침. 흥분하면 심해짐.", O: "심잡음 2/6. 흉부 방사선상 경도 심비대 의심, 기관 압박 소견.",
+    A: "기관지염/기침 평가. 심장 원인 감별 필요.", P: "진해 경구약 7일분. 심장 초음파 정밀검사 상담.",
+    dx: [["기관지염/기침 평가", "suspected"], ["심장질환", "differential"]], orders: ["consult-revisit", "xray2", "oral-rx"],
+    img: [["xray-thorax", "흉부 측면 방사선"]] },
+  { p: 23, at: "2026-11-25 09:20", vet: "seoyeon", first: false, purpose: "재진", cc: "기침과 간 수치 재확인",
+    S: "밤 기침 빈도 감소. 저지방 식이 유지 중.", O: "ALP 이전보다 감소. 심잡음 변화 없음.",
+    A: "간 수치 호전. 기침 조절 양호.", P: "식이 유지. 심장 정밀검사 일정 재안내.",
+    dx: [["담낭 슬러지", "confirmed"], ["기관지염/기침 평가", "suspected"]], orders: ["consult-revisit", "chem10"] },
+
+  // CD-P-024 아리 (Norwegian forest cat)
+  { p: 24, at: "2026-07-21 12:00", vet: "doyun", first: true, purpose: "진료", cc: "등 털이 뭉치고 비듬",
+    S: "여름 들어 등 쪽 털이 뭉치고 비듬이 많아짐.", O: "요배부 털 뭉침과 인설. 피부 발적 없음. 외부 기생충 소견 없음.",
+    A: "털 관리 부족에 따른 국소 인설.", P: "뭉친 털 제거. 주 3회 빗질 안내.",
+    dx: [], orders: ["consult-first"] },
+  { p: 24, at: "2026-10-29 12:20", vet: "doyun", first: false, purpose: "정기 검진", cc: "노령묘 정기 검진",
+    S: "특별한 증상 없음. 털 상태 좋아짐.", O: "체중 5.7kg. 신체검사 정상. 혈액검사와 요검사 기준 범위.",
+    A: "건강 상태 양호.", P: "6개월 뒤 노령묘 검진.",
+    dx: [["예방 검진", "confirmed"]], orders: ["consult-revisit", "cbc", "chem10", "ua"] },
+
+  // CD-P-025 복실 (Schnauzer)
+  { p: 25, at: "2026-08-12 10:10", vet: "minjae", first: true, purpose: "진료", cc: "구토와 설사",
+    S: "어제부터 구토 3회와 설사. 기름진 음식을 먹었다고 함.", O: "체온 39.1℃. 복부 촉진 시 통증. 탈수 5%.",
+    A: "급성 위장염. 췌장염 감별 필요.", P: "피하수액 처치. 위장 보호 경구약. 금식 후 저지방 식이.",
+    dx: [["급성 위장염", "confirmed"], ["췌장염", "differential"]], orders: ["consult-first", "cbc", "chem10", "fluid-sc", "oral-rx"] },
+  { p: 25, at: "2026-08-14 10:30", vet: "minjae", first: false, purpose: "재진", cc: "위장염 재진",
+    S: "구토 멈춤. 변이 단단해지는 중.", O: "복부 통증 소실. 탈수 개선.",
+    A: "위장염 회복 중.", P: "저지방 식이 1주 유지 후 종료.",
+    dx: [["급성 위장염", "confirmed"]], orders: ["consult-revisit"] },
+  { p: 25, at: "2026-10-21 16:20", vet: "gayeon", first: true, purpose: "상담", cc: "스케일링 상담",
+    S: "입 냄새와 치석이 눈에 띔. 마취가 걱정된다고 함.", O: "치석 3단계. 하악 전구치 동요.",
+    A: "치주질환.", P: "마취 전 검사 일정 안내. 발치 가능성 설명.",
+    dx: [["치주질환", "confirmed"]], orders: ["consult-revisit"],
+    img: [["dental-photo", "하악 전구치 치석 사진"]] },
+];

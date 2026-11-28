@@ -23,6 +23,7 @@ Use this README as the GitBook entry point for synthetic dataset design. The chi
 | Understand the next empty-clinic default, reset, date, and demo operations direction | `clinic-start-state-and-demo-operations-v1.md` |
 | Understand the demo hospital and staff context | `virtual-hospital-profile.md`, then `staff-roles-workflow-v1.md` |
 | Review outpatient story coverage | `demo-scenarios-v1.md` |
+| Make the Cheongdam workspace look like a hospital in operation for sales demos (master data cleanup, hero patient stories, demo-day state) | `cheongdam-demo-realism-plan-v1.md` |
 | Implement or inspect seed/mock data | `seed-handoff-v1.md` |
 | Work on guardian or patient data | `patient-guardian-data-v1.md` |
 | Work on orders, sets, pricing, chart application, or fulfillment handoff | `order-catalog-v1.md`, `order-sets-and-templates-v1.md`, `order-pricing-rules-v1.md`, `chart-order-application-v1.md` |
