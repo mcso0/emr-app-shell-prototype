@@ -75,7 +75,6 @@ Not done in this item, candidates for later work:
 - Abnormal lab values. Every replayed value sits inside the reference interval, and serum chemistry intervals in the master data are the placeholder `10–20`.
 - Hospitalization and surgery visits.
 - The Cheongdam reset RPC has no marker for replayed history. Do not run it until that is designed.
-- 주치의 shows 이수지 on every card; the cause was not investigated.
 - The test-named master drug item `PR-024B 조제 제품` is still active; the catalog update RPC rejects it.
 - Chart search lists every member of a lab set as its own order name.
 - The remote migration history has no row for `20261128150000` (run in the SQL Editor) and records `20261124141843` for the file `20261124163000_cheongdam_demo_history.sql`.
@@ -250,3 +249,4 @@ Not done in this item, candidates for later work:
   - Production smoke (built-in browser, owner session, synthetic workspace only): `/login` answers 200; 차트 상세 검색 lists 67 charts, each card shows the visit-purpose sentence once as its title and S/O 소견 starts with the S text (checked on the first five cards, e.g. 두부 2026.11.14); searching `디스크` still gives 1 card (밤비 2026.07.18) with 검색 일치 · 방문 목적.
   - Not checked on Production: `텍스트 전체 복사하기` in 환자 차트 이력 (covered by the story test only), a row whose complaint differs from its title (no such row in the Cheongdam data), the list (좁게 보기) view.
 - Remaining for this work item: AI-generated replacements for the 15 schematic images (optional), abnormal lab values and real serum chemistry intervals, hospitalization and surgery visits, reset behavior for replayed history, 내 차트 check with a veterinarian account.
+- 2026-11-29 follow-up, 주치의: every chart search card showed 이수지 as 주치의. Cause: the card reads `patients.primary_attending_vet_id`, and `supabase/snippets/den-468-491_cheongdam_master_seed.sql` gave all 25 seed patients the same veterinarian; the replay did not touch that column. With 승욱 approval ("바꿔줘"), each patient now has the veterinarian who saw them most often (이수지 3, 김도윤 5, 박서연 4, 오지훈 5, 정민재 5, 한가연 3). Hosted: dry run, then one statement changed 22 rows; `updated_at` unchanged; readback matches. Production chart search shows varied 주치의. The seed snippet carries the same values; the applied statement is `supabase/snippets/demo-data-pr-003_primary_attending_vet_update.sql`.
