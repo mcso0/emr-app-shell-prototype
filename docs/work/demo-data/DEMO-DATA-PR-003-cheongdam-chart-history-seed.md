@@ -3,7 +3,7 @@ id: "DEMO-DATA-PR-003"
 status: "in_progress"
 area: "demo-data"
 priority: "P1"
-target_pr: "TBD"
+target_pr: "#1137"
 source_docs:
   - "docs/product/demo-data/cheongdam-demo-realism-plan-v1.md"
   - "docs/work/demo-data/DEMO-DATA-PR-002-clinic-start-state-demo-operations.md"
@@ -151,3 +151,4 @@ Give the Cheongdam synthetic workspace real past visits with signed charts so ad
   - Not checked: 내 차트 (the signed-in owner has no chart), image display (no attachment was seeded; every card shows 첨부된 이미지가 없습니다), list view, export.
   - The old 시연 이력 section still renders under the results (4 rows for the 외이염 search) and now repeats visits that exist as real charts. Its removal (this branch, uncommitted, plus migration `20261128150000`) is the next step.
 - 2026-11-28 change set for the PR: archive removal (UI, route, tests, migration renamed to `20261128150000` so it sorts after the already-applied `20261128123347`), the visit data, the replay converter, and the SQL snippets that were run on hosted. Not included, left as local files: the superseded direct-insert seed (`generate-cheongdam-chart-history.mjs`, the image and upload scripts, the seed snippet and its spec, `20261128101000_cheongdam_reset_keeps_seeded_history.sql`) and the generated `supabase/snippets/demo-data-pr-003_replay/` batches (re-create them with `node scripts/demo-data/build-cheongdam-chart-replay.mjs`).
+- 2026-11-28: opened PR #1137 from `claude/cheongdam-chart-history` (head `ca161f46` at creation). Local checks: `npx tsc --noEmit`, `npm run lint`, `npm run docs:check`, `tests/cheongdam-demo-history-removal.spec.ts` (3 passed). Migration `20261128150000` is not applied to hosted; apply, merge and Production deployment each wait for 승욱's approval.
