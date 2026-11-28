@@ -1,9 +1,9 @@
 ---
 id: "DEMO-DATA-PR-003"
-status: "in_progress"
+status: "done"
 area: "demo-data"
 priority: "P1"
-target_pr: "#1137"
+target_pr: "#1137, #1138, #1139, #1140, #1142"
 source_docs:
   - "docs/product/demo-data/cheongdam-demo-realism-plan-v1.md"
   - "docs/work/demo-data/DEMO-DATA-PR-002-clinic-start-state-demo-operations.md"
@@ -12,7 +12,7 @@ source_docs:
 dependencies:
   - "DEMO-DATA-PR-002"
   - "CHART-PR-042"
-updated: "2026-11-28"
+updated: "2026-11-29"
 ---
 
 # Cheongdam Past Chart History Seed
@@ -59,6 +59,27 @@ Give the Cheongdam synthetic workspace real past visits with signed charts so ad
 - Doctor, date, mine, and query filters behave on seeded data like any other chart.
 - Reset preserves seeded history and still clears non-history demo work.
 - Today's reception, queues, and billing stay empty after seeding.
+
+## Outcome (closed 2026-11-29)
+
+승욱 confirmed the stated purpose is met and asked to close this item.
+
+- Every Cheongdam seed patient (25) has past visits stored as ordinary charts: 69 visits from 2026-06-05 to 2026-11-25 across six veterinarians, 67 completed with signed charts and paid invoices, 2 drafts in consultation.
+- 차트 상세 검색 on Production lists 67 chart cards (69 with drafts). Text search, the veterinarian filter, sort order, the draft toggle and the filter builder were exercised on screen; 내 차트 was checked through `clair_advanced_chart_search_batch` with `p_mine` as a veterinarian (13 charts, all his).
+- Cards show diagnoses, order names, reception sentences as the visit purpose, and 15 fictional image attachments.
+- The 시연 이력 archive is gone from the UI, the source and the hosted database. The temporary replay functions are removed.
+- Final hosted readback on 2026-11-29: 69 encounters, 69 charts, 67 paid invoices, 15 chart attachments, 32 hospital drugs, no category-word visit purpose, no archive or replay function, no open work item, no visit dated on the run day.
+
+Not done in this item, candidates for later work:
+
+- Abnormal lab values. Every replayed value sits inside the reference interval, and serum chemistry intervals in the master data are the placeholder `10–20`.
+- Hospitalization and surgery visits.
+- The Cheongdam reset RPC has no marker for replayed history. Do not run it until that is designed.
+- 주치의 shows 이수지 on every card; the cause was not investigated.
+- The test-named master drug item `PR-024B 조제 제품` is still active; the catalog update RPC rejects it.
+- Chart search lists every member of a lab set as its own order name.
+- The remote migration history has no row for `20261128150000` (run in the SQL Editor) and records `20261124141843` for the file `20261124163000_cheongdam_demo_history.sql`.
+- Screen checks not made: 내 차트 with a veterinarian account, copied card text, list view, export.
 
 ## Verification
 
