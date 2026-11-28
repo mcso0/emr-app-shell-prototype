@@ -307,8 +307,7 @@ export const FigmaSizeContract: Story = {
     };
 
     const blackAlpha4 = resolveColorToken("--clair-color-atomic-black-alpha-4");
-    const blackAlpha36 = resolveColorToken("--clair-color-atomic-black-alpha-36");
-    const blackAlpha48 = resolveColorToken("--clair-color-atomic-black-alpha-48");
+    const textTertiary = resolveColorToken("--emr-text-tertiary");
     const blackAlpha64 = resolveColorToken("--clair-color-atomic-black-alpha-64");
     const neutral200 = resolveColorToken("--clair-color-atomic-neutral-200");
     const expected = {
@@ -323,21 +322,21 @@ export const FigmaSizeContract: Story = {
         icon: 48,
         innerIcon: 24,
         rootGap: "16px",
-        titleColor: blackAlpha48,
+        titleColor: blackAlpha64,
         titleSize: "16px",
       },
       md: {
         icon: 40,
         innerIcon: 24,
         rootGap: "8px",
-        titleColor: blackAlpha48,
+        titleColor: blackAlpha64,
         titleSize: "14px",
       },
       sm: {
         icon: 0,
         innerIcon: 0,
         rootGap: "8px",
-        titleColor: blackAlpha48,
+        titleColor: blackAlpha64,
         titleSize: "14px",
       },
     } as const;
@@ -366,8 +365,8 @@ export const FigmaSizeContract: Story = {
 
       const description = emptyState.querySelector<HTMLElement>("[data-slot='copy'] p");
       if (!description) throw new Error(`Expected ${size} description.`);
-      if (getComputedStyle(description).color !== blackAlpha36) {
-        throw new Error(`Expected ${size} description color black alpha 36.`);
+      if (getComputedStyle(description).color !== textTertiary) {
+        throw new Error(`Expected ${size} description color emr-text-tertiary.`);
       }
 
       const iconArea = emptyState.querySelector<HTMLElement>("[data-slot='icon-area']");
