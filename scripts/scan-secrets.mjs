@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync } from "node:fs";
 
 const placeholderPattern =
   /^(|changeme|change-me|example|placeholder|replace-me|todo|dummy|test|local|localhost|your[_-]?[\w-]+|<[^>]+>|\$\{[^}]+})$/i;
@@ -82,7 +82,14 @@ function main() {
   }
 
   for (const file of files) {
-    if (shouldIgnorePath(file) || !existsSync(file) || isProbablyBinaryOrTooLarge(file)) {
+    // Tracked symlinks (e.g. .claude/skills -> ../.agents/skills) are skipped;
+    // their in-repo targets are tracked and scanned on their own.
+    if (
+      shouldIgnorePath(file) ||
+      !existsSync(file) ||
+      !lstatSync(file).isFile() ||
+      isProbablyBinaryOrTooLarge(file)
+    ) {
       continue;
     }
 
