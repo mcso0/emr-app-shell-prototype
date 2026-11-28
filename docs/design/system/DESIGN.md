@@ -41,7 +41,9 @@ User-facing Korean product copy uses 존댓말. Conversation settings for agents
 internal developer notes, and synthetic user-authored clinical content do not
 determine the product voice.
 
-Until a broader UX writing guide is approved:
+Product copy uses `합니다체` throughout (decided 2026-11-28). This includes
+toasts and success messages; `해요체` (`~어요`, `~예요`, `~할까요?`, `~하세요`) is not
+used. `npm run ux-copy:check` blocks new `해요체` endings outside Storybook files.
 
 - use `합니다체` for system facts, status, explanations, restrictions, and errors
 - use `~해 주세요` when the user needs to take an action
@@ -49,8 +51,6 @@ Until a broader UX writing guide is approved:
 - keep action labels concise, such as `저장`, `취소`, and `다시 시도`
 - preserve the meaning, permission boundary, recovery path, and mock/live
   disclosure when correcting tone
-- do not rewrite existing polite `해요체` solely for register normalization in
-  the honorific-correction pass
 - do not rewrite user-authored notes, clinical records, fixture content that
   represents authored records, machine error codes, or developer-only guidance
 
