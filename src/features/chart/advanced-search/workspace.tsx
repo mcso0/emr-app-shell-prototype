@@ -31,7 +31,6 @@ import { deliverSummary } from "./export";
 import { useChartFavorites } from "./favorites";
 import { ChartRow, type OpenChartProfile } from "./result-card";
 import { PatientHistory } from "./patient-history";
-import { DemoHistorySection, filterDemoHistory, useDemoHistory } from "../demo-history";
 import { Switch } from "@/components/ui/switch";
 import {
   Popover,
@@ -217,8 +216,6 @@ export function ChartSearchWorkspace({
     }),
     [q, sort, mine, drafts, doctor, groups],
   );
-  const demo = useDemoHistory(entry.workspaceId, userId, undefined, active && !readOnly);
-  const demoMatches = useMemo(() => filterDemoHistory(demo.items, params), [demo.items, params]);
   const sameSource = loaded?.api === api;
   const page = sameSource && loaded.params === params ? loaded.page : null;
   // Retain the previous geometry while the same search source refreshes.
@@ -814,8 +811,7 @@ export function ChartSearchWorkspace({
                 ))}
               </section>
             )}
-            <DemoHistorySection items={demoMatches} unavailable={demo.unavailable} query={q} />
-            {!demoMatches.length && !loadingFirst && !error && page?.total === 0 && (
+            {!loadingFirst && !error && page?.total === 0 && (
               <EmrTableFeedbackSurface className="min-h-52 flex-1" role="status">
                 <EmrEmptyState
                   surface="content"
@@ -887,8 +883,6 @@ export function ChartSearchWorkspace({
             <PatientHistory
               key={selected.patientId}
               source={selected}
-              workspaceId={entry.workspaceId}
-              viewerKey={userId}
               api={api}
               onClose={closeSource}
               favorites={favorites.ids}

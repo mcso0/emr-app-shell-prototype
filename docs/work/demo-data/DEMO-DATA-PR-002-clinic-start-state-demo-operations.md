@@ -205,6 +205,8 @@ Stop and ask 승욱 before:
 
 ### Approved follow-up: Cheongdam read-only visit archive
 
+> Superseded on 2026-11-28 by [DEMO-DATA-PR-003](DEMO-DATA-PR-003-cheongdam-chart-history-seed.md). 승욱 rejected the separate archive section; seeded history now uses ordinary chart tables.
+
 This bounded release adds one reviewed archive of 18 fictional visits to the six exact existing Cheongdam seed patients. It does not change the empty-clinic operational baseline or the normal clinical-signature flow. The archive appears within ordinary chart search, the chart history rail, and the patient's profile history, including profiles with no operational visits. The archive keeps its own labeled section and does not become a selectable chart, copy source, or live order.
 
 The additive database migration starts with no records. Use only the exact authenticated current Cheongdam owner, fixed reviewed batch payload, and normal app endpoint to activate after the target release is ready and anonymous/non-Cheongdam reads have been verified. Repeat activation is a no-op; retirement hides only this batch and retains its audited import/retirement actor and time. Do not insert into clinical SOAP, encounter, order, result, queue, notification, billing, or stock tables. A catalog snapshot label is not a live order or billable work item. A separate standalone review URL is not part of this archive release.
