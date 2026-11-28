@@ -1,12 +1,11 @@
 -- CLINICAL-BILLING-PR-025 contract. Run as postgres on a database that has the
--- Cheongdam synthetic workspace and migration 20261128110000 applied. It drives
+-- Cheongdam synthetic workspace and migration 20261128123347 applied. It drives
 -- one visit through the app RPCs: an individual consultation order plus the
 -- fixed-price order set "요검사 패널", then billing request, issue and payment.
 --
 -- The block always ends with "SET_PARENT_BILLING_CONTRACT_ROLLBACK {...}" and
 -- saves nothing. A failed expectation ends with "SET_PARENT_BILLING_CONTRACT_FAILED".
--- Verified against the hosted demo schema on 2026-11-28 with the function
--- replaced inside the same rolled-back transaction.
+-- Passed on the hosted demo database on 2026-11-28 after the migration was applied.
 
 do $contract$
 declare

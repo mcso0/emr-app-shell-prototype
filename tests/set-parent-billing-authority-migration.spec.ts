@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 
 const migration = readFileSync(
-  "supabase/migrations/20261128110000_set_parent_billing_authority.sql",
+  "supabase/migrations/20261128123347_set_parent_billing_authority.sql",
   "utf8",
 );
 const previous = readFileSync(

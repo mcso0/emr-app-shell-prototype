@@ -53,11 +53,14 @@ Found on 2026-11-28 while preparing Cheongdam demo data. Ordering the fixed-pric
 
 - `npx tsc --noEmit`, `npm run lint`, `npm run docs:check`
 - `npx playwright test tests/set-parent-billing-authority-migration.spec.ts`
-- `tests/sql/set-parent-billing-authority.sql` on a database with the Cheongdam synthetic workspace and this migration applied.
+- `tests/sql/set-parent-billing-authority.sql` on a database with the Cheongdam synthetic workspace and this migration applied. Passed on the hosted demo database on 2026-11-28.
 
 ## Notes
 
 - 2026-11-28 hosted verification without persistence: the function body was replaced inside one transaction on the hosted demo database, a visit with one individual consultation order and the set `요검사 패널` was driven through the app RPCs to payment, and the transaction was force-rolled back. Result: set candidate `fixed_set` / `set` / `taxable` / `parent` / `fixed_set` at 33,000; consultation candidate unchanged (`per_order` / `session`, no set owner); invoice `paid` with two lines (요검사 패널 33,000, 재진 16,500); encounter `completed`. Readback after rollback confirmed the hosted function is unchanged.
 - The local Supabase replay cannot run the contract end to end: it stops on remote-anchored clinical-master migrations, so the master order catalog is missing. Locally the migration compiles and the contract parses and runs until the first catalog lookup.
 - Observation, not changed here: invoice lines showed `tax_type: taxable` for the consultation line although its candidate tax class was `non_taxable`; the invoice tax total was 0.
-- Remote migration apply and release follow the release policy and need 승욱's approval.
+- 2026-11-28 remote apply, approved by 승욱 ("승인"): applied to the hosted demo project through the Supabase MCP `apply_migration` from PR #1136 head `10cfd563`. Remote history recorded version `20261128123347`; the migration file was renamed to that version so local and remote history match. The automatic Release Check was still pending at apply time.
+  - Post-apply check: `tests/sql/set-parent-billing-authority.sql` ran on the hosted database and ended with `SET_PARENT_BILLING_CONTRACT_ROLLBACK passed` (invoice `paid`, total 49,500, set price 33,000, encounter `completed`). Nothing was saved. Function ACL stays `postgres` only.
+  - Rollback: re-create the function from `20260912113946_dispensing_set_confirmation_compatibility.sql`.
+- Merge and Production deployment still need 승욱's approval. The change is database-only, so the app deployment does not alter this behavior.
