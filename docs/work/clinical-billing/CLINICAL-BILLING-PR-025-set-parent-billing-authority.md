@@ -7,7 +7,7 @@ status: "in_progress"
 area: "clinical-billing"
 priority: "P1"
 tags: [plan-order, billing, order-set, snapshots]
-target_pr: "TBD"
+target_pr: "#1136"
 source_docs:
   - "docs/work/clinical-billing/CLINICAL-BILLING-PR-023-plan-order-billing-authority.md"
   - "docs/engineering/operations/release-environment-policy.md"
@@ -64,3 +64,5 @@ Found on 2026-11-28 while preparing Cheongdam demo data. Ordering the fixed-pric
   - Post-apply check: `tests/sql/set-parent-billing-authority.sql` ran on the hosted database and ended with `SET_PARENT_BILLING_CONTRACT_ROLLBACK passed` (invoice `paid`, total 49,500, set price 33,000, encounter `completed`). Nothing was saved. Function ACL stays `postgres` only.
   - Rollback: re-create the function from `20260912113946_dispensing_set_confirmation_compatibility.sql`.
 - Merge and Production deployment still need 승욱's approval. The change is database-only, so the app deployment does not alter this behavior.
+- 2026-11-28 use on hosted data: the Cheongdam replay (DEMO-DATA-PR-003) ordered 25 fixed-price lab sets across 69 visits; all 67 invoices that include them were issued and paid through the normal billing request.
+- 2026-11-28 release: 승욱 approved the merge ("#1136 머지해"). The branch was brought up to date with `origin/main` (`496c70fc`) by a merge commit. The change has no application code, so there is nothing for a Preview to show; Vercel reports the build as ignored, as for #1137.
