@@ -931,7 +931,7 @@ test("self status message saves optimistically, rolls back, retries, cancels, an
   const input = panel.getByRole("textbox", { name: "상태 메시지" });
   await input.fill("  곧 복귀합니다  ");
   await input.press("Enter");
-  await expect(panel.getByRole("alert")).toContainText("저장하지 못했어요");
+  await expect(panel.getByRole("alert")).toContainText("저장하지 못했습니다");
   await expect(panel).toContainText("진료 중입니다");
   await panel.getByRole("button", { name: "다시 시도" }).click();
   await expect(panel).toContainText("곧 복귀합니다");

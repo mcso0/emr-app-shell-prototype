@@ -1648,7 +1648,7 @@ for (const queueType of ["dispensing", "treatment"] as const) {
     };
     await unassign();
     if (queueType === "dispensing") {
-      await expect(page.getByRole("alert").filter({ hasText: "변경을 저장하지 못했어요." })).toBeVisible();
+      await expect(page.getByRole("alert").filter({ hasText: "변경을 저장하지 못했습니다." })).toBeVisible();
       await expect(heading).toBeVisible();
       await expect(inProgress.getByTestId(cardId)).toBeVisible();
       await unassign();

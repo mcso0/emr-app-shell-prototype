@@ -3267,7 +3267,7 @@ test("live patient chart history shows every chart by created_at and keeps past 
   await expect(completedCandidate).toContainText("차트 추가 불가");
   await completedCandidate.hover();
   await expect(page.getByRole("tooltip")).toContainText(
-    "완료된 진료에는 새 차트를 추가할 수 없어요.",
+    "완료된 진료에는 새 차트를 추가할 수 없습니다.",
   );
   await currentCandidate.hover();
   await expect(page.getByRole("tooltip")).toBeHidden();
@@ -5335,7 +5335,7 @@ test("chart preconsultation read error uses the shared recovery empty state", as
   await expect(feedback).toHaveAttribute("data-kind", "read-error");
   await expect(feedback).toContainText("접수 정보를 불러오지 못했습니다");
   await expect(feedback).toContainText(
-    "대기 목록의 접수 정보는 변경되지 않았어요.",
+    "대기 목록의 접수 정보는 변경되지 않았습니다.",
   );
   await expect(
     feedback.getByRole("button", { name: "대기 목록으로" }),
@@ -9297,7 +9297,7 @@ test("chart queue selection changes the selected encounter", async ({
   await expect(lockedState).toContainText("16:05 접수");
   await expect(lockedState).toContainText("담당 수의사");
   await expect(lockedState).toContainText("이수지");
-  await expect(lockedState).toContainText("기록된 바이탈이 없어요");
+  await expect(lockedState).toContainText("기록된 바이탈이 없습니다");
   await expect(lockedState).toContainText("이전 진료이력이 없습니다");
   await expect(page.getByText("진단 입력 전입니다.")).toHaveCount(0);
   await expect(page.getByLabel("SOAP 블록 문서")).toHaveCount(0);

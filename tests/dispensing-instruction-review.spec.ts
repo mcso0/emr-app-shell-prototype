@@ -347,7 +347,7 @@ test("completed dispensing is read-only and reopening a single order can be retr
   await page.getByRole("menuitem", { name: "진행 중으로 변경" }).click();
   const submit = reopen.getByRole("button", { name: "진행 중으로 변경" });
   await submit.click();
-  await expect(reopen.getByRole("alert")).toContainText("변경을 저장하지 못했어요.");
+  await expect(reopen.getByRole("alert")).toContainText("변경을 저장하지 못했습니다.");
   await expect(page.getByTestId("instruction-status-label")).toHaveText("완료");
   expect(document.items[0].status).toBe("completed");
   await submit.click();
