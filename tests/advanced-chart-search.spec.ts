@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { exampleChart } from "../src/features/chart/advanced-search/search.stories.fixture";
 import {
+  complaintBeyondTitle,
   hasSameDiagnosis,
   orderDescription,
   representativeMedia,
@@ -187,6 +188,30 @@ test("부정 표현과 실제 기록이 함께 있을 때 단어별 문맥과 �
       },
     }),
   ).toBe("예시약 · 2 mg/kg · 하루 2회 · 3일");
+});
+
+test("접수 문장이 제목과 같으면 소견 요약에서 주호소를 빼고 검색 일치는 유지한다", () => {
+  const sentence = "일주일 전부터 계단이랑 소파에 안 올라가려고 해요";
+  expect(complaintBeyondTitle(sentence, sentence)).toBe("");
+  expect(complaintBeyondTitle(" " + sentence + "\n", sentence)).toBe("");
+  expect(complaintBeyondTitle("오른쪽 귀 가려움", "현장 접수")).toBe(
+    "오른쪽 귀 가려움",
+  );
+  expect(complaintBeyondTitle("", "모카 진료")).toBe("");
+  const found = evidence(
+    exampleChart("reception", {
+      purpose: sentence,
+      complaint: sentence,
+      paragraphs: [],
+      orders: [],
+    }),
+    ["소파"],
+  );
+  expect(found.included).toBe(true);
+  expect(found.matches.map((match) => match.label)).toEqual([
+    "방문 목적",
+    "주호소",
+  ]);
 });
 
 test("복사한 S를 대상 차트에서 고쳐도 원본과 검색어를 유지한다", async ({

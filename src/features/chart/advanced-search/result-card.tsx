@@ -27,7 +27,11 @@ import {
   StethoscopeIcon,
 } from "@/components/icons";
 import { getOperatingDateFromIso } from "@/lib/emr-domain/demo-date";
-import { diagnosisLabels, type SearchChart } from "./contract";
+import {
+  complaintBeyondTitle,
+  diagnosisLabels,
+  type SearchChart,
+} from "./contract";
 import { evidence, searchWords, speciesLabel } from "./ranking";
 import { Highlight, stateText, Thumbnail, type CopyMode } from "./presentation";
 import { CdsMedicalClipboardPenIcon, CdsMedicalStethoscopeIcon } from "@/components/cds-icons/medical-and-domain";
@@ -215,7 +219,10 @@ export function ChartRow({
     chart.paragraphs
       .filter((p) => p.section && sections.includes(p.section))
       .map((p) => p.text);
-  const so = [chart.complaint, ...paragraphs(["subjective", "objective"])]
+  const so = [
+    complaintBeyondTitle(chart.complaint, chartTitle(chart)),
+    ...paragraphs(["subjective", "objective"]),
+  ]
     .filter(Boolean)
     .join("\n");
   const diagnoses = [...chart.diagnoses].sort(

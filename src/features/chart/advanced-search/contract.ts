@@ -175,6 +175,12 @@ export type CopyResult = {
   patientId: string;
   requestId: string;
 };
+// Reception stores one 방문목적 text as both visit purpose and chief complaint.
+// Keep the complaint in a clinical summary only when the title does not already show it.
+export function complaintBeyondTitle(complaint: string, title: string) {
+  return complaint.trim() === title.trim() ? "" : complaint;
+}
+
 export function hasSameDiagnosis(a: SearchDiagnosis, b: SearchDiagnosis) {
   return (
     (!!a.catalogId && a.catalogId === b.catalogId) ||
