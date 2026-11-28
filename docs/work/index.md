@@ -370,6 +370,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | CLINICAL-FULFILLMENT-PR-011 | in_progress | clinical-fulfillment | P1 | User-reviewed clinical history aside concept | `docs/work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-011-patient-history-aside.md` |
 | DEMO-DATA-PR-001            | human_review | demo-data            | P0       | Project 04 / DEN-99  | `docs/work/demo-data/DEMO-DATA-PR-001-portfolio-virtual-hospital-dataset-foundation.md`                |
 | DEMO-DATA-PR-002            | ready        | demo-data            | P0       | TBD                  | `docs/work/demo-data/DEMO-DATA-PR-002-clinic-start-state-demo-operations.md`                           |
+| DEMO-DATA-PR-003 | in_progress | demo-data | P1 | Cheongdam past chart history seed; replaces the #1128 시연 이력 archive | `docs/work/demo-data/DEMO-DATA-PR-003-cheongdam-chart-history-seed.md` |
 | DEMO-DB-PR-001              | human_review | demo-data            | P0       | Demo DB PR 1         | `docs/work/demo-data/DEMO-DB-PR-001-seed-inventory-readback-contract.md`                               |
 | DEMO-DB-PR-002              | human_review | demo-data            | P0       | Demo DB PR 2         | `docs/work/demo-data/DEMO-DB-PR-002-order-catalog-set-seed-foundation.md`                              |
 | DEMO-DB-PR-003              | human_review | demo-data            | P0       | Demo DB PR 3         | `docs/work/demo-data/DEMO-DB-PR-003-fulfillment-work-item-seed-foundation.md`                          |

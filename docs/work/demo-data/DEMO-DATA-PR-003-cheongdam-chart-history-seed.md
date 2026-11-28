@@ -1,0 +1,166 @@
+---
+id: "DEMO-DATA-PR-003"
+status: "in_progress"
+area: "demo-data"
+priority: "P1"
+target_pr: "#1137"
+source_docs:
+  - "docs/product/demo-data/cheongdam-demo-realism-plan-v1.md"
+  - "docs/work/demo-data/DEMO-DATA-PR-002-clinic-start-state-demo-operations.md"
+  - "docs/design/screens/chart/planning/advanced-chart-search/implementation-plan.html"
+  - "docs/engineering/operations/release-environment-policy.md"
+dependencies:
+  - "DEMO-DATA-PR-002"
+  - "CHART-PR-042"
+updated: "2026-11-28"
+---
+
+# Cheongdam Past Chart History Seed
+
+## Goal
+
+Give the Cheongdam synthetic workspace real past visits with signed charts so advanced chart search, the chart history rail, and patient profile history can be developed and verified against ordinary chart data.
+
+## Background
+
+승욱 asked for per-patient chart history to support advanced chart search work. PR #1128 instead shipped a separate read-only "시연 이력" archive: 18 visits stored as one JSON batch outside the clinical tables and rendered in its own labeled section. That archive cannot exercise search, filters, sorting, doctor attribution, order/task display, or attachments, and it shows a second, unfamiliar list under the real results. 승욱 rejected that presentation on 2026-11-28.
+
+## Approved Scope (승욱, 2026-11-28)
+
+- Remove the 시연 이력 archive: UI section, API route, archive table/functions, and its tests.
+- Seed about 70 past visits across all 25 Cheongdam seed patients (2–5 visits each) over roughly the last six months, spread across the Cheongdam veterinarians.
+- Each visit is a completed encounter with a signed chart: SOAP, diagnoses, completed orders, and image attachments.
+- Mark seeded history so the Cheongdam reset RPC keeps it while still clearing demo-session work.
+- Keep the two existing charts (초코 2026-09-13, 구름 2026-09-08) unchanged.
+
+### Scope change (승욱, 2026-11-28)
+
+- The data must look like an operating hospital for sales demos, so visits are created through the app RPCs (reception to paid invoice) instead of direct inserts. Orders, order execution, invoices and payments are now in scope; the earlier direct-insert seed and its `CD-HX-*` marker are superseded and not part of the change.
+- Existing Cheongdam test data (every encounter and its dependents, appointments, notifications, audit events, non-seed patients and guardians) is purged first. The two old charts are not kept.
+- Master data cleanup, the hospital drug list and the fixed-price set billing fix (CLINICAL-BILLING-PR-025) support the replay.
+- Deferred: SOAP image attachments, abnormal lab values, hospitalization and surgery visits, and reset behavior. The current Cheongdam reset RPC has no marker for replayed history; do not run it until that is designed.
+
+## Out Of Scope
+
+- Real patient, guardian, staff, or clinical data. All content is fictional.
+- Invoices, payments, waiting-queue entries, notifications, stock movements, or any provider side effect.
+- Changes to chart search behavior itself.
+
+## Constraints
+
+- Preview and Production share one Supabase demo project. Any remote apply writes demo data that Production shows. Remote migration, seed apply, and storage upload each need 승욱's explicit approval at action time.
+- Seeded encounters, tasks, and orders must be in finished past states so they never appear as today's reception, queue, fulfillment, or billing work.
+- The seed must be idempotent (fixed ids) and reversible (documented removal by marker).
+
+## Done Criteria
+
+- No 시연 이력 section, route, or archive storage remains after migration.
+- Advanced chart search for Cheongdam returns the seeded charts through `clair_advanced_chart_search_batch`, with diagnoses, orders, task status, and images.
+- Doctor, date, mine, and query filters behave on seeded data like any other chart.
+- Reset preserves seeded history and still clears non-history demo work.
+- Today's reception, queues, and billing stay empty after seeding.
+
+## Verification
+
+- `npx tsc --noEmit`, `npm run lint`, `npm run docs:check`
+- Local Supabase replay: migrations + seed, search RPC readback, reset readback, idempotent re-run.
+- Focused Playwright coverage for chart search on seeded data.
+- After an approved remote apply: hosted readback and a Production smoke of chart search.
+
+## Notes
+
+- 2026-11-28: Work item opened. #1128 archive removal and seed design in progress on branch `claude/cheongdam-chart-history`.
+- 2026-11-28 local candidate:
+  - Removed the archive UI, route, tests, and storage (`20261128150000_remove_cheongdam_demo_history_archive.sql`). The old route maps a missing read function to an empty list, so the migration can land before the app.
+  - `20261128101000_cheongdam_reset_keeps_seeded_history.sql` re-creates the reset RPC with a `CD-HX-*` filter.
+  - Seed source: `scripts/demo-data/cheongdam-chart-history.data.mjs` (69 visits, 25 patients, 6 vets, 2026-06-05 to 2026-11-25). The 18 #1128 visits are reused as ordinary visits.
+  - `generate-cheongdam-chart-history.mjs` writes `supabase/snippets/demo-data-pr-003_cheongdam_chart_history_seed.sql` and, with `--images`, 15 synthetic JPEGs marked `SYNTHETIC · CLAiR DEMO`. `upload-cheongdam-chart-history-images.mjs` uploads them; it refuses a non-local target without `--allow-remote`.
+  - Apply order: upload images, then run the SQL as `postgres`. The chart guard requires each image object to exist first.
+  - Charts are schema-v2 block documents with S/O/A/P projected by `clair_soap_document_field_v2`, validated by `clair_soap_document_is_valid`. 67 are signed; 2 are drafts on completed visits for the 작성 중 toggle.
+- Local verification limits: a fresh local replay stops on remote-anchored clinical-master migrations. The local DB skipped 34 such migrations, so it is close to, but not identical with, the hosted schema. Checks run there: seed twice (idempotent), search RPC as a vet (67 signed / 69 with drafts, doctor, mine, date filters, image media and captions), reset as owner (1 demo encounter removed, 69 history kept).
+- Orders are not seeded yet. Hosted orders must link the hosted order catalog, and the order guard only accepts inserts while the encounter is in consultation and the chart is a draft. That needs a read of the hosted Cheongdam catalog before the order rows can be written. `data.mjs` keeps the planned order keys per visit.
+- Unrelated finding: the reset RPC predates `order_tasks` and `chart_diagnosis_assessments`. Their non-cascading FKs can make reset fail when ordinary demo work has tasks or assessed diagnoses. Not changed here.
+- 2026-11-28 direction change (승욱): the goal is demo-grade realism — data that looks like a hospital in operation, so sales demos can show every module. Scope stays the Cheongdam workspace only. Data safety is secondary to realism because there are no customers or real users.
+- 2026-11-28 replay spike (hosted DB, every run force-rolled back; readback confirmed no residue):
+  - One visit for CD-P-008 replayed through the app's own RPCs as front desk and vet: walk-in with vitals and a past `plannedStartAt` → `clair_call_consultation_queue` (creates the first chart) → SOAP v4 save → diagnoses v2 → orders added with `clair_save_chart_order_draft_for_chart` and confirmed with `clair_confirm_chart_order_candidates_with_actual_for_chart` → consultation actual result, lab claim/entry/complete, imaging claim + execution result, treatment via `clair_mutate_fulfillment_instruction` → chart sign → billing request → `clair_complete_chart` → billing claim, issue, paid transition, `complete_payment`.
+  - Result: encounter `completed`, invoice `paid` (4 lines, one payment), chart search returns the signed chart with four orders and task status `complete`.
+  - Two settings had to be supplied inside the test transaction. Without them the hosted app cannot bill these orders either: (1) non-dispensing catalog items have no `default_detail_inputs.planOrderAuthority` (price basis, billing unit, tax class) → `billing_authority_incomplete`; (2) no `workspace_order_billing_policies.vat_calculation_policy` row → `vat_calculation_policy_missing`.
+  - Realism gaps in hosted master data: order defaults carry "합성 기능 검증용…" wording; prices are marker values such as 28,001; the CBC panel has three analytes and no reference intervals (results show `not_judged`); only one dispensing item allows clinical use and it is dog-only.
+  - Most timestamps are written with `now()`; only reception accepts a past time. A backdating pass is still untested.
+- 2026-11-28 leftover test data: 승욱 approved deleting all Cheongdam encounters and dependents, the two signed test charts, non-seed patients/guardians, notifications, and audit events. The MCP declined the delete SQL twice, so the script is saved for 승욱 to run: `supabase/snippets/demo-data-pr-003_cheongdam_test_data_purge.sql` (dry run first). Not run yet.
+- The direct-insert seed (`supabase/snippets/demo-data-pr-003_cheongdam_chart_history_seed.sql`) is superseded as the delivery path by RPC replay; its visit content needs rewriting to demo-grade scenarios.
+- 2026-11-28: Drafted `docs/product/demo-data/cheongdam-demo-realism-plan-v1.md` for 승욱's review: hosted master-data findings, cleanup proposal, 12 hero patient timelines, 13 routine patients, demo-day state, and seven open decisions. Clinical values are unreviewed.
+- 2026-11-28: 승욱 confirmed the seven decisions in the realism plan with the recommended values (plan section 8).
+- 2026-11-28 backdating spike (hosted DB, force-rolled back, no residue): after replaying one visit in a single transaction, every `timestamptz` column in Cheongdam rows written at or after `transaction_timestamp()` was shifted by one interval with `session_replication_role = replica` (immutability triggers block ordinary updates). 31 rows in 18 tables moved to the visit day; `private.chart_content_edits` was shifted by chart id. Readback: chart `clinical_at`/`signed_at` and search `visitAt`/`lastContentEditedAt` show the visit day, the search date filter finds the chart, and no audit event stays on today's date.
+  - Still to design: per-stage time offsets inside a visit (all rows currently land within seconds), `invoices.invoice_no` (embeds today's date), and timestamps embedded in jsonb snapshots (`billing_snapshot.frozenAt` is hashed, so leave it).
+  - The method assumes nobody else writes to Cheongdam during the replay transaction.
+- 2026-11-28 master cleanup phase 1 (`supabase/snippets/demo-data-pr-003_master_cleanup_phase1.sql`), hosted dry run, force-rolled back:
+  - Catalog edits go through `clair_update_order_catalog_item` as the hospital admin, so `catalog_revision`, `customized_fields` and field policies follow the app's rules. The VAT policy goes through `clair_update_workspace_order_billing_policy` as the owner; only the owner role has `hospital_settings:manage`, and no app screen calls this RPC today.
+  - Result over 385 active non-dispensing items: 385 changed, 0 failed, about 17 s. Billing basis added to 385, test wording rewritten in 261, prices rounded in 106. No odd price remains.
+  - 26 items keep test wording in item-specific fields (`deviceProtocol` 19, `bodyRegion` 2, `testPanel` 2, `imagingProtocol` 1, `method` 1, `stagedInstructions` 1) for a later item-level pass. Dispensing items, names and hand-tuned prices are also later phases.
+  - Tax class assumption: clinical items `non_taxable`, `other` items `taxable`. Check against the product's VAT rules before real use.
+  - Verification in one rolled-back transaction: VAT policy + one consultation item patched through the RPCs, then a visit replayed to payment. Invoice `paid`, tax 0, encounter `completed`.
+  - Reception requires weight and temperature (workspace vital settings). Invoice numbers embed today's date and need the backdating pass.
+- 2026-11-28 master cleanup phase 1 APPLIED to the hosted Cheongdam workspace with 승욱's approval ("반영해"). Original odd prices are saved in `supabase/snippets/demo-data-pr-003_master_cleanup_phase1_price_backup.txt`.
+  - Hosted readback after apply: VAT policy `vat_included`; 385 of 397 active non-dispensing items carry a billing basis (the 12 without are unpriced `system_exam` items); no odd price remains; 385 items show `customization_state = customized`; 23 items still contain test wording in item-specific fields.
+  - App check on Production (`/w/workspace-clair-cheongdam/orders`, 검사 전체 132): the order catalog list loads and shows the rewritten 채취 조건 text.
+- Unrelated finding: an unknown module path such as `/w/workspace-clair-cheongdam/hospital-admin` crashes with React error #185 (update loop in `syncActiveRoute`) instead of a not-found state. Not changed here.
+- 2026-11-28 master cleanup phase 2 (`supabase/snippets/demo-data-pr-003_master_cleanup_phase2.sql`) dry-run, then APPLIED to hosted Cheongdam with 승욱's approval. Pre-apply prices: `supabase/snippets/demo-data-pr-003_master_cleanup_phase2_price_backup.txt`.
+  - Applied: remaining test wording rewritten in 21 items, 2 pilot lab items named "합성 …" paused, proposed prices set on 46 core items, hospital phone and guide memo through `clair_update_workspace_hospital_contact` (owner), address and representative by direct update (the app only has a change-request flow for them).
+  - Hosted readback: no active non-dispensing item contains test wording; sample prices match the plan (초진 22,000, 재진 16,500, 전혈구 기본 패널 44,000, 심장 초음파 187,000); profile revision 2.
+  - App check on Production: 병원 관리 → 병원 기본 설정 shows 대표자 서지훈 and the address.
+  - Plan items with no hosted catalog item yet: 프룩토사민, 혈압 측정, 혈당 곡선, 조직검사. Address and phone are invented values; their non-existence in the real world is unverified.
+- 2026-11-28 REGRESSION from cleanup phases 1–2 (FIXED on hosted the same day, see the next entry): order sets pin each member's `catalog_revision`. Bumping 385 catalog revisions left 34 of 39 active Cheongdam order sets stale, so applying them in a chart raises `catalog_revision_requires_refresh`. Individual orders still work.
+  - Repair script: `supabase/snippets/demo-data-pr-003_order_set_refresh.sql` (re-saves each set through `clair_save_order_set_revision` with the same definition and current member revisions). Hosted dry run, rolled back: 31 sets repaired, 0 failed. The apply call was blocked by the session's permission classifier and waits for 승욱's approval.
+  - Not repairable as-is: test sets `PR1023 다항목 처치 2/4` (duplicate members) and `합성 기초 혈액검사` (its member was paused in phase 2). Ten test-named sets (`PR-024B…`, `PR1013…`, `PR1023…`, `합성 …`) should be paused for demos.
+  - Rule for later phases: after any catalog edit, re-run the order set refresh in the same change.
+- 2026-11-28 lab model findings (hosted, read-only and rolled-back tests):
+  - Lab panels are meant to be ordered as ORDER SETS of single-analyte tests (e.g. set `전혈구 기본 패널` has 26 members). The 90 single-analyte catalog items are already bound to result profiles for cat and dog. The 30 panel-type catalog items have no binding, which is why the earlier panel replay showed `not_judged`.
+  - Master result profiles already carry reference intervals: CBC 25/25 analytes, serum 33/34, urine 4/10. Binding the legacy CBC panel item to the cat CBC profile made results judge correctly (헤마토크릿 25.4 → low, range 27.2–57.6) in a rolled-back test.
+  - Device and profile names contain "합성 … (실제 장비 아님)". Device `name` has no rename RPC and no trigger; profile names live in master data.
+  - Replay must add lab panels as `rowType: "set"` rows (`sourceSetId`, `sourceSetRevisionId`, `sourceSetRevisionNo`, `selectionIntent.items`, `childInputs`). That path is untested until the sets are refreshed.
+- 2026-11-28 order set refresh APPLIED to hosted Cheongdam with 승욱's approval ("복구 반영해"). Readback: 34 of 39 active sets are usable again (no stale or inactive member). The 5 that stay unusable are test fixtures: `합성 기초 혈액검사`, `PR-024B dispensing set`, `PR1023 합성 처치 검증`, `PR1023 다항목 처치 2`, `PR1023 다항목 처치 4`. `needs_composition_review` is set on 8 inactive sets and `합성 기초 혈액검사`; those flags predate the refresh. No nested-set member and no pending update review exist.
+- 2026-11-28 set ordering spike (hosted, force-rolled back): adding the set `전혈구 기본 패널` as a `rowType: "set"` draft row and confirming it created 1 set order, 26 `set_child` orders, 26 work items, 26 lab result entries, 1 aggregate task and 26 execution tasks. Claim → value entry → complete worked for 14 members; the 15th failed `required_lab_results_incomplete` because the test filled a placeholder value outside that analyte's accepted range. Replay content must supply a valid value per analyte.
+  - Open for sets: the set's billing candidate is one parent row priced 36,001 with no price basis. Order sets carry their own price and billing authority, which phases 1–2 did not touch, so billing a set will still fail and shows a marker price.
+  - Inactive sets with demo-suitable names exist (`개 중성화 수술`, `고양이 중성화 수술`, `구토·설사 기본 평가`, `노령묘 건강검진`, `고양이 하부요로 기본 평가`, `집중 입원 모니터링`).
+- 2026-11-28 PRODUCT GAP, confirmed on hosted with a rolled-back test: a fixed-price order set cannot be billed. Ordering set `요검사 패널` creates one parent billing candidate (`billedAs: set_parent`, amount = set price), but `price_basis_snapshot`, `billing_unit_snapshot`, `tax_class_snapshot` and `set_billing_owner_snapshot` stay null, so `clair_request_selected_chart_order_billing` raises `billing_authority_incomplete`.
+  - Cause: `private.clair_snapshot_order_billing_authority` reads `planOrderAuthority` / `amountBasis` / `taxType` from the candidate's `source_snapshot` (the order's confirmed snapshot). For a set parent those values live in `orders.applied_price_snapshot` (`amountBasis: set_fixed_price`, `taxType`, `billedAs`), and a set definition has no field for a plan-order authority.
+  - All 29 lab panel sets are fixed-price, so lab panels ordered the intended way cannot reach an invoice. Individual orders are unaffected.
+  - Options: (a) product fix — a migration that derives the set-parent authority (`fixed_set`, owner `parent`, tax class from `applied_price_snapshot`) plus a SQL contract test; (b) data workaround — switch lab sets to `included_order_sum` with billed members and re-price the single-analyte tests, which yields many invoice lines per panel. Waiting for 승욱's decision.
+- 2026-11-28 master cleanup phase 3 for sets and devices (`supabase/snippets/demo-data-pr-003_master_cleanup_phase3_sets.sql`), hosted dry run, rolled back: 29 lab sets re-priced (e.g. 전혈구 기본 패널 36,001 → 44,000), all 10 test-named sets end inactive (four through a normal save; six hold an invalid definition and the RPC deactivates them while returning `ok=false`), no odd set price remains, 3 lab devices renamed. Not applied yet.
+- 2026-11-28 master cleanup phase 3 (sets and devices) APPLIED to hosted Cheongdam with 승욱's approval. Hosted readback: 29 active sets, none test-named, no odd set price, no active set with a stale or inactive member; the 10 test-named sets are `inactive`; device names are `혈구 검사 수기 입력`, `일반 검사 수기 입력`, `혈액도말 현미경 판독`. App check on Production: 병원 관리 → 세트 Order lists 29 sets as 사용 / 세트 고정가 with the new prices (간 검사 66,000원, 전해질 검사 33,000원).
+  - Still open: fixed-price set billing (product gap above), result profile names in master data ("CLAiR 합성 CBC · 고양이"), dispensing items, diagnosis catalog, six inactive demo-suitable sets, leftover test encounters (purge script not run).
+- 2026-11-28: 승욱 chose the product fix for fixed-price set billing. It is a separate change: work item `CLINICAL-BILLING-PR-025`, branch `claude/set-parent-billing-authority` (worktree `.claude/worktrees/set-parent-billing-authority`), migration `20261128110000_set_parent_billing_authority.sql`. Verified on the hosted schema inside a rolled-back transaction (set `요검사 패널` billed as one 33,000 line and paid). Not committed, not applied remotely. Until it is released, replay must not bill order sets.
+- 2026-11-28: the set billing fix is PR #1136 (`claude/set-parent-billing-authority`). With 승욱's approval its migration was applied to the hosted demo project (remote version `20261128123347`), and the SQL contract passed there: a fixed-price set is billed as one invoice line and paid. Replay may now bill order sets. PR merge is still pending.
+- 2026-11-28 hospital drug list (`supabase/snippets/demo-data-pr-003_hospital_drug_list.sql`), hosted, all rolled back. The 179 master drug items stay blocked (`clinical_use_allowed = false`) and carry brand names, so drugs are added as hospital-authored items: admin `clair_create_order_catalog_item` → admin `clair_update_order_catalog_item` to add `planOrderAuthority` (the create path rejects it; without it confirmation raises `actual_dispense_confirmation_blocked`) → veterinarian `clair_review_workspace_dispensing_order` approve. The server assigns the item id (`ord-…`), so the script reads it from the RPC result. Verified end to end: `마로피탄트 16mg 정` ordered for 3 days → dispensing instruction claimed and completed → invoice paid 9,900 (3 × 3,300). Dry run of the list: 31 of 31 created and approved after two fixes (frequency `qod` is rejected for catalog defaults; the test-named master item `PR-024B 조제 제품` cannot be deactivated through the update RPC, `catalog_default_detail_inputs_invalid`, and stays active). `테오필린 100mg 서방정` was added afterwards (32 items) and is not dry-run yet. Not applied.
+- 2026-11-28 replay engine (`supabase/snippets/demo-data-pr-003_replay_engine.sql`) and converter (`scripts/demo-data/build-cheongdam-chart-replay.mjs`). The engine is four temporary `private.clair_demo_replay_*` functions that drive one visit through the app RPCs and then move the timestamps written by the transaction to the visit time in stages (reception 0, consultation +7 min, chart done +28 min, payment +36 min); only tables the transaction wrote to are touched (`pg_stat_xact_user_tables`). The converter turns the 69 fictional visits in `cheongdam-chart-history.data.mjs` into replay input: abstract order keys become real catalog items, lab order sets, imaging items and hospital drug names (`supabase/snippets/demo-data-pr-003_replay/`, 9 batches of 8).
+  - Hosted dry runs, force-rolled back, with the functions created inside the same transaction: 10 representative visits pass (vaccination, ear cleaning + ear drops, subcutaneous fluids, stifle radiograph, abdominal ultrasound, CBC + chemistry + urinalysis sets, one draft). Encounter `completed`, invoice `paid`, chart `signed` and returned by `clair_advanced_chart_search_batch`; encounter numbers and invoice numbers carry the visit date; no audit event of those encounters is left on the run day. 1.1–6.9 s per visit.
+  - Rules found: reception rejects a start at or after 19:00 (`walk_in_outside_business_hours`; 18:30 passes, the lunch break passes); the catalog default of `피하 수액 처치` needs a linked drug order (`treatment_medication_link_required`), a direct amount does not; imaging `performedAt` in the past raises `invalid_performed_at`, so the engine passes `now()` and lets the timestamp move correct it; coded lab rows need a code (`negative`, `unremarkable`), not a label.
+  - Not covered by the replay: SOAP image attachments (15 planned; storage upload needed), abnormal lab values (every value is generated inside the reference interval), hospitalization and surgery.
+  - Observations, not changed: serum chemistry reference intervals are the placeholder `10–20` for every analyte (CBC intervals are real), so chemistry values are not realistic yet. Chart search lists every member of a lab set as its own order (38 order names for a CBC + chemistry + urinalysis visit). The update RPC cannot deactivate `PR-024B 조제 제품`.
+  - Order of operations for the real run: purge script first (승욱, SQL Editor), then drug list, engine install, 9 batches, drop the engine functions. The purge deletes every Cheongdam encounter, so running it after the replay would remove the replayed charts.
+- 2026-11-28 purge script fix: 승욱's first dry run in the SQL Editor failed at the orphan check with `record "fk" has no field "notnull"` (a bare alias `notnull` is parsed as the NOTNULL operator). Nothing was deleted. The aliases now use `as`; the corrected orphan check ran read-only on hosted (70 tables, 142 foreign keys, no orphan). The delete steps before it had already run without error in that dry run.
+- 2026-11-28 real run, approved by 승욱 ("삭제 후 반영"), after 승욱 ran the purge in the SQL Editor (hosted readback: 0 encounters, 0 charts, 0 orders, 0 invoices, 25 patients, 25 guardians). Applied: hospital drug list (32 active and approved), replay engine functions (ACL `postgres` only), batch 1 and batch 2 (16 visits, all `completed` / `paid`, about 20 s per batch of 8).
+- 2026-11-28 INCIDENT during the real run: batches 3 and 4 were sent as one call (16 visits in one transaction). The MCP call timed out and from 13:19:34 UTC the hosted database stopped answering: SQL calls end with "connection timeout", PostgREST returns 522, Realtime reports `DatabaseConnectionDown`, and the Production app stays on the session check. No Postgres log line after 13:19:34. Cause not confirmed; suspected memory exhaustion of the small instance by one long transaction (each timestamp move switches `session_replication_role`, which resets every cached plan). Rule for the next run: at most 8 visits per call, one call at a time, and check `pg_stat_activity` before the next call. State of batches 3–4 is unknown until the database answers again (a crash rolls the open transaction back; batches re-run safely because existing visits are skipped).
+- 2026-11-28 recovery and completion: 승욱 restarted the project from the dashboard (Free plan; `shared_buffers` 224MB, `max_connections` 60). Postgres came back at 13:33:43 UTC after WAL redo. The 16-visit call had been cancelled by the statement timeout at 13:23:31 and its transaction was rolled back; drugs, engine functions and the first 16 visits were intact. The remaining 53 visits were replayed 4 per call, one call at a time (1–15 s per call), with no failure.
+  - Hosted readback: 69 encounters (67 `completed`, 2 `in_consultation`), 69 charts (67 `signed`, 2 `draft`), all 25 seed patients have at least one visit, visits from 2026-06-05 to 2026-11-25, six veterinarians (9–14 visits each), 70 diagnoses, 475 orders (116 individual, 25 sets, 334 set members), 67 invoices all `paid` (total 3,971,110 KRW), 334 lab rows (330 normal, 4 not judged), no open work item, no invoice number dated today, no clinical row stamped on the run day.
+  - `clair_advanced_chart_search_batch` as veterinarian 이수지 for 2026-06-01..2026-11-28 returns 67 signed charts; every card has orders, 64 have diagnoses (three visits have none by design). The two drafts are not in that result.
+  - Engine bug found and corrected: the invoice number update ran after the last timestamp move, so `invoices.updated_at` held the next visit time (52 rows) or the run time (15 rows). Fixed on hosted by setting `updated_at = paid_at` for the 67 paid invoices; the engine file now updates the number before the last move.
+  - Still open: the four `private.clair_demo_replay_*` functions remain on hosted (ACL `postgres` only). The MCP declined the `drop function` call; 승욱 can run `supabase/snippets/demo-data-pr-003_replay_engine_drop.sql`. App screen check is pending because the browser session expired with the restart.
+- 2026-11-28 Production screen check (built-in browser, signed in as owner 송민재, after the restart): 차트 상세 검색 lists 67 ordinary chart cards, newest first, with visit date, patient, guardian, diagnoses, 주치의/진료의, 진행상태, S/O and assessment text, and order names. "작성 중 차트 포함" raises the count to 69 and shows the two drafts as 작성 중. The 진료 담당의 filter lists six veterinarians; 정민재 gives 13 cards, all his. 오래된순 reverses the order (2026.06.06 first). Searching 외이염 gives 6 cards with the matching diagnosis highlighted. The filter builder (fields: 동물명, 보호자명, 동물종, 품종, 진단 계통, 진단명, 오더명, 검사 오더 있음, 진료일, 차트 작성일) with 동물종 = 고양이 gives 24 cards, all cats. There is no 진행상태 field in the builder; drafts are controlled by the toggle. 접수/예약 for today is empty.
+  - Not checked: 내 차트 (the signed-in owner has no chart), image display (no attachment was seeded; every card shows 첨부된 이미지가 없습니다), list view, export.
+  - The old 시연 이력 section still renders under the results (4 rows for the 외이염 search) and now repeats visits that exist as real charts. Its removal (this branch, uncommitted, plus migration `20261128150000`) is the next step.
+- 2026-11-28 change set for the PR: archive removal (UI, route, tests, migration renamed to `20261128150000` so it sorts after the already-applied `20261128123347`), the visit data, the replay converter, and the SQL snippets that were run on hosted. Not included, left as local files: the superseded direct-insert seed (`generate-cheongdam-chart-history.mjs`, the image and upload scripts, the seed snippet and its spec, `20261128101000_cheongdam_reset_keeps_seeded_history.sql`) and the generated `supabase/snippets/demo-data-pr-003_replay/` batches (re-create them with `node scripts/demo-data/build-cheongdam-chart-replay.mjs`).
+- 2026-11-28: opened PR #1137 from `claude/cheongdam-chart-history` (head `ca161f46` at creation). Local checks: `npx tsc --noEmit`, `npm run lint`, `npm run docs:check`, `tests/cheongdam-demo-history-removal.spec.ts` (3 passed). Migration `20261128150000` is not applied to hosted; apply, merge and Production deployment each wait for 승욱's approval.
+- 2026-11-28 release preparation for PR #1137. 승욱 approved the archive migration apply ("삭제 마이그레이션 반영해") and merge plus Production deployment ("머지 배포까지").
+  - Migration apply through the Supabase MCP `apply_migration` was declined by the tool (drop statements). Not retried. Hosted still has the four archive functions and the table with one batch. 승욱 can run the migration file in the SQL Editor; the app release does not depend on it.
+  - Candidate: head `45bdf2e0b9bb4b5ec96b8896410ae58b31a0d51e`, base `origin/main` `8ef3963905f9b634b76b27d360aa5da16c6245f5`. Local preflight at that head: `npm run security:secrets` (passed, 5194 tracked files), `git diff --check`, `npm run lint`, `npx tsc --noEmit`, `npm run build` (passed), `npm run docs:check`. The worktree also holds untracked superseded files that are not part of the candidate.
+  - Open gate: Vercel reports `Canceled by Ignored Build Step`, so there is no Ready Preview (automatic Preview is held, RELEASE-OPS-PR-005). The release policy lists a missing Preview as a stop condition, so the merge waits for 승욱 to decide. The required Release Check for the current head was still running at this point.
+- 2026-11-28 release of PR #1137. 승욱 waived the missing Preview for this PR ("Preview 없이 머지"); recent PRs #1104, #1133 and #1135 were merged the same way.
+  - Required Release Check passed on head `45bdf2e0b9bb4b5ec96b8896410ae58b31a0d51e` (run 46151505249); CodeQL and GitBook checks passed; merge state `CLEAN`.
+  - Squash-merged with `--match-head-commit` at 2026-11-28T13:54:09Z. Merge commit `3e671e4b3d9c271956673c71621159b62a0b2630` is the tip of `origin/main`.
+  - Production deployment for the merge commit reported `success` at 13:57 UTC (GitHub deployment 8130466234). Rollback candidate: the previous Production deployment of `8ef39639` (GitHub deployment 8127492844).
+  - Production smoke (built-in browser, owner 송민재, synthetic workspace only): 차트 상세 검색 lists 67 charts and shows no 시연 이력 section, also after searching 외이염 (6 results); the patient profile panel for 콩이 shows 차트 이력 5 with no archive section.
+  - Still open on hosted: the archive functions and table (migration `20261128150000` not applied; the MCP declines it) and the four temporary replay functions. Both are removable by 승욱 in the SQL Editor.
+- 2026-11-28 hosted cleanup by 승욱 in the SQL Editor: migration `20261128150000` (archive functions and table) and `demo-data-pr-003_replay_engine_drop.sql` (four temporary replay functions). Readback: no `*cheongdam_demo_history*` function, no `private.clair_cheongdam_demo_history_batches`, no `private.clair_demo_replay_*` function; 69 encounters, 69 charts, 67 paid invoices and 32 hospital drugs unchanged. Production 차트 상세 검색 still lists 67 charts after the cleanup. The migration was run outside the Supabase migration runner, so the remote migration history has no row for `20261128150000`; its statements are `drop ... if exists`, so a later runner apply is harmless.
+- Remaining for this work item: SOAP image attachments, abnormal lab values and real serum chemistry intervals, hospitalization and surgery visits, reset behavior for replayed history, 내 차트 check with a veterinarian account.
