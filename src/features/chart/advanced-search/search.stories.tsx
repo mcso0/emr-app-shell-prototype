@@ -76,9 +76,38 @@ export const DiagnosisWithChiefComplaint: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      canvas.getByText("오른쪽 귀 가려움", { exact: false }),
-    ).toBeVisible();
+      canvas.getByText("S/O 소견").nextElementSibling,
+    ).toHaveTextContent(/^오른쪽 귀 가려움/);
     await expect(canvas.getByText(/토끼/)).toBeVisible();
+  },
+};
+
+export const ReceptionSentenceShownOnce: Story = {
+  args: {
+    query: "소파",
+    chart: exampleChart("synthetic-reception", {
+      purpose: "일주일 전부터 계단이랑 소파에 안 올라가려고 해요",
+      complaint: "일주일 전부터 계단이랑 소파에 안 올라가려고 해요",
+      paragraphs: [
+        {
+          id: "s",
+          section: "subjective",
+          scope: "기본 SOAP",
+          text: "일주일 전부터 높은 곳을 오르지 않으려 함.",
+        },
+      ],
+    }),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByRole("button", { name: "모카 차트 원본 열기" }),
+    ).toHaveTextContent("일주일 전부터 계단이랑 소파에 안 올라가려고 해요");
+    await expect(canvas.getByText("검색 일치 · 방문 목적")).toBeVisible();
+    const findings = canvas.getByText("S/O 소견").nextElementSibling;
+    await expect(findings).toHaveTextContent(
+      /^일주일 전부터 높은 곳을 오르지 않으려 함\.$/,
+    );
   },
 };
 

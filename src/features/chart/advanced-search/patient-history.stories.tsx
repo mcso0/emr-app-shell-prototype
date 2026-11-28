@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { expect, fn, userEvent, waitFor, within } from "storybook/test";
+import { expect, fn, spyOn, userEvent, waitFor, within } from "storybook/test";
 import { cases } from "@/app/review/chart-search/cases";
 import { createReviewSession } from "@/app/review/chart-search/review-session";
 import { PatientHistory } from "./patient-history";
@@ -53,5 +53,26 @@ export const VisitHeaders: Story = {
       expect(body.getByRole("menuitem", { name: "이 차트만 펼치기" })).toBeVisible(),
     );
     await userEvent.keyboard("{Escape}");
+  },
+};
+
+export const CopiedTextShowsReceptionSentenceOnce: Story = {
+  args: { source: { ...source, complaint: source.purpose } },
+  play: async ({ canvasElement }) => {
+    const writeText = spyOn(navigator.clipboard, "writeText").mockResolvedValue();
+    const drawer = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      drawer.getByRole("button", { name: "식욕 저하와 무른 변 복사" }),
+    );
+    await userEvent.click(
+      await body.findByRole("menuitem", { name: "텍스트 전체 복사하기" }),
+    );
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+    const lines = String(writeText.mock.calls[0][0]).split("\n");
+    await expect(
+      lines.filter((line) => line === "식욕 저하와 무른 변"),
+    ).toHaveLength(1);
+    writeText.mockRestore();
   },
 };
