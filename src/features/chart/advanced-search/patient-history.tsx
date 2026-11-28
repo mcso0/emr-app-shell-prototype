@@ -42,6 +42,7 @@ import {
 import { getOperatingDateFromIso } from "@/lib/emr-domain/demo-date";
 import { errorMessage, type ChartSearchApi } from "./client";
 import {
+  complaintBeyondTitle,
   sectionNames,
   orderDescription,
   type SearchChart,
@@ -561,7 +562,7 @@ export function PatientHistory({
                                 clock.format(
                                   new Date(c.createdAt ?? c.clinicalAt),
                                 ),
-                                c.complaint,
+                                complaintBeyondTitle(c.complaint, title),
                                 c.doctor,
                                 c.author,
                                 ...sections.flatMap((section) => [
