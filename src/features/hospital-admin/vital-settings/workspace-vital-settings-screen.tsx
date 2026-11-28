@@ -200,7 +200,7 @@ export function WorkspaceVitalSettingsScreen({
         : current,
     );
 
-    toast.success(`${preset.label}을 목록에서 제거했어요.`, {
+    toast.success(`${preset.label}을 목록에서 제거했습니다.`, {
       action: {
         label: "되돌리기",
         onClick: () =>
@@ -251,7 +251,7 @@ export function WorkspaceVitalSettingsScreen({
       setSaved(cloneWorkspaceVitalSettingsSnapshot(next));
       setDraft(cloneWorkspaceVitalSettingsSnapshot(next));
       setSaveOpen(false);
-      toast.success("바이탈 설정을 저장했어요.");
+      toast.success("바이탈 설정을 저장했습니다.");
     } catch (error) {
       toast.error(
         error instanceof Error && error.message === "denied"
@@ -412,10 +412,10 @@ export function WorkspaceVitalSettingsScreen({
           <DialogHeader>
             <DialogTitle>
               {pendingAction?.kind === "delete"
-                ? `${draft.presets.find((preset) => preset.key === pendingAction.key)?.label ?? "바이탈"}을 목록에서 제거할까요?`
+                ? `${draft.presets.find((preset) => preset.key === pendingAction.key)?.label ?? "바이탈"}을 목록에서 제거하시겠습니까?`
                 : pendingAction?.kind === "disable-required"
-                  ? "필수 입력 항목을 비활성화할까요?"
-                  : "사용하지 않는 항목을 필수 입력으로 설정할까요?"}
+                  ? "필수 입력 항목을 비활성화하시겠습니까?"
+                  : "사용하지 않는 항목을 필수 입력으로 설정하시겠습니까?"}
             </DialogTitle>
             <DialogDescription>
               {pendingAction?.kind === "delete"
@@ -443,7 +443,7 @@ export function WorkspaceVitalSettingsScreen({
       >
         <DialogContent data-testid="vital-settings-save-dialog">
           <DialogHeader>
-            <DialogTitle>바이탈 설정을 저장할까요?</DialogTitle>
+            <DialogTitle>바이탈 설정을 저장하시겠습니까?</DialogTitle>
             <DialogDescription>
               저장하면 워크스페이스의 접수와 진료 화면에 같은 설정이 적용됩니다.
             </DialogDescription>
@@ -651,7 +651,7 @@ function VitalSettingsState({
       <EmrMainContentHeader aria-hidden="true" heightMode="adaptive" />
       <div className="flex min-h-0 flex-1 items-center justify-center p-6">
         <EmrEmptyState
-          description="잠시 후 다시 시도하거나 관리자에게 문의하세요."
+          description="잠시 후 다시 시도하거나 관리자에게 문의해 주세요."
           kind={onRetry ? "read-error" : "no-permission"}
           primaryAction={
             onRetry ? (

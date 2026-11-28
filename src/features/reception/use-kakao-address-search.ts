@@ -8,7 +8,7 @@ import {
   type KakaoPostcodeSelectedAddress,
 } from "@/lib/kakao-postcode";
 
-const ADDRESS_SEARCH_ERROR_MESSAGE = "주소 검색을 불러오지 못했어요. 직접 입력해 주세요.";
+const ADDRESS_SEARCH_ERROR_MESSAGE = "주소 검색을 불러오지 못했습니다. 직접 입력해 주세요.";
 
 type AddressSearchStatus = "error" | "idle" | "loading" | "ready";
 

@@ -126,7 +126,7 @@ test("veterinarian lane menu shares filter state and protects the final lane", a
     /last-veterinarian-lane-description/,
   );
   await expect(
-    page.getByText("최소 1명의 수의사를 표시해야 해요"),
+    page.getByText("최소 1명의 수의사를 표시해야 합니다"),
   ).toBeAttached();
 });
 
@@ -194,7 +194,7 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
   await expect(panel).toContainText("이수지");
   await expect(panel).toContainText("계정 정보");
   await expect(panel).toContainText("오늘 근무 정보");
-  await expect(panel).toContainText("오늘 게시된 근무가 없어요");
+  await expect(panel).toContainText("오늘 게시된 근무가 없습니다");
   await expect(panel).not.toContainText("09:30 - 10:00");
   await expect(panel).not.toContainText("예약 진료");
   await expect(panel).not.toContainText("콩이 · 김하늘 외 1건");
@@ -270,7 +270,7 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
     panel.getByRole("heading", { name: "일정", exact: true }),
   ).toBeVisible();
   await expect(
-    panel.getByText("근무 일정은 일정 화면에서 확인할 수 있어요"),
+    panel.getByText("근무 일정은 일정 화면에서 확인할 수 있습니다"),
   ).toBeVisible();
   await expect(panel.getByRole("button", { name: "일정 확인" })).toBeVisible();
 
@@ -334,7 +334,7 @@ test("non-veterinarian appointment assignees receive the same profile workload",
 
   const panel = page.getByRole("region", { name: "직원 운영 프로필" });
   await expect(panel).toContainText("송하윤");
-  await expect(panel).toContainText("오늘 게시된 근무가 없어요");
+  await expect(panel).toContainText("오늘 게시된 근무가 없습니다");
   await expect(panel).not.toContainText("09:42 - 10:12");
   await expect(panel).not.toContainText("현장 접수");
 
@@ -352,7 +352,7 @@ test("walk-in reception assigned to a staff member appears in profile and worklo
   await openStaffProfile(page, "김도윤");
 
   const panel = page.getByRole("region", { name: "직원 운영 프로필" });
-  await expect(panel).toContainText("오늘 게시된 근무가 없어요");
+  await expect(panel).toContainText("오늘 게시된 근무가 없습니다");
   await expect(panel).not.toContainText("09:42 - 10:12");
   await expect(panel).not.toContainText("현장 접수");
 
@@ -452,7 +452,7 @@ test("staff work tab keeps server order, merges cursor pages by hospital date, a
   await panel.getByRole("button", { name: "합성 CBC 더보기" }).click();
   await page.getByRole("menuitem", { name: "업무 보러가기" }).click();
   const dialog = page.getByRole("dialog", {
-    name: "업무 화면으로 이동할까요?",
+    name: "업무 화면으로 이동하시겠습니까?",
   });
   await expect(dialog).toContainText("합성 환자 · 합성 보호자 · 합성 CBC");
   await page.keyboard.press("Escape");
@@ -474,7 +474,7 @@ test("schedule tab keeps a missing authorized destination neutral", async ({ pag
 
   const panel = page.getByRole("region", { name: "직원 운영 프로필" });
   await panel.getByRole("tab", { name: "일정" }).click();
-  await expect(panel.getByText("표시할 일정이 없어요")).toBeVisible();
+  await expect(panel.getByText("표시할 일정이 없습니다")).toBeVisible();
   await expect(panel.getByRole("button", { name: "일정 확인" })).toHaveCount(0);
 });
 
@@ -595,12 +595,12 @@ test("staff profile panel keeps loading, error, retry, and offline states distin
     drawer.getByTestId("staff-operational-profile-loading"),
   ).toBeVisible();
   await expect(drawer.getByRole("alert")).toContainText(
-    "운영 프로필을 불러오지 못했어요",
+    "운영 프로필을 불러오지 못했습니다",
   );
   allowSuccess = true;
   await drawer.getByRole("button", { name: "다시 시도" }).click();
   await expect(drawer).toContainText("상태 확인 중");
-  await expect(drawer).toContainText("오늘 게시된 근무가 없어요");
+  await expect(drawer).toContainText("오늘 게시된 근무가 없습니다");
   await expect(drawer).not.toContainText("예약 진료");
 });
 
@@ -785,7 +785,7 @@ test("staff profile panel renders account, published shift, availability, and pe
   const phoneCopy = drawer.getByRole("button", { name: "전화번호 복사" });
   await expect(emailCopy).toHaveCSS("opacity", "1");
   await emailCopy.click();
-  await expect(page.getByText("이메일을 복사했어요")).toBeVisible();
+  await expect(page.getByText("이메일을 복사했습니다")).toBeVisible();
   await expect(phoneCopy).toHaveCSS("opacity", "1");
   await drawer.getByRole("button", { name: "프로필 작업 더보기" }).click();
   await expect(page.getByRole("menuitem")).toHaveCount(2);

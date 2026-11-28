@@ -12,7 +12,7 @@ type Story = StoryObj<typeof meta>;
 async function enterBilling(canvas: ReturnType<typeof within>, canvasElement: HTMLElement, owned = false) {
   const label = owned ? "업무 시작하기" : "담당하기";
   await userEvent.click(await canvas.findByRole("button", { name: label }));
-  const dialog = within(await within(canvasElement.ownerDocument.body).findByRole("dialog", { name: owned ? "업무를 시작할까요?" : "이 업무를 담당할까요?" }));
+  const dialog = within(await within(canvasElement.ownerDocument.body).findByRole("dialog", { name: owned ? "업무를 시작하시겠습니까?" : "이 업무를 담당하시겠습니까?" }));
   await userEvent.click(dialog.getByRole("button", { name: label }));
   await canvas.findByRole("table", { name: "청구 항목 테이블" });
 }

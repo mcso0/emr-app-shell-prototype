@@ -72,7 +72,7 @@ export const FailedApprovalKeepsError: Story = { args: { scenario: "pending-appr
   await canvas.findByRole("alert");
   // Let any accidental follow-up GET settle before checking the failure feedback.
   await new Promise(resolve => setTimeout(resolve, 100));
-  await expect(canvas.getByRole("alert")).toHaveTextContent("다른 창에서 이 오더를 수정 중이에요.");
+  await expect(canvas.getByRole("alert")).toHaveTextContent("다른 창에서 이 오더를 수정 중입니다.");
   await expect(fixture.reads).toBe(reads);
   await expect(canvas.getByRole("button", { name: "확인 후 금액 반영" })).toBeEnabled();
 } };

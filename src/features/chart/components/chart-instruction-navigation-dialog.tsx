@@ -65,7 +65,7 @@ export function ChartInstructionNavigationDialog({
       });
       if (request.signal.aborted) return;
       if (response.status === 401 || response.status === 403) {
-        setError("이 지시서를 볼 권한이 없어요.");
+        setError("이 지시서를 볼 권한이 없습니다.");
         return;
       }
       if (!response.ok) throw new Error("instruction_target_read_failed");
@@ -82,13 +82,13 @@ export function ChartInstructionNavigationDialog({
       // Use the same date precedence as the worklist's server-side filter.
       const date = getOperatingDateFromIso(item?.dueAt ?? undefined) ?? getOperatingDateFromIso(item?.createdAt);
       if (!item || !date) {
-        setError("연결된 지시서를 찾을 수 없어요. 차트를 새로고침한 뒤 다시 시도해 주세요.");
+        setError("연결된 지시서를 찾을 수 없습니다. 차트를 새로고침한 뒤 다시 시도해 주세요.");
         return;
       }
       onClose();
       onNavigate(item.id, date);
     } catch {
-      if (!request.signal.aborted) setError("지시서를 확인하지 못했어요. 다시 시도해 주세요.");
+      if (!request.signal.aborted) setError("지시서를 확인하지 못했습니다. 다시 시도해 주세요.");
     } finally {
       requestRef.current = null;
       if (!request.signal.aborted) setPending(false);
@@ -98,7 +98,7 @@ export function ChartInstructionNavigationDialog({
   return (
     <Dialog open={open} onOpenChange={nextOpen => { if (!nextOpen) close(); }}>
       <EmrConfirmDialogContent
-        title={`${label} 지시서로 이동할까요?`}
+        title={`${label} 지시서로 이동하시겠습니까?`}
         description={
           <>
             <span className="block break-words">{target.orderName}</span>

@@ -49,7 +49,7 @@ async function checkCopy(canvasElement: HTMLElement, args: Args) {
   const canvas = within(canvasElement);
   const previous = Object.getOwnPropertyDescriptor(navigator, "clipboard");
   const previousToastIds = new Set(toast.getToasts().map(item => item.id));
-  const message = args.rejectClipboard ? "링크를 복사하지 못했어요." : "링크를 복사했어요.";
+  const message = args.rejectClipboard ? "링크를 복사하지 못했습니다." : "링크를 복사했습니다.";
   try {
     const button = canvas.getByRole("button", { name: args.ariaLabel });
     button.focus(); await userEvent.keyboard("{Enter}");

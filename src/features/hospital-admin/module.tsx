@@ -4154,7 +4154,7 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
         : "Order 변경사항을 저장했습니다.",
     );
     toast.success(
-      creatingNewOrder ? "Order를 등록했어요." : "Order 변경사항을 저장했어요.",
+      creatingNewOrder ? "Order를 등록했습니다." : "Order 변경사항을 저장했습니다.",
     );
   };
 
@@ -4301,8 +4301,8 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
     );
     toast.success(
       decision === "approve"
-        ? "조제 오더를 승인하고 사용 상태로 전환했어요."
-        : "조제 오더를 반려했어요.",
+        ? "조제 오더를 승인하고 사용 상태로 전환했습니다."
+        : "조제 오더를 반려했습니다.",
     );
   };
 
@@ -4406,7 +4406,7 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
                     onClick={() => setConfirmTaxonomyResetOpen(true)}>마스터 분류로 초기화</Button>
                   {source.customizedFields?.includes("*") ? <p className="emr-text-metadata text-muted-foreground">전체 수정 표시가 있어 분류만 초기화할 수 없습니다.</p> : null}
                   {confirmTaxonomyResetOpen ? <EmrConfirmDialogContent
-                    title="마스터 분류로 초기화할까요?"
+                    title="마스터 분류로 초기화하시겠습니까?"
                     description="세부 분류와 검사 계열만 현재 마스터 값으로 저장합니다. 임상 기본값은 유지되며, 이 창의 미저장 변경사항은 취소됩니다."
                     cancelLabel="취소" confirmLabel="분류 초기화" closeAriaLabel="분류 초기화 확인 닫기"
                     onCancel={() => setConfirmTaxonomyResetOpen(false)} onConfirm={() => void handleTaxonomyReset()} /> : null}
@@ -4458,7 +4458,7 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
               </div>
               <Dialog open={executionResolution !== null} onOpenChange={open => { if (!open) setExecutionResolution(null); }}>
                 {executionResolution ? <EmrConfirmDialogContent
-                  title={executionResolution.action === "reset" ? "이 필드에 마스터 값을 적용할까요?" : "이 필드의 병원 값을 유지할까요?"}
+                  title={executionResolution.action === "reset" ? "이 필드에 마스터 값을 적용하시겠습니까?" : "이 필드의 병원 값을 유지하시겠습니까?"}
                   description="선택한 필드의 갱신 결정을 저장합니다. 다른 저장값은 유지되고 이 창의 미저장 변경사항은 취소됩니다."
                   cancelLabel="취소" confirmLabel={executionResolution.action === "reset" ? "마스터 값 적용" : "병원 값 유지"}
                   closeAriaLabel="기본값 갱신 확인 닫기" onCancel={() => setExecutionResolution(null)} onConfirm={() => void handleExecutionResolution()} /> : null}
@@ -5117,8 +5117,8 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
               <EmrConfirmDialogContent
                 title={
                   reviewDecision === "approve"
-                    ? "조제 오더를 승인할까요?"
-                    : "조제 오더를 반려할까요?"
+                    ? "조제 오더를 승인하시겠습니까?"
+                    : "조제 오더를 반려하시겠습니까?"
                 }
                 description={
                   reviewDecision === "approve"
@@ -5148,7 +5148,7 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
             </Button>
             {confirmDeleteOpen ? (
               <EmrConfirmDialogContent
-                title="Order 사용을 중지할까요?"
+                title="Order 사용을 중지하시겠습니까?"
                 description={`${order.standardName} 항목은 차트 신규 선택에서 제외되고, 과거 진료와 청구 기록은 유지됩니다.`}
                 cancelLabel="취소"
                 confirmLabel="사용 중지"
@@ -5191,8 +5191,8 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
               <EmrConfirmDialogContent
                 title={
                   creatingNewOrder
-                    ? "오더를 등록할까요?"
-                    : "Order 변경사항을 저장할까요?"
+                    ? "오더를 등록하시겠습니까?"
+                    : "Order 변경사항을 저장하시겠습니까?"
                 }
                 description={
                   creatingNewOrder

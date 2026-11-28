@@ -240,7 +240,7 @@ for (const [queueType, label] of [["dispensing", "조제"], ["treatment", "처�
     await page.keyboard.press("Escape");
     await expect(arrow).toBeFocused();
     await complete.click();
-    const confirm = page.getByRole("dialog", { name: "오더를 완료할까요?" });
+    const confirm = page.getByRole("dialog", { name: "오더를 완료하시겠습니까?" });
     await expect(confirm).toBeVisible();
     await confirm.getByRole("button", { name: "취소" }).click();
     expect(actions).toEqual([]);
@@ -252,7 +252,7 @@ test("unassigned requester completes dispensing without result input and retries
   await expect(page.getByRole("button", { name: "조제 완료", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "완료 메뉴 열기" }).click();
   await page.getByRole("menuitem", { name: "조제 완료", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "오더를 완료할까요?" });
+  const dialog = page.getByRole("dialog", { name: "오더를 완료하시겠습니까?" });
   await expect(dialog.getByRole("button", { name: /수행값 입력/ })).toHaveCount(0);
   expect(actions).toEqual([]); expect(writes).toEqual([]);
   await dialog.getByRole("button", { name: "완료", exact: true }).click();
@@ -292,14 +292,14 @@ test("treatment history is available only after a displayable revision", async (
 test("treatment set completes one item and then the rest without result input", async ({ page }) => {
   const { actions, writes, document } = await install(page, { queueType: "treatment", set: true, started: true });
   await page.getByRole("button", { name: "합성 품목 1 완료", exact: true }).click();
-  const item = page.getByRole("dialog", { name: "이 항목을 완료할까요?" });
+  const item = page.getByRole("dialog", { name: "이 항목을 완료하시겠습니까?" });
   await expect(item.getByRole("button", { name: /수행값 입력/ })).toHaveCount(0);
   await item.getByRole("button", { name: "완료", exact: true }).click();
   await expect(item).not.toBeVisible();
   expect(document.items.map(row => row.status)).toEqual(["completed", "in_progress"]);
   expect(document.finalized).toBe(false);
   await page.getByRole("button", { name: "처치 완료", exact: true }).click();
-  const set = page.getByRole("dialog", { name: "오더를 완료할까요?" });
+  const set = page.getByRole("dialog", { name: "오더를 완료하시겠습니까?" });
   await expect(set.getByText("미완료 항목 1개도 함께 완료됩니다.")).toBeVisible();
   await set.getByRole("button", { name: "완료", exact: true }).click();
   await expect(page.getByTestId("instruction-status-label")).toHaveText("완료");
@@ -311,7 +311,7 @@ test("treatment set completes one item and then the rest without result input", 
 test("completed dispensing is read-only and reopening a single order can be retried", async ({ page }) => {
   const { actions, document, reopenWrites } = await install(page, { started: true, failReopen: true });
   await page.getByRole("button", { name: "조제 완료", exact: true }).click();
-  await page.getByRole("dialog", { name: "오더를 완료할까요?" }).getByRole("button", { name: "완료", exact: true }).click();
+  await page.getByRole("dialog", { name: "오더를 완료하시겠습니까?" }).getByRole("button", { name: "완료", exact: true }).click();
   await expect(page.getByTestId("instruction-status-label")).toHaveText("완료");
 
   const row = page.getByRole("row").filter({ hasText: "합성 품목 1" });
@@ -320,7 +320,7 @@ test("completed dispensing is read-only and reopening a single order can be retr
   const filter = page.getByRole("button", { name: "필터", exact: true }).last();
   await filter.click();
   await page.getByRole("menuitemradio", { name: "기존 오더", exact: true }).click();
-  await expect(page.getByText("조건에 맞는 항목이 없어요.")).toBeVisible();
+  await expect(page.getByText("조건에 맞는 항목이 없습니다.")).toBeVisible();
   await page.getByRole("button", { name: "필터 초기화", exact: true }).click();
   await expect(filter).toBeFocused();
   await expect(row).toBeVisible();
@@ -339,7 +339,7 @@ test("completed dispensing is read-only and reopening a single order can be retr
   await page.keyboard.press("Enter");
   await expect(page.getByRole("menuitem", { name: /담당 취소|업무 취소/ })).toHaveCount(0);
   await page.getByRole("menuitem", { name: "진행 중으로 변경" }).click();
-  const reopen = page.getByRole("dialog", { name: "진행 중으로 변경할까요?" });
+  const reopen = page.getByRole("dialog", { name: "진행 중으로 변경하시겠습니까?" });
   await expect(reopen).toContainText("합성 검증 오더");
   await reopen.getByRole("button", { name: "취소" }).click();
   expect(actions).toEqual(["complete_all"]);
@@ -378,7 +378,7 @@ test("completed execution history is read-only and the document menu preserves c
     } } });
   });
   await page.getByRole("button", { name: "조제 완료", exact: true }).click();
-  await page.getByRole("dialog", { name: "오더를 완료할까요?" }).getByRole("button", { name: "완료", exact: true }).click();
+  await page.getByRole("dialog", { name: "오더를 완료하시겠습니까?" }).getByRole("button", { name: "완료", exact: true }).click();
   await expect(page.getByTestId("instruction-status-label")).toHaveText("완료");
   await page.getByRole("button", { name: "합성 검증 오더 더 보기" }).click();
   await page.getByRole("menuitem", { name: "수행기록", exact: true }).click();
@@ -407,12 +407,12 @@ test("completed treatment set reopens one selected item and releases only its re
   const inProgress = page.getByTestId("order-queue-status-inProgress");
   const waiting = page.getByTestId("order-queue-status-waiting");
   await page.getByRole("button", { name: "처치 완료", exact: true }).click();
-  await page.getByRole("dialog", { name: "오더를 완료할까요?" }).getByRole("button", { name: "완료", exact: true }).click();
+  await page.getByRole("dialog", { name: "오더를 완료하시겠습니까?" }).getByRole("button", { name: "완료", exact: true }).click();
   await expect(completed.locator(card)).toBeVisible();
 
   await page.getByRole("button", { name: "업무 상태 변경" }).click();
   await page.getByRole("menuitem", { name: "진행 중으로 변경" }).click();
-  const dialog = page.getByRole("dialog", { name: "진행 중으로 변경할까요?" });
+  const dialog = page.getByRole("dialog", { name: "진행 중으로 변경하시겠습니까?" });
   const submit = dialog.getByRole("button", { name: "진행 중으로 변경" });
   await expect(submit).toBeDisabled();
   await expect(dialog.getByRole("radio")).toHaveCount(2);
@@ -441,7 +441,7 @@ test("completed treatment set reopens one selected item and releases only its re
   await expect(prework).toBeVisible();
   await expect(waiting.locator(card)).toHaveAttribute("data-selected", "true");
   await prework.getByRole("button", { name: "담당하기", exact: true }).click();
-  await page.getByRole("dialog", { name: "이 업무를 담당할까요?" }).getByRole("button", { name: "담당하기", exact: true }).click();
+  await page.getByRole("dialog", { name: "이 업무를 담당하시겠습니까?" }).getByRole("button", { name: "담당하기", exact: true }).click();
   await expect(inProgress.locator(card)).toHaveAttribute("data-selected", "true");
   await expect(completed.locator(sibling)).toBeVisible();
   expect(actions).toEqual(["complete_all", "reopen", "unassign", "claim"]);
@@ -461,7 +461,7 @@ test("claim assigns and starts before opening the instruction", async ({ page })
   await page.screenshot({ path: test.info().outputPath("dispensing-narrow.png") });
   await page.setViewportSize({ width: 1624, height: 1000 });
   await page.getByRole("button", { name: "담당하기", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "이 업무를 담당할까요?" });
+  const dialog = page.getByRole("dialog", { name: "이 업무를 담당하시겠습니까?" });
   await expect(dialog.getByText("미지정 → 나", { exact: true })).toBeVisible();
   await expect(dialog.getByRole("list", { name: "대상 오더" }).getByRole("listitem")).toHaveText(["합성 품목 1"]);
   await expect(dialog.getByText("현재 담당:", { exact: false })).toHaveCount(0);
@@ -510,7 +510,7 @@ test("direct start still requires acknowledgement of changed instructions", asyn
   await start.click();
   const review = page.getByRole("dialog", { name: "지시사항 확인" });
   await expect(review).toBeVisible();
-  await expect(page.getByRole("dialog", { name: "업무를 시작할까요?" })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "업무를 시작하시겠습니까?" })).toHaveCount(0);
   expect(actions).toEqual([]);
   await review.getByRole("button", { name: "최신 지시 확인" }).click();
   await expect(review).not.toBeVisible();
@@ -716,7 +716,7 @@ for (const queueType of ["dispensing", "treatment"] as const) {
 
     const claimWork = async () => {
       await claim.click();
-      await page.getByRole("dialog", { name: "이 업무를 담당할까요?" })
+      await page.getByRole("dialog", { name: "이 업무를 담당하시겠습니까?" })
         .getByRole("button", { name: "담당하기", exact: true }).click();
     };
     await claimWork();
@@ -741,7 +741,7 @@ for (const queueType of ["dispensing", "treatment"] as const) {
       name: dispensing ? "확인하고 조제 계속" : "확인하고 처치 계속",
     }).click();
     if (failAssignment) {
-      await expect(page.getByText("변경을 저장하지 못했어요. 다시 시도해 주세요.")).toBeVisible();
+      await expect(page.getByText("변경을 저장하지 못했습니다. 다시 시도해 주세요.")).toBeVisible();
       await expect(prework.getByTestId("instruction-status-label")).toHaveText("재요청");
       const acknowledgementCount = acknowledgementVersions.length;
       await claimWork();
@@ -772,7 +772,7 @@ for (const queueType of ["dispensing", "treatment"] as const) {
 test("takeover requires a reason, retains it on failure and retries one command", async ({ page }) => {
   const { actions, assignmentWrites } = await install(page, { owner: "other", set: true, failAssignment: true, requester: false });
   await page.getByRole("button", { name: "담당하기", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "담당자를 변경할까요?" });
+  const dialog = page.getByRole("dialog", { name: "담당자를 변경하시겠습니까?" });
   await expect(dialog.getByText("합성 기존 담당자 → 나", { exact: true })).toBeVisible();
   await expect(dialog.getByRole("list", { name: "대상 오더" }).getByRole("listitem")).toHaveText(["합성 품목 1", "합성 품목 2"]);
   const confirm = dialog.getByRole("button", { name: "담당 변경", exact: true });
@@ -814,7 +814,7 @@ test("takeover keeps the reason when a new instruction must be acknowledged", as
   });
 
   const entry = page.getByTestId("fulfillment-prework");
-  const takeover = page.getByRole("dialog", { name: "담당자를 변경할까요?" });
+  const takeover = page.getByRole("dialog", { name: "담당자를 변경하시겠습니까?" });
   await entry.getByRole("button", { name: "담당하기", exact: true }).click();
   await takeover.getByLabel("담당 변경 사유").fill("합성 교대 사유");
   await takeover.getByRole("button", { name: "담당 변경", exact: true }).click();
@@ -1002,7 +1002,7 @@ test("profile read failure stays distinct from missing demographics", async ({ p
 test("takeover conflict refreshes the owner and keeps the reason until a new command", async ({ page }) => {
   const { assignmentWrites } = await install(page, { owner: "other", staleAssignment: true, requester: false });
   await page.getByRole("button", { name: "담당하기", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "담당자를 변경할까요?" });
+  const dialog = page.getByRole("dialog", { name: "담당자를 변경하시겠습니까?" });
   await dialog.getByLabel("담당 변경 사유").fill("교대 인계");
   const confirm = dialog.getByRole("button", { name: "담당 변경", exact: true });
   await confirm.click();
@@ -1140,7 +1140,7 @@ for (const [queueType, label] of [["dispensing", "조제"], ["treatment", "처�
     await page.screenshot({ path: testInfo.outputPath("prework-narrow.png") });
     await menu.click();
     await page.getByRole("menuitem", { name: label + " 완료" }).click();
-    const completion = page.getByRole("dialog", { name: "오더를 완료할까요?" });
+    const completion = page.getByRole("dialog", { name: "오더를 완료하시겠습니까?" });
     await expect(completion.getByRole("button", { name: "완료", exact: true })).toBeEnabled();
     await completion.getByRole("button", { name: "취소", exact: true }).click();
     requireInstructionReview();

@@ -92,8 +92,8 @@ function PatientContextExample({
 type ContextArgs = ChartContextArgs & BillingContextArgs;
 
 const disabledReasons = {
-  "encounter-inactive": "진료 중인 접수에서만 바이탈을 입력할 수 있어요.",
-  historical: "과거 차트 보기에서는 바이탈을 수정할 수 없어요.",
+  "encounter-inactive": "진료 중인 접수에서만 바이탈을 입력할 수 있습니다.",
+  historical: "과거 차트 보기에서는 바이탈을 수정할 수 없습니다.",
 };
 
 // All variants follow ChartPatientHeader in chart/module.tsx. Only synthetic

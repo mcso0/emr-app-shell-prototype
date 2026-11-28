@@ -138,7 +138,7 @@ export const SaveErrorAndRetry: Story = {
   play: async ({ canvasElement }) => {
     const { content } = await newMeasurement(canvasElement);
     await userEvent.click(content.getByRole("button", { name: "저장" }));
-    await waitFor(() => expect(content.getByText("바이탈을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.")).toBeVisible());
+    await waitFor(() => expect(content.getByText("바이탈을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.")).toBeVisible());
     await expect(fixture.records).toHaveLength(0); await expect(content.getByRole("textbox", { name: "체중" })).toHaveValue("4.8");
     fixture.recoverSave(); await userEvent.click(content.getByRole("button", { name: "저장" }));
     await waitFor(() => expect(fixture.records).toHaveLength(1));
@@ -160,12 +160,12 @@ export const DirtyCancelConfirmation: Story = {
     await waitFor(() => expect(weight).toHaveValue("4.5"));
     await userEvent.clear(weight); await userEvent.type(weight, "4.8");
     await userEvent.click(content.getByRole("button", { name: "취소" }));
-    const confirm = within(await body.findByRole("dialog", { name: "작성 중인 내용을 취소할까요?" }));
+    const confirm = within(await body.findByRole("dialog", { name: "작성 중인 내용을 취소하시겠습니까?" }));
     await userEvent.click(confirm.getByRole("button", { name: "돌아가기" }));
-    await waitFor(() => expect(body.queryByRole("dialog", { name: "작성 중인 내용을 취소할까요?" })).not.toBeInTheDocument());
+    await waitFor(() => expect(body.queryByRole("dialog", { name: "작성 중인 내용을 취소하시겠습니까?" })).not.toBeInTheDocument());
     await expect(weight).toHaveValue("4.8");
     await userEvent.keyboard("{Escape}");
-    await userEvent.click(within(await body.findByRole("dialog", { name: "작성 중인 내용을 취소할까요?" })).getByRole("button", { name: "취소하기" }));
+    await userEvent.click(within(await body.findByRole("dialog", { name: "작성 중인 내용을 취소하시겠습니까?" })).getByRole("button", { name: "취소하기" }));
     await waitFor(() => expect(body.queryByRole("dialog", { name: "바이탈 이력" })).not.toBeInTheDocument());
     await expect(fixture.records[0].weightKg).toBe(4.5); await expect(fixture.writes).toHaveLength(0);
   },
@@ -194,7 +194,7 @@ export const ClearHistoricalMeasurementPreservesOrigin: Story = {
     await waitFor(() => expect(weight).toHaveValue("4"));
     await userEvent.clear(weight);
     await userEvent.click(content.getByRole("button", { name: "저장" }));
-    const confirmation = within(await body.findByRole("dialog", { name: "과거 바이탈 이력을 수정할까요?" }));
+    const confirmation = within(await body.findByRole("dialog", { name: "과거 바이탈 이력을 수정하시겠습니까?" }));
     // The portal mounts before its fade-in becomes visible.
     await waitFor(() => expect(confirmation.getByText(/측정 기록은 유지되고 입력값만 비워집니다/)).toBeVisible());
     await expect(fixture.writes).toHaveLength(0);

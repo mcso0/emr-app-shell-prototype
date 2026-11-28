@@ -82,7 +82,7 @@ export function TaskInstructionReview({ controller, renderInstructions, orderCha
             {controller.busy ? "확인 중…" : controller.continuationLabel ?? confirmLabel}
           </Button>
         )}>
-        {controller.loadingRestart && <p className="text-sm text-muted-foreground" role="status">변경 내용을 불러오는 중이에요.</p>}
+        {controller.loadingRestart && <p className="text-sm text-muted-foreground" role="status">변경 내용을 불러오는 중입니다.</p>}
         <div className="space-y-6">{(controller.loadingRestart ? [] : reviewItems).map(item => {
           const targetId = instructionReviewTargetId(item);
           const change = orderChanges?.get(targetId);
@@ -99,7 +99,7 @@ export function TaskInstructionReview({ controller, renderInstructions, orderCha
               </div>}
             </> : <div className="grid gap-4 sm:grid-cols-2"><div className="rounded-lg border p-3"><h3 className="mb-3 text-sm font-medium">이전 확인·요청 당시</h3><InstructionContent document={item.previous} /></div>
               <div className="rounded-lg border p-3"><h3 className="mb-3 text-sm font-medium">최신 지시</h3><InstructionContent document={item.current} /></div></div>}
-            {!!item.current?.partialWork?.length && <section className="mt-3 rounded-lg border p-3 text-sm"><h4 className="mb-2 font-medium">이미 수행한 내용</h4>{item.current.partialWork.map((note, index) => <p className="mb-2 whitespace-pre-wrap" key={index}>{note.attemptNo}회차 · {note.actorName}: {note.note}</p>)}<p className="text-muted-foreground">남은 작업 범위를 확인해 주세요. 이전 수행량을 자동으로 차감하지 않아요.</p></section>}
+            {!!item.current?.partialWork?.length && <section className="mt-3 rounded-lg border p-3 text-sm"><h4 className="mb-2 font-medium">이미 수행한 내용</h4>{item.current.partialWork.map((note, index) => <p className="mb-2 whitespace-pre-wrap" key={index}>{note.attemptNo}회차 · {note.actorName}: {note.note}</p>)}<p className="text-muted-foreground">남은 작업 범위를 확인해 주세요. 이전 수행량을 자동으로 차감하지 않습니다.</p></section>}
             {snapshots.length > 0 && <details className="mt-3 text-sm"><summary className="cursor-pointer">요청·완료 당시 기록</summary><div className="mt-3 space-y-4">{snapshots.map((snapshot, index) => <section className="rounded-lg border p-3" key={index}><h4 className="mb-3 font-medium">{snapshot.legacy ? "이전 경구제 기록 · " : ""}{snapshot.attemptNo ? `${snapshot.attemptNo}회차 · ` : ""}{snapshot.phase === "requested" ? "요청 당시" : "완료 당시"} · {new Date(snapshot.capturedAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}</h4><InstructionContent document={snapshot.document} /></section>)}</div></details>}
           </section>;
         })}</div>

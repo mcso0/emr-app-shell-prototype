@@ -689,7 +689,7 @@ test("workspace creation validates required fields before creating state", async
   await expect(page).toHaveURL(/\/workspace\/new/);
   await page.getByRole("button", { name: "워크스페이스 만들기" }).click();
 
-  await expect(page.getByText("병원/워크스페이스 이름을 입력하세요.")).toBeVisible();
+  await expect(page.getByText("병원/워크스페이스 이름을 입력해 주세요.")).toBeVisible();
   await expect(page).toHaveURL(/\/workspace\/new/);
 
   const stored = await page.evaluate((key) => window.localStorage.getItem(key), SESSION_WORKSPACES_STORAGE_KEY);
@@ -892,7 +892,7 @@ test("hospital admin can manage route-backed member invitations", async ({
   await page.getByRole("button", { name: "직원 초대" }).click();
   await page.getByLabel("초대 이메일").fill("VET@HANBIT.TEST");
   await page.getByRole("button", { name: "초대 만들기" }).click();
-  await expect(page.getByText("이미 대기 중인 초대가 있습니다. 재발송을 사용하세요.")).toBeVisible();
+  await expect(page.getByText("이미 대기 중인 초대가 있습니다. 재발송을 사용해 주세요.")).toBeVisible();
   await page.getByRole("button", { name: "닫기" }).click();
 
   const resendResponse = page.waitForResponse(
@@ -1449,7 +1449,7 @@ test("personal profile settings validate editable fields and save session-only d
   await page.getByLabel("이름").fill("");
   await page.getByRole("button", { name: "저장", exact: true }).click();
 
-  await expect(page.getByText("이름을 입력하세요.")).toBeVisible();
+  await expect(page.getByText("이름을 입력해 주세요.")).toBeVisible();
 
   await page.getByLabel("이름").fill("김승욱");
   await page.getByLabel("연락처").fill("010-1111-2222");
@@ -1495,8 +1495,8 @@ test("personal profile contract keeps user-editable profile separate from author
   expect(validatePersonalProfileInput(input)).toEqual({
     valid: false,
     fieldErrors: {
-      displayName: "이름을 입력하세요.",
-      initials: "이니셜은 1~3자로 입력하세요.",
+      displayName: "이름을 입력해 주세요.",
+      initials: "이니셜은 1~3자로 입력해 주세요.",
     },
   } satisfies PersonalProfileValidationResult);
 
@@ -1590,9 +1590,9 @@ test("workspace creation contract returns field errors for missing required fiel
   ).toEqual({
     valid: false,
     fieldErrors: {
-      hospitalName: "병원/워크스페이스 이름을 입력하세요.",
-      adminDisplayName: "대표/관리자 이름을 입력하세요.",
-      contactEmail: "올바른 이메일 형식으로 입력하세요.",
+      hospitalName: "병원/워크스페이스 이름을 입력해 주세요.",
+      adminDisplayName: "대표/관리자 이름을 입력해 주세요.",
+      contactEmail: "올바른 이메일 형식으로 입력해 주세요.",
     },
   });
 });
@@ -1658,7 +1658,7 @@ test("workspace invitation contract blocks duplicate pending and active membersh
   ).toEqual({
     valid: false,
     fieldErrors: {
-      email: "이미 대기 중인 초대가 있습니다. 재발송을 사용하세요.",
+      email: "이미 대기 중인 초대가 있습니다. 재발송을 사용해 주세요.",
     },
   });
 

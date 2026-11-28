@@ -146,7 +146,7 @@ export function ConfirmedOrderEditDialog({ workspaceId, chartId, orderId, name, 
       if (session) session.held = false;
       onClose();
     } catch {
-      setError("일시중지를 해제하지 못했어요. 다시 시도해 주세요.");
+      setError("일시중지를 해제하지 못했습니다. 다시 시도해 주세요.");
     } finally {
       pending.current = false;
       setClosing(false);
@@ -275,7 +275,7 @@ export function ConfirmedOrderEditDialog({ workspaceId, chartId, orderId, name, 
       {context && <div style={{ minHeight: billingViewport?.minimumContentHeight }}>
         <div ref={formContentRef} className="space-y-6">
           <fieldset disabled={busy || !context.canEditClinical} className="space-y-3"><legend className="mb-3 text-sm font-semibold">업무 정보</legend>
-            {!context.canEditClinical && <p className="text-sm text-muted-foreground">업무 수정 권한이 없어요.</p>}
+            {!context.canEditClinical && <p className="text-sm text-muted-foreground">업무 수정 권한이 없습니다.</p>}
             <div className="grid gap-3 sm:grid-cols-2">
               {clinicalFields?.fields}
               {clinicalType === "dispensing" && <>
@@ -308,7 +308,7 @@ export function ConfirmedOrderEditDialog({ workspaceId, chartId, orderId, name, 
                   </div> : <Input aria-label="요청 조제량" readOnly value={automaticPending ? "저장 시 자동 계산" : requestDisplay} />}
                   {invalidManualQuantity && editingQuantity && <p className="text-sm text-destructive">0보다 큰 요청 조제량을 입력해 주세요.</p>}
                   {needsQuantityConfirmation && <div className="space-y-2">
-                    <p>처방 조건이 바뀌었어요. 수동으로 지정한 요청 조제량을 확인해 주세요.</p>
+                    <p>처방 조건이 바뀌었습니다. 수동으로 지정한 요청 조제량을 확인해 주세요.</p>
                     <Button variant="outline" type="button" disabled={!manualQuantityValid}
                       onClick={() => setConfirmedQuantity(confirmationKey)}>요청 조제량 확인</Button>
                   </div>}
@@ -318,7 +318,7 @@ export function ConfirmedOrderEditDialog({ workspaceId, chartId, orderId, name, 
             </div>
           </fieldset>
           {financial && <fieldset disabled={financialDisabled} className="space-y-3"><legend className="mb-3 text-sm font-semibold">청구 정보</legend>
-            {(!context.canEditFinancial || context.billingStage === "locked") && <p className="text-sm text-muted-foreground">{context.billingStage === "locked" ? "결제 중·완료된 금액은 수납 정정에서 처리해 주세요." : "청구 수정 권한이 없어요."}</p>}
+            {(!context.canEditFinancial || context.billingStage === "locked") && <p className="text-sm text-muted-foreground">{context.billingStage === "locked" ? "결제 중·완료된 금액은 수납 정정에서 처리해 주세요." : "청구 수정 권한이 없습니다."}</p>}
             <div className="grid items-start gap-3 sm:grid-cols-2">
               <label className="grid gap-1.5 text-sm sm:col-span-2">청구명<Input value={financial.billingName} onChange={e => setFinancial({ ...financial, billingName: e.target.value })} /></label>
               {([['billingQuantity', '청구 수량'], ['unitPriceKrw', '단가 (원)']] as const).map(([key, label]) => <label key={key} className="grid gap-1.5 text-sm">{label}<Input type="number" step="any" value={Number.isNaN(financial[key]) ? "" : financial[key]} onChange={e => setFinancial({ ...financial, [key]: e.target.value === "" ? NaN : Number(e.target.value) })} /></label>)}
@@ -344,12 +344,12 @@ export function ConfirmedOrderEditDialog({ workspaceId, chartId, orderId, name, 
             </div>
           </fieldset>}
           {changed && <section className="rounded-lg border p-3 text-sm" aria-label="변경 내용"><h3 className="mb-2 font-medium">변경 내용</h3>
-            {clinicalChanged && <><p>업무 내용 변경을 담당자에게 전달해요. 기존 수행 기록은 보존해요.</p>{changedFields.map(key => <p key={key}>{fieldLabels?.[key] ?? key}: {String(context.detailInputs[key] ?? "—")} → {String(inputs[key] ?? "—")}</p>)}</>}
+            {clinicalChanged && <><p>업무 내용 변경을 담당자에게 전달합니다. 기존 수행 기록은 보존합니다.</p>{changedFields.map(key => <p key={key}>{fieldLabels?.[key] ?? key}: {String(context.detailInputs[key] ?? "—")} → {String(inputs[key] ?? "—")}</p>)}</>}
             {Object.entries(financialPatch).map(([key, value]) => <p key={key}>{orderFinancialLabels[key as keyof OrderFinancialValues]}: {formatOrderFinancialValue(baseFinancial?.[key as keyof OrderFinancialValues])} → {formatOrderFinancialValue(value)}</p>)}
             {quantityChanged && <p>요청 조제량: {context.actualDispenseQuantity ?? "—"} ({context.actualDispenseMode === "manual" ? "수동 지정" : "자동 계산"}) → {mode === "manual" ? `${quantity || "—"} (수동 지정)` : "자동 계산"}</p>}
-            {!clinicalChanged && <p>{clinicalType === "dispensing" || clinicalType === "treatment" ? "조제·처치" : "검사 오더"} 변경 안내는 보내지 않아요.</p>}
-            {context.billingStage === "requested" && <p className="mt-2">수납 담당자가 확인하기 전에는 기존 청구금액을 유지해요.</p>}
-            {context.taskStatus === "complete" && clinicalChanged && <p className="mt-2">새 작업을 요청해요. 수행기록만 바로잡으려면 지시서의 기록 정정을 이용해 주세요.</p>}
+            {!clinicalChanged && <p>{clinicalType === "dispensing" || clinicalType === "treatment" ? "조제·처치" : "검사 오더"} 변경 안내는 보내지 않습니다.</p>}
+            {context.billingStage === "requested" && <p className="mt-2">수납 담당자가 확인하기 전에는 기존 청구금액을 유지합니다.</p>}
+            {context.taskStatus === "complete" && clinicalChanged && <p className="mt-2">새 작업을 요청합니다. 수행기록만 바로잡으려면 지시서의 기록 정정을 이용해 주세요.</p>}
           </section>}
           {changed && <label className="grid gap-1.5 text-sm">수정 사유 {clinicalChanged ? "(필수)" : "(선택 입력)"}
             <Textarea required={clinicalChanged} maxLength={500} value={reason} disabled={busy}

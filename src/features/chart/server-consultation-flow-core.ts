@@ -196,7 +196,7 @@ export async function mutateConsultationFlow({
         ...(action !== "call" || roomId ? {} : { roomId: "진료실을 선택해 주세요." }),
         ...(action === "call" || action === "start" || action === "return_to_waiting"
           ? {}
-          : { action: "지원하지 않는 진료 흐름 액션이에요." }),
+          : { action: "지원하지 않는 진료 흐름 액션입니다." }),
       },
     };
   }

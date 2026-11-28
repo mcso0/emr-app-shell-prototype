@@ -2372,9 +2372,9 @@ function LabResultTableLinkButton({ date, resultId, search, workspaceId }: {
     url.hash = "lab-result-table";
     try {
       await navigator.clipboard.writeText(url.href);
-      toast.success("결과표 링크를 복사했어요.");
+      toast.success("결과표 링크를 복사했습니다.");
     } catch {
-      toast.error("결과표 링크를 복사하지 못했어요.");
+      toast.error("결과표 링크를 복사하지 못했습니다.");
     }
   };
 
@@ -3212,7 +3212,7 @@ export function LabRightPanel({ workspaceId }: ShellComponentProps) {
           onOpenChange={(open) => !open && setReceiptToPaste(null)}
         >
           <EmrConfirmDialogContent
-            title="검사결과를 붙여넣을까요?"
+            title="검사결과를 붙여넣으시겠습니까?"
             description={
               <>
                 {receiptToPaste?.equipmentName} 수신값을 현재 검사결과지에

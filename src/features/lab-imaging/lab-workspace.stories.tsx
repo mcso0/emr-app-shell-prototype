@@ -22,7 +22,7 @@ async function waitForCanonical(root: HTMLElement, instance: typeof fixture) {
     const finding = root.querySelector<HTMLTextAreaElement>("textarea[aria-label='검사결과 종합소견']");
     expect(finding).toBeInTheDocument();
     expect(finding).toHaveAttribute("id", `lab-overall-finding-${instance.result.id}`);
-    expect(finding).toHaveAttribute("placeholder", "전체 검사 결과에 대한 종합소견을 입력하세요. 자동으로 저장됩니다.");
+    expect(finding).toHaveAttribute("placeholder", "전체 검사 결과에 대한 종합소견을 입력해 주세요. 자동으로 저장됩니다.");
     expect(root.querySelector(`[data-testid='lab-result-row-${instance.result.rows[0].id}']`)).toBeInTheDocument();
   }, { timeout: 5000 });
 }
@@ -347,7 +347,7 @@ export const EmptyQueue: Story = { args: { scenario: "empty", view: "content" },
 
 export const AssignedFirstRequestStarts: Story = { args: { scenario: "assigned-request", view: "content" }, play: async ({ canvas, canvasElement }) => {
   await userEvent.click(await canvas.findByRole("button", { name: "업무 시작하기" }));
-  const dialog = within(await within(canvasElement.ownerDocument.body).findByRole("dialog", { name: "업무를 시작할까요?" }));
+  const dialog = within(await within(canvasElement.ownerDocument.body).findByRole("dialog", { name: "업무를 시작하시겠습니까?" }));
   await userEvent.click(dialog.getByRole("button", { name: "업무 시작하기" }));
   await ready(canvas);
   await expect(fixture.lifecycle.map(command => command.action)).toEqual(["start"]);

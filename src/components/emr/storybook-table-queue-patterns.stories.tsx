@@ -41,7 +41,7 @@ function ActionPattern() {
   </Table>
   {detail ? <section aria-label="합성 상세" className="mt-3 rounded border p-3">샘플 재확인 요청 · 재요청<Button size="sm" variant="ghost" onClick={() => setDetail(false)}>합성 상세 닫기</Button></section> : null}
   <output aria-label="행 작업 결과">{receipt}</output>
-  <Dialog open={cancel} onOpenChange={setCancel}><EmrConfirmDialogContent title="합성 요청을 취소할까요?" description="Storybook 합성 행만 숨깁니다." cancelLabel="계속 보기" confirmLabel="합성 요청 취소" onCancel={() => setCancel(false)} onConfirm={() => { setVisible(false); setDetail(false); setCancel(false); setReceipt("요청 취소"); }} /></Dialog>
+  <Dialog open={cancel} onOpenChange={setCancel}><EmrConfirmDialogContent title="합성 요청을 취소하시겠습니까?" description="Storybook 합성 행만 숨깁니다." cancelLabel="계속 보기" confirmLabel="합성 요청 취소" onCancel={() => setCancel(false)} onConfirm={() => { setVisible(false); setDetail(false); setCancel(false); setReceipt("요청 취소"); }} /></Dialog>
   </PatternShell>;
 }
 function ToolbarPattern() {
@@ -88,9 +88,9 @@ async function verifyPattern(canvasElement: HTMLElement, pattern: StorybookTable
     const openAction = async (name: RegExp) => { await userEvent.click(canvas.getByRole("button", { name: "샘플 재확인 요청 작업" })); const item = await body.findByRole("menuitem", { name }); await waitFor(() => expect(item).toBeVisible()); await userEvent.click(item); };
     await openAction(/상세 보기/); await expect(canvas.getByRole("region", { name: "합성 상세" })).toBeVisible();
     await openAction(/담당 지정/); await expect(canvas.getByLabelText("행 작업 결과")).toHaveTextContent("담당: 합성 스태프");
-    await openAction(/요청 취소/); let dialog = await body.findByRole("dialog", { name: "합성 요청을 취소할까요?" }); await waitFor(() => expect(dialog).toBeVisible()); await userEvent.click(within(dialog).getByRole("button", { name: "계속 보기" }));
+    await openAction(/요청 취소/); let dialog = await body.findByRole("dialog", { name: "합성 요청을 취소하시겠습니까?" }); await waitFor(() => expect(dialog).toBeVisible()); await userEvent.click(within(dialog).getByRole("button", { name: "계속 보기" }));
     await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument()); await expect(canvas.getByText("샘플 재확인 요청", { exact: true })).toBeVisible();
-    await openAction(/요청 취소/); dialog = await body.findByRole("dialog", { name: "합성 요청을 취소할까요?" }); await waitFor(() => expect(dialog).toBeVisible()); await userEvent.click(within(dialog).getByRole("button", { name: "합성 요청 취소" }));
+    await openAction(/요청 취소/); dialog = await body.findByRole("dialog", { name: "합성 요청을 취소하시겠습니까?" }); await waitFor(() => expect(dialog).toBeVisible()); await userEvent.click(within(dialog).getByRole("button", { name: "합성 요청 취소" }));
     await expect(canvas.getByText("합성 요청이 취소되었습니다.")).toBeVisible();
   } else if (pattern === "filter-toolbar") {
     await userEvent.click(canvas.getByRole("button", { name: /대기/ })); await expect(canvas.getByLabelText("샘플 업무 결과")).toHaveTextContent("결과 5건");

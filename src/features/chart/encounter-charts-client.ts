@@ -20,10 +20,10 @@ export async function encounterChartsRequest(workspaceId: string, method: "GET" 
 }
 export function chartLifecycleError(reason?: string) {
   if (reason === "unfinished_charts") return "미완료 차트를 각각 완료한 뒤 진료를 종료해 주세요.";
-  if (reason === "soap_note_conflict") return "다른 곳에서 차트가 변경됐어요. 최신 내용을 확인한 뒤 다시 시도해 주세요.";
-  if (reason === "stale_status") return "진행 중인 접수에서만 차트를 추가·수정할 수 있어요.";
+  if (reason === "soap_note_conflict") return "다른 곳에서 차트가 변경되었습니다. 최신 내용을 확인한 뒤 다시 시도해 주세요.";
+  if (reason === "stale_status") return "진행 중인 접수에서만 차트를 추가·수정할 수 있습니다.";
   if (reason === "permission_missing") return "차트 권한을 확인해 주세요.";
-  return "차트를 처리하지 못했어요. 연결을 확인한 뒤 다시 시도해 주세요.";
+  return "차트를 처리하지 못했습니다. 연결을 확인한 뒤 다시 시도해 주세요.";
 }
 
 export function useEncounterCharts({ workspaceId, encounterId, actorKey, actorHeaders, enabled, prepareInitialChart, requestedChartId, requireRequestedChart = false }: {
@@ -109,7 +109,7 @@ export function useEncounterCharts({ workspaceId, encounterId, actorKey, actorHe
     useChartStore.setState({ encounterChartCreating: true });
     try {
       if (!await useChartStore.getState().flushEditors()) {
-        toast.error("현재 차트를 저장하지 못했어요. 저장 오류를 해결한 뒤 새 차트를 추가해 주세요."); return false;
+        toast.error("현재 차트를 저장하지 못했습니다. 저장 오류를 해결한 뒤 새 차트를 추가해 주세요."); return false;
       }
       if (activeScopeRef.current !== scope) return false;
       if (createRequestRef.current?.scope !== targetScope) createRequestRef.current = { scope: targetScope, id: crypto.randomUUID() };
@@ -130,7 +130,7 @@ export function useEncounterCharts({ workspaceId, encounterId, actorKey, actorHe
       url.searchParams.set("chartId", result.chart.id);
       window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}`);
       useChartStore.getState().requestChartHistoryRefresh();
-      toast.success("새 차트를 열었어요.");
+      toast.success("새 차트를 열었습니다.");
       return true;
     } finally {
       creatingRef.current = false;

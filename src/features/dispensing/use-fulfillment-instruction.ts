@@ -78,7 +78,7 @@ export function useFulfillmentInstruction(
         if (!response.ok || body.ok !== true || !parsed.success) {
           reportError(
             instructionErrorMessages[body.error] ??
-              "지시서를 불러오지 못했어요. 다시 시도해 주세요.",
+              "지시서를 불러오지 못했습니다. 다시 시도해 주세요.",
           );
           // Preserve same-item content on transient failure; authorization/removal
           // failures must immediately withdraw previously loaded information.
@@ -109,12 +109,12 @@ export function useFulfillmentInstruction(
           );
         } catch {
           if (!abort.signal.aborted && generation.current === current) {
-            reportError("담당자 정보를 불러오지 못했어요. 다시 조회해 주세요.");
+            reportError("담당자 정보를 불러오지 못했습니다. 다시 조회해 주세요.");
           }
         }
       } catch {
         if (!abort.signal.aborted && generation.current === current)
-          reportError("지시서를 불러오지 못했어요. 다시 시도해 주세요.");
+          reportError("지시서를 불러오지 못했습니다. 다시 시도해 주세요.");
       } finally {
         if (generation.current === current) setFinishedRead(readKey);
       }
@@ -187,7 +187,7 @@ export function useFulfillmentInstruction(
         if (body.error === "revision_conflict" || body.error === "order_work_on_hold") { retry.current = null; refresh(); }
         setError(
           instructionErrorMessages[body.error] ??
-            "변경을 저장하지 못했어요. 다시 시도해 주세요.",
+            "변경을 저장하지 못했습니다. 다시 시도해 주세요.",
         );
         return false;
       }
@@ -204,7 +204,7 @@ export function useFulfillmentInstruction(
     } catch {
       if (selection.current === selected)
         setError(
-          "변경 결과를 확인하지 못했어요. 다시 시도하면 같은 요청의 결과를 확인해요.",
+          "변경 결과를 확인하지 못했습니다. 다시 시도하면 같은 요청의 결과를 확인합니다.",
         );
       return false;
     }

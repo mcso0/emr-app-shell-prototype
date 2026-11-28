@@ -32,7 +32,7 @@ function ErrorField({ invalid, ...args }: FieldArgs) {
   return <Field {...args} data-invalid={invalid}>
     <FieldLabel htmlFor={id}>필수 메모</FieldLabel>
     <Textarea id={id} aria-invalid={invalid} aria-describedby={invalid ? `${id}-error` : undefined} placeholder="샘플 메모" rows={3} />
-    {invalid ? <FieldError id={`${id}-error`}>샘플 메모를 한 줄 이상 입력하세요.</FieldError> : null}
+    {invalid ? <FieldError id={`${id}-error`}>샘플 메모를 한 줄 이상 입력해 주세요.</FieldError> : null}
   </Field>;
 }
 export const WithError: Story = {
@@ -41,7 +41,7 @@ export const WithError: Story = {
   play: async ({ canvas }) => {
     const input = canvas.getByRole("textbox", { name: "필수 메모" });
     await expect(input).toHaveAttribute("aria-invalid", "true");
-    await expect(input).toHaveAccessibleDescription("샘플 메모를 한 줄 이상 입력하세요.");
+    await expect(input).toHaveAccessibleDescription("샘플 메모를 한 줄 이상 입력해 주세요.");
     await userEvent.type(input, "합성 메모"); await expect(input).toHaveValue("합성 메모");
   },
 };

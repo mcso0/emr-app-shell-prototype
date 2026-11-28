@@ -1626,10 +1626,10 @@ function getNewChartEncounterStatusLabel(encounter: Encounter) {
 
 function getNewChartUnavailableReason(encounter: Encounter) {
   if (encounter.status === "waiting") {
-    return "진료 시작 후 새 차트를 추가할 수 있어요.";
+    return "진료 시작 후 새 차트를 추가할 수 있습니다.";
   }
 
-  return "완료된 진료에는 새 차트를 추가할 수 없어요. 새 기록이 필요하면 새 접수를 만들어 주세요.";
+  return "완료된 진료에는 새 차트를 추가할 수 없습니다. 새 기록이 필요하면 새 접수를 만들어 주세요.";
 }
 
 function getNewChartEncounterCandidates({
@@ -2082,18 +2082,18 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
     !latestVitals.canWriteVitals ||
     latestVitals.vitalSettingsStatus !== "ready";
   const vitalActionDisabledReason = isHistoricalReadOnlyView
-    ? "과거 차트 보기에서는 바이탈을 수정할 수 없어요."
+    ? "과거 차트 보기에서는 바이탈을 수정할 수 없습니다."
     : !vitalWriteStateAllowed
-      ? "진료 중인 접수에서만 바이탈을 입력할 수 있어요."
+      ? "진료 중인 접수에서만 바이탈을 입력할 수 있습니다."
       : latestVitals.vitalSettingsStatus === "error"
-        ? "바이탈 필수 입력 설정을 불러오지 못했어요. 다시 시도해 주세요."
+        ? "바이탈 필수 입력 설정을 불러오지 못했습니다. 다시 시도해 주세요."
       : latestVitals.vitalSettingsStatus === "loading"
-        ? "바이탈 필수 입력 설정을 확인하는 중이에요."
+        ? "바이탈 필수 입력 설정을 확인하는 중입니다."
       : latestVitals.status === "loading"
-        ? "바이탈 입력 권한을 확인하고 있어요."
+        ? "바이탈 입력 권한을 확인하고 있습니다."
         : latestVitals.status === "error"
-          ? "바이탈 입력 권한을 확인하지 못했어요."
-          : "바이탈을 입력할 권한이 없어요.";
+          ? "바이탈 입력 권한을 확인하지 못했습니다."
+          : "바이탈을 입력할 권한이 없습니다.";
   const currentEncounterVital =
     latestVitals.vital?.encounterId === bundle.encounter.id
       ? latestVitals.vital
@@ -2219,7 +2219,7 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
         }
         onSaved={async (vital) => {
           await latestVitals.replaceVital(vital);
-          toast.success("바이탈을 저장했어요.");
+          toast.success("바이탈을 저장했습니다.");
         }}
         vitalSettings={latestVitals.vitalSettings}
         workspaceId={workspaceId}
@@ -2668,7 +2668,7 @@ function ChartHistoryAside({ workspaceId, bundle }: { workspaceId: string; bundl
       >
         <EmrDialogShell
           variant="form"
-          title="새 차트를 어느 진료에 추가할까요?"
+          title="새 차트를 어느 진료에 추가하시겠습니까?"
           description="방문 목적과 진료 일시를 확인한 뒤 차트를 추가할 진료를 선택해 주세요."
           primaryAction={
             <Button
@@ -2781,7 +2781,7 @@ function ChartHistoryAside({ workspaceId, bundle }: { workspaceId: string; bundl
       >
         <EmrDialogShell
           variant="confirm"
-          title="지난 접수 건을 호출할까요?"
+          title="지난 접수 건을 호출하시겠습니까?"
           description={
             pastWaitingRecord
               ? `${getShortDateTime(getEncounterVisitAt(pastWaitingRecord.encounter)).slice(0, 8)}에 등록된 접수입니다. 호출하면 지금 진료를 시작하고 차트는 오늘 날짜로 생성됩니다.`
@@ -3128,7 +3128,7 @@ function ChartInlineHistoryPanel({
                 }
                 description={
                   priorDiagnosisRows.length
-                    ? "다른 키워드로 진단 이력을 찾아보세요."
+                    ? "다른 키워드로 진단 이력을 검색해 주세요."
                     : "이 환자의 이전 진단이 기록되면 여기에 표시됩니다."
                 }
                 testId="chart-history-empty-state"
@@ -4990,10 +4990,10 @@ function SoapPanel({
       </div>
 
       {readError ? (
-        <ChartNotice severity="error" title="SOAP를 불러오지 못했어요"
+        <ChartNotice severity="error" title="SOAP를 불러오지 못했습니다"
           className="mx-3 my-2 w-auto shrink-0 emr-text-metadata" testId="chart-soap-read-error"
           action={<Button size="sm" variant="outline" onClick={onRetryRead}>다시 불러오기</Button>}>
-          최신 내용을 확인할 때까지 편집할 수 없어요.
+          최신 내용을 확인할 때까지 편집할 수 없습니다.
         </ChartNotice>
       ) : null}
 
@@ -5001,7 +5001,7 @@ function SoapPanel({
         <ChartNotice
           severity="warning"
           key={`recovery-${soapNote.updatedAt}`}
-          title="저장된 문서를 열지 못해 기존 SOAP 내용을 표시했어요"
+          title="저장된 문서를 열지 못해 기존 SOAP 내용을 표시했습니다"
           className="mx-3 my-2 w-auto shrink-0 emr-text-metadata"
           testId="chart-soap-document-recovery-warning"
         >
@@ -5015,8 +5015,7 @@ function SoapPanel({
           className="mx-3 my-2 w-auto shrink-0 emr-text-metadata"
           testId="chart-soap-conflict"
           action={<Button size="sm" variant="outline" disabled={writeDisabled} onClick={() => coordinator.retry()}>최신 상태 확인</Button>}>
-          서버의 최신 SOAP와 현재 입력이 달라 자동으로 덮어쓰지 않았어요.
-          현재 입력은 유지됩니다. 필요한 내용을 보관한 뒤 최신 상태를 다시 확인해 주세요.
+          서버의 최신 SOAP와 현재 입력이 달라 자동으로 덮어쓰지 않았습니다. 현재 입력은 유지됩니다. 필요한 내용을 보관한 뒤 최신 상태를 다시 확인해 주세요.
         </ChartNotice>
       ) : null}
 
@@ -5111,7 +5110,7 @@ function SoapPanel({
           <DialogHeader>
             <DialogTitle>S/O 추가</DialogTitle>
             <DialogDescription>
-              추가할 진단계통을 선택해주세요. 여러 개 선택할 수 있어요.
+              추가할 진단계통을 선택해주세요. 여러 개 선택할 수 있습니다.
             </DialogDescription>
           </DialogHeader>
           <div className="relative">
@@ -7539,8 +7538,8 @@ function ChartOrderInlineFieldCell({
       <EmrTableCellText
         mode="one-line"
         fullText={clinicianId
-          ? `${clinicianId} · 진료 담당 수의사에서 자동 결정돼요.`
-          : "진료 담당 수의사가 미배정되어 있어요. 접수에서 지정한 뒤 다시 불러와 주세요."}
+          ? `${clinicianId} · 진료 담당 수의사에서 자동 결정됩니다.`
+          : "진료 담당 수의사가 미배정되어 있습니다. 접수에서 지정한 뒤 다시 불러와 주세요."}
       >
         {clinicianId || "담당 수의사 미배정"}
       </EmrTableCellText>
@@ -7927,7 +7926,7 @@ function ChartOrderLegacyActualDispenseCell({
         </PopoverTrigger>
         <PopoverContent align="end" className="w-72">
           <p className="emr-text-metadata font-semibold">
-            준비 예정량 변경 사유가 필요해요
+            준비 예정량 변경 사유가 필요합니다
           </p>
           <p className="emr-text-micro text-[var(--emr-text-secondary)]">
             기준값 {proposedQuantity!.toFixed(precision)}{dispenseUnit ? ` ${dispenseUnit}` : ""}
@@ -8067,7 +8066,7 @@ function ChartOrderDispenseRequestCell({ disabled, onSave, row, saving, inputCac
     if (!valid || saving || (numeric === quantity && !(explicitReconfirm && reconfirm))) return;
     onSave(numeric, reconfirm && numeric === quantity ? "reconfirm" : "manual");
   };
-  const feedback = error ?? (reconfirm ? "처방이 변경됐어요. 실 조제량을 확인한 뒤 Enter를 눌러 주세요." : null);
+  const feedback = error ?? (reconfirm ? "처방이 변경되었습니다. 실 조제량을 확인한 뒤 Enter를 눌러 주세요." : null);
   return <span className="flex min-w-0 items-center" data-row-interactive="true" aria-busy={saving}>
     <ChartOrderCellFeedback message={feedback} messageId={errorId}>
       <Input aria-label={`${row.order.displayName} 실 조제량`} aria-invalid={!valid} aria-describedby={feedback ? errorId : undefined} disabled={saving}
@@ -9521,7 +9520,7 @@ function ChartOrderTable({
                         aria-label={`${row.original.order.displayName} 담당자`}
                         className="!h-6 !w-6 !min-w-6 !rounded-full !border-0 !bg-transparent !p-0 !shadow-none focus-visible:ring-3 focus-visible:ring-ring/50 [&>svg]:hidden"
                         data-row-interactive="true"
-                        title={persisted ? undefined : "오더 저장 후 지정할 수 있어요."}
+                        title={persisted ? undefined : "오더 저장 후 지정할 수 있습니다."}
                       >
                         <SelectValue>
                           <ChartOrderAvatar name={assignee.name} unknownIcon />
@@ -9534,7 +9533,7 @@ function ChartOrderTable({
                       ? "저장 중"
                       : persisted
                         ? assignee.name
-                        : "오더 저장 후 지정할 수 있어요."}
+                        : "오더 저장 후 지정할 수 있습니다."}
                   </TooltipContent>
                 </Tooltip>
                 <SelectContent>
@@ -9745,9 +9744,9 @@ function ChartOrderTable({
                 : writeDisabled
                   ? "오더 수정 권한이 없습니다."
                   : draftWriteDisabled
-                    ? "저장이 끝난 뒤 확정할 수 있어요."
+                    ? "저장이 끝난 뒤 확정할 수 있습니다."
                     : confirmationDisabled
-                      ? "삭제 저장 또는 충돌 해결 후 확정할 수 있어요."
+                      ? "삭제 저장 또는 충돌 해결 후 확정할 수 있습니다."
                       : invalidOrderIds.has(order.id)
                         ? "확정에 필요한 수량과 세부값을 입력해 주세요."
                         : undefined;
@@ -9756,7 +9755,7 @@ function ChartOrderTable({
                 : writeDisabled
                   ? "오더 수정 권한이 없습니다."
                   : draftWriteDisabled
-                    ? "저장이 끝난 뒤 삭제할 수 있어요."
+                    ? "저장이 끝난 뒤 삭제할 수 있습니다."
                     : undefined;
               return (
                 <>
@@ -10119,8 +10118,8 @@ function ChartOrderFieldControl({
         />
         <p className="emr-text-metadata text-[var(--emr-text-secondary)]">
           {clinicianId
-            ? "진료 담당 수의사에서 자동 결정돼요."
-            : "진료 담당 수의사가 미배정되어 있어요. 접수에서 지정한 뒤 다시 불러와 주세요."}
+            ? "진료 담당 수의사에서 자동 결정됩니다."
+            : "진료 담당 수의사가 미배정되어 있습니다. 접수에서 지정한 뒤 다시 불러와 주세요."}
         </p>
       </div>
     );
@@ -10508,7 +10507,7 @@ function ChartOrderHistorySheet({
             <p className="mt-1 emr-text-metadata text-[var(--emr-text-secondary)]">
               {planTask
                 ? `Task 계획 보관됨 · attempt ${planTask.attemptNo}`
-                : "수행 계획 snapshot을 확인하지 못했어요. 확정 전 후보 또는 이전 형식의 이력일 수 있어요."}
+                : "수행 계획 snapshot을 확인하지 못했습니다. 확정 전 후보 또는 이전 형식의 이력일 수 있습니다."}
             </p>
             {row.runtimeRow?.snapshotHash ? (
               <p className="mt-1 break-all emr-text-metadata text-[var(--emr-text-secondary)]">
@@ -10827,7 +10826,7 @@ function ChartOrderMutationDialog({
                           value={draft.actualDispenseInput}
                         />
                         <span className="emr-text-micro text-[var(--emr-text-secondary)]">
-                          서버가 변경된 처방값으로 다시 계산한 뒤 이 값을 검증해요.
+                          서버가 변경된 처방값으로 다시 계산한 뒤 이 값을 검증합니다.
                         </span>
                       </label>
                     ) : (
@@ -10836,8 +10835,7 @@ function ChartOrderMutationDialog({
                         severity="info"
                         title="서버 계산값으로 재확정"
                       >
-                        마스터에 수동 조정 규칙이 없어서 재확정 시 서버 계산값을
-                        그대로 적용해요.
+                        마스터에 수동 조정 규칙이 없어서 재확정 시 서버 계산값을 그대로 적용합니다.
                       </EmrInlineAlert>
                     )
                   ) : null)}
@@ -11058,22 +11056,22 @@ function getChartOrderPersistenceErrorMessage(error?: string) {
       return "차트 내 완료 항목의 실제 수행 시각·본인 확인·결과를 입력해 주세요.";
     case "chart_actual_finding_mismatch":
     case "chart_actual_scope_mismatch":
-      return "실제 기록과 확정할 오더가 일치하지 않아요. 최신 후보와 소견을 다시 확인해 주세요.";
+      return "실제 기록과 확정할 오더가 일치하지 않습니다. 최신 후보와 소견을 다시 확인해 주세요.";
     case "inpatient_location_required":
     case "inpatient_location_unavailable":
       return "이 병원에 등록된 사용 가능한 병동·케이지를 선택해 주세요.";
     case "confirmed_inpatient_location_immutable":
-      return "이미 확정된 입원 위치는 직접 변경할 수 없어요. 재요청 흐름을 이용해 주세요.";
+      return "이미 확정된 입원 위치는 직접 변경할 수 없습니다. 재요청 흐름을 이용해 주세요.";
     case "etag_header_body_mismatch":
     case "revision_conflict":
-      return "다른 사용자가 오더를 변경했어요. 다시 불러온 뒤 저장해 주세요.";
+      return "다른 사용자가 오더를 변경했습니다. 다시 불러온 뒤 저장해 주세요.";
     case "stale_status":
-      return "차트 상태가 변경되어 오더를 저장할 수 없어요.";
+      return "차트 상태가 변경되어 오더를 저장할 수 없습니다.";
     case "invalid_removed_order_ids":
     case "order_removal_unavailable":
-      return "삭제할 수 없는 오더 후보가 포함되어 있어요. 최신 상태를 다시 확인해 주세요.";
+      return "삭제할 수 없는 오더 후보가 포함되어 있습니다. 최신 상태를 다시 확인해 주세요.";
     case "order_removal_has_downstream_artifacts":
-      return "이미 확정·수행·청구에 연결된 오더는 후보 삭제로 제거할 수 없어요.";
+      return "이미 확정·수행·청구에 연결된 오더는 후보 삭제로 제거할 수 없습니다.";
     case "order_set_empty_selection":
       return "하나 이상의 구성 항목을 선택해 주세요.";
     case "order_set_quantity_invalid":
@@ -11083,7 +11081,7 @@ function getChartOrderPersistenceErrorMessage(error?: string) {
     case "order_set_range_no_match":
       return "가격 범위를 확인해 주세요.";
     case "order_set_price_unset":
-      return "가격이 설정되지 않은 오더는 저장할 수 없어요.";
+      return "가격이 설정되지 않은 오더는 저장할 수 없습니다.";
     case "order_set_member_unavailable":
     case "order_set_composition_review_required":
     case "catalog_revision_requires_refresh":
@@ -11092,15 +11090,15 @@ function getChartOrderPersistenceErrorMessage(error?: string) {
     case "if_match_required":
       return "오더 버전 확인이 필요합니다. 다시 불러온 뒤 저장해 주세요.";
     case "idempotency_conflict":
-      return "같은 확정 요청의 내용이 달라 처리하지 않았어요. 다시 확인해 주세요.";
+      return "같은 확정 요청의 내용이 달라 처리하지 않았습니다. 다시 확인해 주세요.";
     case "confirmation_in_progress":
-      return "같은 확정 요청을 처리하고 있어요. 잠시 후 다시 시도해 주세요.";
+      return "같은 확정 요청을 처리하고 있습니다. 잠시 후 다시 시도해 주세요.";
     case "master_revision_requires_refresh":
       return "Order 마스터가 변경되어 최신 내용을 다시 확인해 주세요.";
     case "confirmation_detail_inputs_incomplete":
       return "확정에 필요한 세부값을 모두 입력해 주세요.";
     default:
-      return "오더 작업 상태를 저장하지 못했어요.";
+      return "오더 작업 상태를 저장하지 못했습니다.";
   }
 }
 
@@ -12972,7 +12970,7 @@ const OrderArea = memo(function OrderArea({
       setSetPreviewError(
         result.denialReason === "permission_missing" ||
           result.denialReason === "workspace_membership_missing"
-          ? "오더 수정 권한이 없어 Order 세트를 확인하지 못했어요."
+          ? "오더 수정 권한이 없어 Order 세트를 확인하지 못했습니다."
           : result.denialReason === "unauthenticated"
             ? "로그인 후 Order 세트를 확인해 주세요."
             : result.error === "order_set_range_input_required"
@@ -12980,7 +12978,7 @@ const OrderArea = memo(function OrderArea({
               : result.error === "order_set_range_no_match"
                 ? "입력한 범위에 맞는 가격 구간이 없습니다."
                 : result.error === "order_set_empty_selection"
-                  ? "Order 세트에 선택된 구성 항목이 없어요."
+                  ? "Order 세트에 선택된 구성 항목이 없습니다."
                   : getChartOrderPersistenceErrorMessage(result.error),
       );
       return undefined;
@@ -13419,7 +13417,7 @@ const OrderArea = memo(function OrderArea({
     setBillingSummaryError(
       result.denialReason === "permission_missing"
         ? "금액 정보를 확인할 권한이 없습니다."
-        : "최신 금액을 불러오지 못했어요. 다시 확인해 주세요.",
+        : "최신 금액을 불러오지 못했습니다. 다시 확인해 주세요.",
     );
     return false;
   }, [
@@ -13476,7 +13474,7 @@ const OrderArea = memo(function OrderArea({
       (candidate) => candidate.order.id === orderId,
     );
     if (!row || !isChartOrderPrebillingEditable(row)) {
-      toast.error("청구 전 수정이 가능한 확정 오더가 아니에요.");
+      toast.error("청구 전 수정이 가능한 확정 오더가 아닙니다.");
       return;
     }
 
@@ -13501,19 +13499,19 @@ const OrderArea = memo(function OrderArea({
     if (!result.ok) {
       const message =
         result.error === "revision_conflict"
-          ? "다른 사용자가 청구 전 값을 변경했어요. 최신 값을 다시 불러옵니다."
+          ? "다른 사용자가 청구 전 값을 변경했습니다. 최신 값을 다시 불러옵니다."
           : result.error === "adjustment_reason_required"
             ? "할인·할증 사유를 먼저 선택해 주세요."
             : result.error === "adjustment_reason_not_allowed"
-              ? "병원 정책에 등록된 할인·할증 사유만 사용할 수 있어요."
+              ? "병원 정책에 등록된 할인·할증 사유만 사용할 수 있습니다."
               : result.error === "negative_charge"
-                ? "청구금액은 0원보다 작을 수 없어요."
+                ? "청구금액은 0원보다 작을 수 없습니다."
                 : result.error === "billing_candidate_unavailable" ||
                     result.error === "order_unavailable"
-                  ? "이미 청구됐거나 검토 보류된 오더는 수정할 수 없어요."
+                  ? "이미 청구됐거나 검토 보류된 오더는 수정할 수 없습니다."
                   : result.denialReason === "permission_missing"
                     ? "청구 전 값을 수정할 권한이 없습니다."
-                    : "청구 전 값을 저장하지 못했어요.";
+                    : "청구 전 값을 저장하지 못했습니다.";
       toast.error(message);
       if (result.error === "revision_conflict") {
         setOrderDraftReloadKey((key) => key + 1);
@@ -13530,7 +13528,7 @@ const OrderArea = memo(function OrderArea({
     );
     setBillingSummaryFreshness("stale");
     void refreshBillingSummary();
-    toast.success("청구 전 값을 저장했어요.");
+    toast.success("청구 전 값을 저장했습니다.");
   };
   const handleConfirmedOrderSaved = (context: ConfirmedOrderContext) => {
               const update = (rows: ChartOrderDraftRow[]) => rows.map(item => item.order.id === context.orderId ? {
@@ -13542,7 +13540,7 @@ const OrderArea = memo(function OrderArea({
               } : item);
               setDraftRows(update); setCommittedRows(update); setConfirmedEditId(null); setSelectedOrderIds(new Set());
               void refreshOrderExecution(); void refreshBillingSummary();
-              toast.success(context.pendingFinancial ? "변경안을 저장했어요. 수납 담당자 확인을 기다려요." : "오더 수정을 저장했어요.");
+              toast.success(context.pendingFinancial ? "변경안을 저장했습니다. 수납 담당자 확인을 기다립니다." : "오더 수정을 저장했습니다.");
 
   };
   const refreshOrderExecution = async () => {
@@ -13653,7 +13651,7 @@ const OrderArea = memo(function OrderArea({
           ? "담당자를 지정할 권한이 없습니다."
           : result.error === "order_unavailable"
             ? "현재 오더에는 담당자를 지정할 수 없습니다."
-            : "선택 가능한 담당자를 불러오지 못했어요.",
+            : "선택 가능한 담당자를 불러오지 못했습니다.",
       );
       return;
     }
@@ -13682,7 +13680,7 @@ const OrderArea = memo(function OrderArea({
       (candidate) => candidate.order.id === orderId,
     );
     if (!row?.runtimeRow || isChartOrderConfirmedRow(row)) {
-      toast.error("확정 전 저장된 오더에만 담당자를 지정할 수 있어요.");
+      toast.error("확정 전 저장된 오더에만 담당자를 지정할 수 있습니다.");
       return;
     }
     intendedAssigneeSavingOrderIdsRef.current.add(orderId);
@@ -13709,14 +13707,14 @@ const OrderArea = memo(function OrderArea({
       }
       toast.error(
         conflict
-          ? "다른 사용자가 오더를 변경했어요. 서버 값을 다시 불러와 주세요."
+          ? "다른 사용자가 오더를 변경했습니다. 서버 값을 다시 불러와 주세요."
           : result.error === "assignee_ineligible"
-            ? "대상 부서에서 이 업무를 맡을 수 있는 사용자만 지정할 수 있어요."
+            ? "대상 부서에서 이 업무를 맡을 수 있는 사용자만 지정할 수 있습니다."
             : result.denialReason === "permission_missing"
               ? "담당자를 지정할 권한이 없습니다."
               : result.error === "order_unavailable"
-                ? "확정됐거나 청구에 연결된 오더에는 예정 담당자를 바꿀 수 없어요."
-                : "담당자를 저장하지 못했어요.",
+                ? "확정됐거나 청구에 연결된 오더에는 예정 담당자를 바꿀 수 없습니다."
+                : "담당자를 저장하지 못했습니다.",
       );
       return;
     }
@@ -13740,7 +13738,7 @@ const OrderArea = memo(function OrderArea({
       orderDraftConflictRef.current = true;
       setOrderDraftSaveState("conflict");
       toast.error(
-        "담당자는 저장됐지만 최신 오더 버전을 확인하지 못했어요. 서버 값을 다시 불러와 주세요.",
+        "담당자는 저장됐지만 최신 오더 버전을 확인하지 못했습니다. 서버 값을 다시 불러와 주세요.",
       );
       return;
     }
@@ -13768,7 +13766,7 @@ const OrderArea = memo(function OrderArea({
     orderDraftConflictRef.current = false;
     setOrderDraftSaveState("saved");
     toast.success(
-      intendedAssigneeUserId ? "예정 담당자를 저장했어요." : "예정 담당자를 해제했어요.",
+      intendedAssigneeUserId ? "예정 담당자를 저장했습니다." : "예정 담당자를 해제했습니다.",
     );
   };
   const saveActualDispense = async (
@@ -13800,7 +13798,7 @@ const OrderArea = memo(function OrderArea({
       row.runtimeRow.calculationOutputs.calculationStatus !== "ready" ||
       row.runtimeRow.calculationOutputs.dispenseApplicability !== true
     ) {
-      toast.error("계산이 완료된 확정 전 오더에서만 실 조제량을 조정할 수 있어요.");
+      toast.error("계산이 완료된 확정 전 오더에서만 실 조제량을 조정할 수 있습니다.");
       return;
     }
 
@@ -13830,14 +13828,14 @@ const OrderArea = memo(function OrderArea({
       }
       toast.error(
         conflict
-          ? "다른 사용자가 오더를 변경했어요. 서버 값을 다시 불러와 주세요."
+          ? "다른 사용자가 오더를 변경했습니다. 서버 값을 다시 불러와 주세요."
           : result.error === "actual_dispense_calculation_unavailable"
-                  ? "실 조제량 계산 입력이 완전하지 않아요. 오더 세부값을 확인해 주세요."
+                  ? "실 조제량 계산 입력이 완전하지 않습니다. 오더 세부값을 확인해 주세요."
                   : result.denialReason === "permission_missing"
                     ? "이 오더의 실 조제량을 조정할 권한이 없습니다."
                     : result.error === "order_unavailable"
-                      ? "확정되었거나 취소된 오더는 표에서 실 조제량을 바꿀 수 없어요."
-                      : "실 조제량을 저장하지 못했어요.",
+                      ? "확정되었거나 취소된 오더는 표에서 실 조제량을 바꿀 수 없습니다."
+                      : "실 조제량을 저장하지 못했습니다.",
       );
       return;
     }
@@ -13861,7 +13859,7 @@ const OrderArea = memo(function OrderArea({
       orderDraftConflictRef.current = true;
       setOrderDraftSaveState("conflict");
       toast.error(
-        "실 조제량은 저장됐지만 최신 오더 버전을 확인하지 못했어요. 서버 값을 다시 불러와 주세요.",
+        "실 조제량은 저장됐지만 최신 오더 버전을 확인하지 못했습니다. 서버 값을 다시 불러와 주세요.",
       );
       return;
     }
@@ -13892,7 +13890,7 @@ const OrderArea = memo(function OrderArea({
     toast.success(
       result.state.actualDispenseSource === "manual_override"
         ? "실 조제량을 저장했습니다."
-        : "실 조제량을 자동 계산값으로 되돌렸어요.",
+        : "실 조제량을 자동 계산값으로 되돌렸습니다.",
     );
     } finally {
       actualDispensePendingOrderIdsRef.current.delete(orderId);
@@ -13973,7 +13971,7 @@ const OrderArea = memo(function OrderArea({
         (row) => getChartOrderSelectionCohort(row) !== "draft",
       )
     ) {
-      toast.error("확정 전 후보만 확정할 수 있어요.");
+      toast.error("확정 전 후보만 확정할 수 있습니다.");
       setOrderActionDialog(null);
       setConfirmationOrderIds(null);
       setConfirmationSource(null);
@@ -13999,7 +13997,7 @@ const OrderArea = memo(function OrderArea({
           : false;
       if (!summaryAccepted) {
         setOrderDraftSaveState("error");
-        toast.error("확정 결과의 최신 금액을 확인하지 못했어요.");
+        toast.error("확정 결과의 최신 금액을 확인하지 못했습니다.");
         return false;
       }
       // The atomic command can return rows captured before its final revision
@@ -14045,7 +14043,7 @@ const OrderArea = memo(function OrderArea({
       setOrderActionDialog(null);
       setOrderDraftSaveState("saved");
       void refreshOrderExecution();
-      toast.success("Order 확정 상태를 저장했어요.");
+      toast.success("Order 확정 상태를 저장했습니다.");
       return true;
     };
 
@@ -14184,9 +14182,9 @@ const OrderArea = memo(function OrderArea({
         orderDraftFailedAutoSaveVersionRef.current = attemptedDraftEditVersion;
         toast.error(
           conflict
-            ? "다른 기기의 변경과 충돌했어요. 충돌을 해결한 뒤 확정해 주세요."
+            ? "다른 기기의 변경과 충돌했습니다. 충돌을 해결한 뒤 확정해 주세요."
             : effectiveDraftResult.denialReason === "permission_missing"
-              ? "오더 수정 권한이 없어 저장하지 못했어요."
+              ? "오더 수정 권한이 없어 저장하지 못했습니다."
               : getChartOrderPersistenceErrorMessage(
                   effectiveDraftResult.denialReason ??
                     effectiveDraftResult.error,
@@ -14203,7 +14201,7 @@ const OrderArea = memo(function OrderArea({
       if (!draftSummaryAccepted) {
         orderDraftSaveInFlightRef.current = false;
         setOrderDraftSaveState("error");
-        toast.error("저장 결과의 최신 금액을 확인하지 못했어요.");
+        toast.error("저장 결과의 최신 금액을 확인하지 못했습니다.");
         return;
       }
 
@@ -14228,7 +14226,7 @@ const OrderArea = memo(function OrderArea({
         setCommittedRows(savedDraftRows);
         setDraftRows(savedDraftRows);
         setConfirmationOrderIds(new Set(actionOrderIds));
-        toast.error("선택한 오더를 서버 draft에 저장하지 못했어요.");
+        toast.error("선택한 오더를 서버 draft에 저장하지 못했습니다.");
         return;
       }
 
@@ -14248,7 +14246,7 @@ const OrderArea = memo(function OrderArea({
       orderDraftSaveInFlightRef.current = false;
       setOrderDraftSaveState("error");
       setConfirmationOrderIds(new Set(actionOrderIds));
-      toast.error("선택한 오더를 서버 draft에서 확인하지 못했어요.");
+      toast.error("선택한 오더를 서버 draft에서 확인하지 못했습니다.");
       return;
     }
     const idempotencyKey = createChartOrderConfirmationIdempotencyKey();
@@ -14303,7 +14301,7 @@ const OrderArea = memo(function OrderArea({
       if (result.denialReason === "instruction_ack_required") immediateInstructionReview.requireReview();
       toast.error(
         result.denialReason === "permission_missing"
-          ? "오더 작업 권한이 없어 저장하지 못했어요."
+          ? "오더 작업 권한이 없어 저장하지 못했습니다."
           : getChartOrderPersistenceErrorMessage(
               result.denialReason ?? result.error,
             ),
@@ -14715,7 +14713,7 @@ const OrderArea = memo(function OrderArea({
       ) {
         setOrderMutationDraft({
           ...draft,
-          error: "재확정 실 조제량은 0보다 큰 숫자여야 해요.",
+          error: "재확정 실 조제량은 0보다 큰 숫자여야 합니다.",
         });
         return;
       }
@@ -14748,7 +14746,7 @@ const OrderArea = memo(function OrderArea({
       if (result.denialReason === "revision_conflict") {
         setBillingSummaryFreshness("stale");
         setBillingSummaryError(
-          "다른 사용자가 오더를 변경했어요. 최신 금액을 다시 확인해 주세요.",
+          "다른 사용자가 오더를 변경했습니다. 최신 금액을 다시 확인해 주세요.",
         );
         void refreshBillingSummary();
       }
@@ -14766,11 +14764,11 @@ const OrderArea = memo(function OrderArea({
                 : result.denialReason === "actual_dispense_reconfirmation_invalid"
                   ? "재확정 실 조제량과 계산 입력을 확인해 주세요."
                   : result.denialReason === "actual_dispense_out_of_policy"
-                    ? "재확정 실 조제량이 마스터의 계량 단위 또는 허용 범위를 벗어났어요."
+                    ? "재확정 실 조제량이 마스터의 계량 단위 또는 허용 범위를 벗어났습니다."
                     : result.denialReason === "actual_dispense_override_disabled"
-                      ? "이 오더는 수동 실 조제량 조정을 허용하지 않아요."
+                      ? "이 오더는 수동 실 조제량 조정을 허용하지 않습니다."
                       : result.denialReason === "billing_quantity_calculation_incomplete"
-                        ? "변경된 처방값으로 청구 수량을 계산할 수 없어요."
+                        ? "변경된 처방값으로 청구 수량을 계산할 수 없습니다."
               : result.denialReason === "billing_review_required"
                 ? "연결된 청구서의 검토 보류를 먼저 정정하거나 반전해 주세요."
                 : result.denialReason === "billing_reversal_required"
@@ -14787,7 +14785,7 @@ const OrderArea = memo(function OrderArea({
     if (!acceptAuthoritativeBillingSummary(result.billingSummary)) {
       setOrderMutationDraft({
         ...draft,
-        error: "변경 결과의 최신 금액 범위를 확인하지 못했어요.",
+        error: "변경 결과의 최신 금액 범위를 확인하지 못했습니다.",
         saving: false,
       });
       return;
@@ -14851,7 +14849,7 @@ const OrderArea = memo(function OrderArea({
     setSelectedOrderIds(new Set());
     setOrderMutationDraft(null);
     void refreshOrderExecution();
-    toast.success(`${chartOrderMutationLabels[draft.action]}을 기록했어요.`);
+    toast.success(`${chartOrderMutationLabels[draft.action]}을 기록했습니다.`);
   };
   const draftStatusText = getChartOrderDraftStatusText({
     orderLoading, orderDraftSaveState, orderDraftReadError, hasDraftChanges,
@@ -14909,13 +14907,13 @@ const OrderArea = memo(function OrderArea({
       if (generation !== billingRequestScopeRef.current) return;
       if (!result.ok) {
         const messages: Record<string, string> = {
-          revision_conflict: "오더나 금액이 변경됐어요. 최신 내용을 확인한 뒤 다시 요청해 주세요.",
+          revision_conflict: "오더나 금액이 변경되었습니다. 최신 내용을 확인한 뒤 다시 요청해 주세요.",
           unfinished_ack_required: "아직 완료되지 않은 오더를 확인해 주세요.",
-          billing_selection_unavailable: "선택한 오더의 청구 상태가 바뀌었어요. 오더를 다시 선택해 주세요.",
-          billing_authority_incomplete: "선택한 오더의 청구 정보가 부족해요.",
+          billing_selection_unavailable: "선택한 오더의 청구 상태가 바뀌었습니다. 오더를 다시 선택해 주세요.",
+          billing_authority_incomplete: "선택한 오더의 청구 정보가 부족합니다.",
           returned_work_blocks_billing: "반려된 오더를 확인한 뒤 요청해 주세요.",
         };
-        setBillingRequestError(result.denialReason === "permission_missing" ? "수납 요청 권한이 없습니다." : messages[result.error ?? ""] ?? "수납 요청에 실패했어요. 다시 시도해 주세요.");
+        setBillingRequestError(result.denialReason === "permission_missing" ? "수납 요청 권한이 없습니다." : messages[result.error ?? ""] ?? "수납 요청에 실패했습니다. 다시 시도해 주세요.");
         if (["revision_conflict", "unfinished_ack_required", "billing_selection_unavailable"].includes(result.error ?? "")) {
           billingRequestAttemptRef.current = null;
           await refreshBillingSummary();
@@ -15146,7 +15144,7 @@ const OrderArea = memo(function OrderArea({
           <ChartNotice
             severity="error"
             key={`error-${orderNoticeVersion}`}
-            title={orderDraftReadError ? "오더 정보를 불러오지 못했어요" : "오더 정보를 반영하지 못했습니다"}
+            title={orderDraftReadError ? "오더 정보를 불러오지 못했습니다" : "오더 정보를 반영하지 못했습니다"}
             className="mx-3 mt-2 w-auto shrink-0 emr-text-metadata"
             action={
               <Button
@@ -15159,7 +15157,7 @@ const OrderArea = memo(function OrderArea({
             }
             testId="chart-order-state-error"
           >
-            {orderDraftReadError ? "오더 정보를 다시 불러온 뒤 편집해 주세요." : "현재 표의 내용은 유지돼요. 변경사항을 다시 저장해 주세요."}
+            {orderDraftReadError ? "오더 정보를 다시 불러온 뒤 편집해 주세요." : "현재 표의 내용은 유지됩니다. 변경사항을 다시 저장해 주세요."}
           </ChartNotice>
         ) : null}
         {orderDraftSaveState === "conflict" ? (
@@ -15193,7 +15191,7 @@ const OrderArea = memo(function OrderArea({
           </ChartNotice>
         ) : null}
         {quickAddedHidden ? (
-          <ChartNotice key={quickAddedSourceKey} severity="info" title="다른 분류에 오더를 추가했어요." action={<Button size="sm" variant="ghost" onClick={() => setOrderFilter("all")}>전체에서 보기</Button>} />
+          <ChartNotice key={quickAddedSourceKey} severity="info" title="다른 분류에 오더를 추가했습니다." action={<Button size="sm" variant="ghost" onClick={() => setOrderFilter("all")}>전체에서 보기</Button>} />
         ) : null}
         <div className="min-h-0 flex-1 overflow-hidden bg-[var(--emr-surface-panel)]">
           <ChartOrderTable
@@ -15270,7 +15268,7 @@ const OrderArea = memo(function OrderArea({
 
                 >
                   {catalogRefreshing ? <div role="status" className="flex items-center gap-1 px-3 py-2 text-xs text-[var(--emr-text-tertiary)]"><CdsAlertsLoaderIcon className="size-3 animate-spin motion-reduce:animate-none" />최신 목록 확인 중</div> : null}
-                  {catalogRefreshError ? <EmrInlineAlert className="m-3" severity="warning" title="최신 목록을 확인하지 못했어요." action={<Button size="xs" variant="outline" onClick={() => void loadCatalogRows({ reuse: true, force: true })}>다시 시도</Button>}>다시 확인한 뒤 오더를 추가해 주세요.</EmrInlineAlert> : null}
+                  {catalogRefreshError ? <EmrInlineAlert className="m-3" severity="warning" title="최신 목록을 확인하지 못했습니다." action={<Button size="xs" variant="outline" onClick={() => void loadCatalogRows({ reuse: true, force: true })}>다시 시도</Button>}>다시 확인한 뒤 오더를 추가해 주세요.</EmrInlineAlert> : null}
                   {quickAddQuery.trim() && catalogSearchStatus === "ready" ? (
                     <div className="flex items-center justify-between gap-2 px-3 py-2">
                       <span className="flex items-center gap-1.5 text-xs"><strong>검색 결과</strong><span className="text-[var(--emr-text-tertiary)]">{quickAddCandidates.length}건</span></span>
@@ -15280,7 +15278,7 @@ const OrderArea = memo(function OrderArea({
                     </div>
                   ) : null}
                   {catalogSearchStatus === "loading" || catalogSearchStatus === "idle" ? (
-                    <div role="status" className="flex items-center gap-1 p-3 text-xs text-[var(--emr-text-tertiary)]"><CdsAlertsLoaderIcon className="size-3 animate-spin motion-reduce:animate-none" />검색 목록을 준비하고 있어요.</div>
+                    <div role="status" className="flex items-center gap-1 p-3 text-xs text-[var(--emr-text-tertiary)]"><CdsAlertsLoaderIcon className="size-3 animate-spin motion-reduce:animate-none" />검색 목록을 준비하고 있습니다.</div>
                   ) : catalogSearchStatus === "error" || catalogSearchStatus === "denied" ? (
                     <EmrInlineAlert
                       className="m-3"
@@ -15612,8 +15610,8 @@ const OrderArea = memo(function OrderArea({
             <EmrConfirmDialogContent
               title={
                 bulkOrderMutation.action === "re_request"
-                  ? "선택 오더를 재요청할까요?"
-                  : "선택 오더를 긴급으로 변경할까요?"
+                  ? "선택 오더를 재요청하시겠습니까?"
+                  : "선택 오더를 긴급으로 변경하시겠습니까?"
               }
               description={
                 bulkOrderMutation.action === "re_request"
@@ -15663,7 +15661,7 @@ const OrderArea = memo(function OrderArea({
             <DialogContent className="grid max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden bg-[var(--emr-surface-panel)] p-0 sm:max-w-[560px]" finalFocus={orderConfirmationFinalFocus} showCloseButton={false}>
               <DialogHeader className="relative px-6 pb-3 pt-6">
                 <DialogTitle className="emr-text-dialog-title pr-10 font-semibold text-[var(--emr-text-primary)]">
-                  오더 {confirmationReviewRows.length}건을 확정할까요?
+                  오더 {confirmationReviewRows.length}건을 확정하시겠습니까?
                 </DialogTitle>
                 <DialogDescription className="sr-only">선택한 오더와 금액을 확인해 주세요.</DialogDescription>
                 <Button type="button" variant="ghost" size="icon-sm"
@@ -15735,7 +15733,7 @@ const OrderArea = memo(function OrderArea({
         >
           {deleteTargetRows.length > 0 ? (
             <EmrConfirmDialogContent
-              title="오더를 삭제할까요?"
+              title="오더를 삭제하시겠습니까?"
               description={
                 "선택한 " +
                 deleteTargetRows.length +
@@ -16503,7 +16501,7 @@ export function ChartContent({
     if (chartCompletionState.status === "saving") return;
     if (detailHydrationPending) return;
     if (isHistoricalReadOnlyView) {
-      toast.error("과거 차트는 읽기 전용으로 열려 있어요.");
+      toast.error("과거 차트는 읽기 전용으로 열려 있습니다.");
       return;
     }
     if (!activeEncounterId || !activeWorkspaceId) {
@@ -16539,7 +16537,7 @@ export function ChartContent({
       }));
       toast.error(
         result.denialReason === "permission_missing"
-          ? "진료 완료 권한이 없어 저장하지 못했어요."
+          ? "진료 완료 권한이 없어 저장하지 못했습니다."
           : chartLifecycleError(result.denialReason),
       );
       return;
@@ -16552,7 +16550,7 @@ export function ChartContent({
     });
     setChartCompleteDialogOpen(false);
     requestChartHistoryRefresh();
-    toast.success("진료 완료 상태를 저장했어요.");
+    toast.success("진료 완료 상태를 저장했습니다.");
   };
   const handleConsultationFlowMutation = async (
     action: "call" | "start" | "return_to_waiting",
@@ -16560,7 +16558,7 @@ export function ChartContent({
     if (consultationFlowState.status === "saving") return;
     if (detailHydrationPending) return;
     if (isHistoricalReadOnlyView) {
-      toast.error("과거 차트는 읽기 전용으로 열려 있어요.");
+      toast.error("과거 차트는 읽기 전용으로 열려 있습니다.");
       return;
     }
     const consultationFlowRecord = isHistoricalView
@@ -16588,12 +16586,12 @@ export function ChartContent({
       setConsultationFlowState({ action, status: "error" });
       toast.error(
         result.denialReason === "permission_missing"
-          ? "진료 흐름 변경 권한이 없어 저장하지 못했어요."
+          ? "진료 흐름 변경 권한이 없어 저장하지 못했습니다."
           : action === "call"
-            ? "호출과 진료 시작 상태를 저장하지 못했어요."
+            ? "호출과 진료 시작 상태를 저장하지 못했습니다."
             : action === "return_to_waiting"
-              ? "대기 상태로 변경하지 못했어요."
-              : "진료 시작 상태를 저장하지 못했어요.",
+              ? "대기 상태로 변경하지 못했습니다."
+              : "진료 시작 상태를 저장하지 못했습니다.",
       );
       return;
     }
@@ -16674,17 +16672,17 @@ export function ChartContent({
     requestChartHistoryRefresh();
     toast.success(
       action === "call"
-        ? "환자를 호출하고 진료를 시작했어요."
+        ? "환자를 호출하고 진료를 시작했습니다."
         : action === "return_to_waiting"
-          ? "대기 상태로 변경했어요."
-          : "진료를 시작했어요.",
+          ? "대기 상태로 변경했습니다."
+          : "진료를 시작했습니다.",
     );
   };
   const handleCancelEncounterConfirm = async () => {
     if (encounterCancelState.status === "saving") return;
     if (detailHydrationPending) return;
     if (isHistoricalReadOnlyView) {
-      toast.error("과거 차트는 읽기 전용으로 열려 있어요.");
+      toast.error("과거 차트는 읽기 전용으로 열려 있습니다.");
       return;
     }
     const cancellationRecord = isHistoricalView
@@ -16718,8 +16716,8 @@ export function ChartContent({
         message:
           result.fieldErrors?.cancelReason ??
           (result.denialReason === "permission_missing"
-            ? "진료 취소 권한이 없어 저장하지 못했어요."
-            : "진료 취소 상태를 저장하지 못했어요."),
+            ? "진료 취소 권한이 없어 저장하지 못했습니다."
+            : "진료 취소 상태를 저장하지 못했습니다."),
       });
       return;
     }
@@ -16749,12 +16747,12 @@ export function ChartContent({
     setCancelEncounterDialogOpen(false);
     setCancelEncounterReason("");
     requestChartHistoryRefresh();
-    toast.success("진료를 취소했어요.");
+    toast.success("진료를 취소했습니다.");
   };
   const handleDiagnosisRowsChange = async (nextRows: EditableDiagnosis[]) => {
     if (useChartStore.getState().diagnosisSaving || detailHydrationPending || chartSigned || !activeChartId) return;
     if (isHistoricalReadOnlyView) {
-      toast.error("과거 차트는 읽기 전용으로 열려 있어요.");
+      toast.error("과거 차트는 읽기 전용으로 열려 있습니다.");
       return;
     }
     if (!activeEncounterId || !activeWorkspaceId) {
@@ -16790,8 +16788,8 @@ export function ChartContent({
       });
       toast.error(
         result.denialReason === "permission_missing"
-          ? "진단명 저장 권한이 없어 저장하지 못했어요."
-          : result.denialReason === "diagnoses_conflict" ? "다른 곳에서 진단이 변경됐어요. 차트를 다시 열어 최신 진단을 확인해 주세요." : "진단명을 저장하지 못했어요.",
+          ? "진단명 저장 권한이 없어 저장하지 못했습니다."
+          : result.denialReason === "diagnoses_conflict" ? "다른 곳에서 진단이 변경되었습니다. 차트를 다시 열어 최신 진단을 확인해 주세요." : "진단명을 저장하지 못했습니다.",
       );
       return;
     }
@@ -17325,7 +17323,7 @@ export function ChartContent({
     if (orderChartId && liveQueueStatus === "ready") {
       return (
         <div className="p-3">
-          <ChartNotice severity="error" title="오더 차트를 열지 못했어요"
+          <ChartNotice severity="error" title="오더 차트를 열지 못했습니다"
             action={<Button size="sm" variant="outline" onClick={() => void refreshAction?.onRefresh()}>다시 시도</Button>}
           />
         </div>
@@ -17448,13 +17446,13 @@ export function ChartContent({
                 const value = result.soapNote?.[field]?.trim();
                 if (!value) return [];
                 const excerpt = value.length > 2000
-                  ? `${value.slice(0, 2000)}\n[원문 일부만 삽입했습니다. 전체 내용은 원본 진료 기록에서 확인하세요.]`
+                  ? `${value.slice(0, 2000)}\n[원문 일부만 삽입했습니다. 전체 내용은 원본 진료 기록에서 확인해 주세요.]`
                   : value;
                 return [{ id: `${chart.id}-${field}`, label, sourceLabel, text: excerpt }];
               });
               const freeformText = getFreeformSoapDocumentText(result.soapNote.blockDocument);
               const freeformExcerpt = freeformText.length > 2000
-                ? `${freeformText.slice(0, 2000)}\n[원문 일부만 삽입했습니다. 전체 내용은 원본 진료 기록에서 확인하세요.]`
+                ? `${freeformText.slice(0, 2000)}\n[원문 일부만 삽입했습니다. 전체 내용은 원본 진료 기록에서 확인해 주세요.]`
                 : freeformText;
               return [
                 ...scalarItems,
@@ -17771,7 +17769,7 @@ export function ChartContent({
                       ? "진료실 목록을 불러오는 중입니다."
                       : consultationRoomsStatus === "ready"
                         ? "사용 가능한 진료실이 없습니다. 병원 관리에서 진료 공간을 추가해 주세요."
-                        : "진료실 목록을 불러오지 못했어요."}
+                        : "진료실 목록을 불러오지 못했습니다."}
                   </span>
                   {consultationRoomsStatus === "error" ||
                   consultationRoomsStatus === "denied" ? (
@@ -17822,8 +17820,7 @@ export function ChartContent({
                 </Button>
               }
             >
-              호출과 진료 시작 상태를 저장하지 못했어요. 잠시 후 다시 시도해
-              주세요.
+              호출과 진료 시작 상태를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.
             </EmrInlineAlert>
           ) : null}
         </EmrDialogShell>
@@ -17834,8 +17831,8 @@ export function ChartContent({
       >
         <EmrDialogShell
           variant="confirm"
-          title="대기로 변경할까요?"
-          description="작성된 차트, 진단명, 오더가 있어요. 대기로 변경하면 진료 시작 전 상태로 돌아갑니다."
+          title="대기로 변경하시겠습니까?"
+          description="작성된 차트, 진단명, 오더가 있습니다. 대기로 변경하면 진료 시작 전 상태로 돌아갑니다."
           primaryAction={
             <Button
               size="sm"
@@ -17865,7 +17862,7 @@ export function ChartContent({
           }
         >
           {encounterCharts.charts.some((chart) => chart.status === "draft" || chart.status === "autosaved") ? (
-            <EmrInlineAlert severity="warning" title="미완료 차트가 있어요">
+            <EmrInlineAlert severity="warning" title="미완료 차트가 있습니다">
               {encounterCharts.charts.filter((chart) => chart.status === "draft" || chart.status === "autosaved").map((chart) => (
                 <Button key={chart.id} size="xs" variant="outline" onClick={() => { setChartCompleteDialogOpen(false); void useChartStore.getState().selectChart(chart.id); }}>
                   {getShortDateTime(chart.clinicalAt ?? chart.createdAt)} 차트 열기
@@ -17980,7 +17977,7 @@ export function ChartContent({
               className="mt-3 emr-text-metadata"
             >
               {encounterCancelState.message ??
-                "진료 취소 상태를 저장하지 못했어요."}
+                "진료 취소 상태를 저장하지 못했습니다."}
             </EmrInlineAlert>
           ) : null}
         </EmrDialogShell>
@@ -18084,10 +18081,10 @@ export function ChartContent({
       ) : !activeChartId ? (
         <div className="flex min-h-0 flex-1 items-start p-3">
           {encounterCharts.status === "error" ? (
-            <ChartNotice key={`${encounterCharts.scope}-list-${chartListRetryKey}`} severity="error" title={orderChartId ? "오더 차트를 열지 못했어요" : "차트 목록을 불러오지 못했어요"}
+            <ChartNotice key={`${encounterCharts.scope}-list-${chartListRetryKey}`} severity="error" title={orderChartId ? "오더 차트를 열지 못했습니다" : "차트 목록을 불러오지 못했습니다"}
               action={<Button size="sm" variant="outline" onClick={() => { setChartListRetryKey((key) => key + 1); void encounterCharts.reload(); }}>다시 시도</Button>} />
           ) : shouldPrepareInitialChart && encounterCharts.initialChartPreparationStatus === "error" ? (
-            <ChartNotice key={`${encounterCharts.scope}-prepare`} severity="error" title="진료 차트를 준비하지 못했어요"
+            <ChartNotice key={`${encounterCharts.scope}-prepare`} severity="error" title="진료 차트를 준비하지 못했습니다"
               action={<Button size="sm" variant="outline" onClick={() => void encounterCharts.ensureInitialChart()}>다시 시도</Button>}>
               다시 시도해 주세요. 계속 준비되지 않으면 관리자에게 문의해 주세요.
             </ChartNotice>
@@ -18097,12 +18094,12 @@ export function ChartContent({
               진료 차트를 준비하는 중
             </div>
           ) : encounterCharts.charts.length === 0 ? (
-            <ChartNotice key={`${encounterCharts.scope}-empty`} severity="info" title="이 접수에 작성된 차트가 없어요" />
+            <ChartNotice key={`${encounterCharts.scope}-empty`} severity="info" title="이 접수에 작성된 차트가 없습니다" />
           ) : (
             <ChartNotice
               key={`${encounterCharts.scope}-selection-${chartListRetryKey}`}
               severity="error"
-              title="차트를 열지 못했어요"
+              title="차트를 열지 못했습니다"
               action={
                 <Button
                   size="sm"

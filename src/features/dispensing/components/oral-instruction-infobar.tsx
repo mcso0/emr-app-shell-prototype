@@ -14,7 +14,7 @@ export function OralInstructionInfobar({ instruction }: { instruction: OralInstr
     </div>
     <div className="min-w-0 flex-1">
       <p className="font-semibold text-neutral-900">경구제 전체 지시사항</p>
-      <p className="mt-1 whitespace-pre-wrap break-words text-neutral-600">{instruction.instruction || "등록된 지시사항이 없어요."}</p>
+      <p className="mt-1 whitespace-pre-wrap break-words text-neutral-600">{instruction.instruction || "등록된 지시사항이 없습니다."}</p>
     </div>
     <Button className="size-8 shrink-0 self-start p-0" variant="ghost" aria-label="경구제 전체 지시사항 숨기기" onClick={() => setHiddenRevision(instruction.revision)}>
       {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -184,14 +184,14 @@ const workDefaultFields: Array<{
 ];
 
 function getRoleValidationMessage(reason: string) {
-  if (reason === "empty_label") return "커스텀 역할 이름을 입력하세요.";
-  if (reason === "empty_permissions") return "하나 이상의 권한을 선택하세요.";
+  if (reason === "empty_label") return "커스텀 역할 이름을 입력해 주세요.";
+  if (reason === "empty_permissions") return "하나 이상의 권한을 선택해 주세요.";
   if (reason === "owner_only_permission") return "소유자 전용 권한은 커스텀 역할에 넣을 수 없습니다.";
   return "선택할 수 없는 권한이 포함되어 있습니다.";
 }
 
 function getJobValidationMessage(reason: string) {
-  return reason === "empty_label" ? "직무 이름을 입력하세요." : "이미 있는 직무입니다.";
+  return reason === "empty_label" ? "직무 이름을 입력해 주세요." : "이미 있는 직무입니다.";
 }
 
 function WorkDefaultsPanel({
@@ -655,7 +655,7 @@ export function RolePermissionManagementScreen({
     } catch {
       setWorkDefaultsSaved(false);
       setWorkDefaultsError(
-        "브라우저 저장소에 저장하지 못했습니다. 브라우저 설정을 확인한 뒤 다시 시도하세요."
+        "브라우저 저장소에 저장하지 못했습니다. 브라우저 설정을 확인한 뒤 다시 시도해 주세요."
       );
     }
   };
@@ -906,7 +906,7 @@ export function RolePermissionManagementScreen({
       if (!result.success) {
         setRoleActionError(
           result.reason === "role_referenced"
-            ? "구성원 또는 초대에 배정된 역할은 삭제할 수 없습니다. 먼저 배정을 변경하세요."
+            ? "구성원 또는 초대에 배정된 역할은 삭제할 수 없습니다. 먼저 배정을 변경해 주세요."
             : "역할을 삭제할 수 없습니다."
         );
         return;
@@ -973,7 +973,7 @@ export function RolePermissionManagementScreen({
             <CardHeader>
               <CardTitle>역할 정보를 불러오지 못했습니다</CardTitle>
               <CardDescription role="alert">
-                {workspace.catalogError ?? "권한 또는 연결 상태를 확인한 뒤 다시 시도하세요."}
+                {workspace.catalogError ?? "권한 또는 연결 상태를 확인한 뒤 다시 시도해 주세요."}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1506,7 +1506,7 @@ export function RolePermissionManagementScreen({
                   </div>
                   {jobPositions.every((position) => position.isSystem) ? (
                     <p className="text-xs leading-5 text-muted-foreground">
-                      아직 커스텀 직무가 없습니다. 필요한 업무 분류가 있다면 새 직무를 추가하세요.
+                      아직 커스텀 직무가 없습니다. 필요한 업무 분류가 있다면 새 직무를 추가해 주세요.
                     </p>
                   ) : null}
                   {jobActionError ? (
@@ -1551,8 +1551,8 @@ export function RolePermissionManagementScreen({
           title="저장하지 않은 변경사항이 있습니다"
           description={
             activeSettingsSection === "work-defaults"
-              ? "업무 기본값 변경을 저장하지 않았습니다. 변경사항을 버리고 이동할까요?"
-              : "역할 권한 변경을 저장하지 않았습니다. 변경사항을 버리고 이동할까요?"
+              ? "업무 기본값 변경을 저장하지 않았습니다. 변경사항을 버리고 이동하시겠습니까?"
+              : "역할 권한 변경을 저장하지 않았습니다. 변경사항을 버리고 이동하시겠습니까?"
           }
           cancelLabel="계속 편집"
           confirmLabel="변경사항 버리기"
@@ -1574,7 +1574,7 @@ export function RolePermissionManagementScreen({
               {roleDialogState?.mode === "edit" ? "커스텀 역할 편집" : "새 커스텀 역할"}
             </DialogTitle>
             <DialogDescription>
-              필요한 권한만 선택하세요. 소유자 전용 권한은 커스텀 역할에 추가할 수 없습니다.
+              필요한 권한만 선택해 주세요. 소유자 전용 권한은 커스텀 역할에 추가할 수 없습니다.
             </DialogDescription>
           </DialogHeader>
           <FieldGroup>

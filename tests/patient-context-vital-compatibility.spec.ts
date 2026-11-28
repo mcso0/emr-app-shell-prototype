@@ -149,7 +149,7 @@ for (const surface of ["chart", "dispensing"] as const) {
     const reads = await prepareContext(page, { canWrite: false });
     const { action } = await openContext(page, surface);
     await expect(action).toHaveAttribute("aria-disabled", "true");
-    await expect(action).toHaveAccessibleDescription("바이탈을 입력할 권한이 없어요.");
+    await expect(action).toHaveAccessibleDescription("바이탈을 입력할 권한이 없습니다.");
     action.focus();
     await page.keyboard.press("Enter");
     await page.keyboard.press("Space");
@@ -164,7 +164,7 @@ test("completed dispensing context keeps vital launch disabled despite write per
   const reads = await prepareContext(page, { workStatus: "completed" });
   const { action } = await openContext(page, "dispensing");
   await expect(action).toHaveAttribute("aria-disabled", "true");
-  await expect(action).toHaveAccessibleDescription("진료가 끝난 접수의 바이탈은 여기서 수정할 수 없어요.");
+  await expect(action).toHaveAccessibleDescription("진료가 끝난 접수의 바이탈은 여기서 수정할 수 없습니다.");
   await action.click({ force: true });
   await expect(page.getByRole("dialog", { name: "바이탈 이력", exact: true })).toHaveCount(0);
   expect(reads.historyReads).toHaveLength(0);

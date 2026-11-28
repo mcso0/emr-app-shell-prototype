@@ -40,7 +40,7 @@ async function createChart(page: Page) {
   await expect(create).toBeEnabled();
   await create.click();
   const dialog = page.getByRole("dialog", {
-    name: "새 차트를 어느 진료에 추가할까요?",
+    name: "새 차트를 어느 진료에 추가하시겠습니까?",
   });
   await expect(dialog).toBeVisible();
   const currentVisit = dialog.getByTestId(`new-chart-encounter-${encounterId}`);

@@ -54,7 +54,7 @@ test("persisted set review shows one root, only included children, and their sco
   const trigger = page.getByRole("toolbar", { name: "선택 행 작업" })
     .getByRole("button", { name: "1개 Order 확정" });
   await trigger.click();
-  const dialog = page.getByRole("dialog", { name: "오더 1건을 확정할까요?" });
+  const dialog = page.getByRole("dialog", { name: "오더 1건을 확정하시겠습니까?" });
   const rootReview = dialog.locator("ul").first().locator(":scope > li");
   await expect(rootReview).toHaveCount(1);
   await expect(rootReview).toContainText("기본 혈액검사 세트");

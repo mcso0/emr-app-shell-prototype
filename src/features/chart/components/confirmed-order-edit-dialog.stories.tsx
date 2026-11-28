@@ -84,7 +84,7 @@ const body = (element: HTMLElement) => within(element.ownerDocument.body);
 async function editPrice(element: HTMLElement) { const screen = body(element); const price = await screen.findByLabelText("단가 (원)"); await userEvent.clear(price); await userEvent.type(price, "6000"); return screen; }
 export const FinancialOnlyAndSuccessiveEdit: Story = { play: async ({ canvasElement, canvas }) => {
  const screen = body(canvasElement); await screen.findByLabelText("단가 (원)"); await expect(screen.getByRole("button", { name: "수정 저장" })).toBeDisabled();
- await expect(screen.queryByText("변경된 내용이 없어요.")).toBeNull();
+ await expect(screen.queryByText("변경된 내용이 없습니다.")).toBeNull();
  await expect(screen.queryByLabelText(/수정 사유/)).toBeNull();
  await expect(screen.getByLabelText("요청 조제량")).toHaveAttribute("readonly");
  await userEvent.click(screen.getByRole("button", { name: "수동으로 조정" }));
@@ -93,7 +93,7 @@ export const FinancialOnlyAndSuccessiveEdit: Story = { play: async ({ canvasElem
  await userEvent.click(screen.getByRole("button", { name: /^닫기$/ }));
  await editPrice(canvasElement);
  await expect(screen.getByLabelText("수정 사유 (선택 입력)")).not.toBeRequired();
- await expect(screen.getByText("조제·처치 변경 안내는 보내지 않아요.")).toBeVisible(); await userEvent.dblClick(screen.getByRole("button", { name: "수정 저장" }));
+ await expect(screen.getByText("조제·처치 변경 안내는 보내지 않습니다.")).toBeVisible(); await userEvent.dblClick(screen.getByRole("button", { name: "수정 저장" }));
  await waitFor(() => expect(canvas.getByLabelText("합성 저장 횟수")).toHaveTextContent("1")); await expect(state.requests).toHaveLength(1); await expect(state.requests[0].clinical).toBeUndefined();
  await userEvent.click(canvas.getByRole("button", { name: "수정 열기" })); await expect(await screen.findByLabelText("단가 (원)")).toHaveValue(6000);
  await userEvent.clear(screen.getByLabelText("단가 (원)")); await userEvent.type(screen.getByLabelText("단가 (원)"), "7000"); await userEvent.click(screen.getByRole("button", { name: "수정 저장" })); await waitFor(() => expect(state.requests).toHaveLength(2)); await expect(state.requests[1].expectedVersion).toBe("synthetic-v2");
@@ -107,7 +107,7 @@ export const ClinicalReason: Story = { args: { scenario: "clinical" }, play: asy
   await expect(screen.getByLabelText("요청 조제량")).toHaveValue("저장 시 자동 계산");
   await userEvent.clear(days);
   await userEvent.type(days, "3");
-  await expect(screen.queryByText("변경된 내용이 없어요.")).toBeNull();
+  await expect(screen.queryByText("변경된 내용이 없습니다.")).toBeNull();
   await expect(screen.getByRole("button", { name: "수정 저장" })).toBeDisabled();
   await userEvent.clear(days);
   await userEvent.type(days, "5");

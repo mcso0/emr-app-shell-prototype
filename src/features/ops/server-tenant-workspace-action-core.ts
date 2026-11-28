@@ -272,13 +272,13 @@ function validateTenantWorkspaceActionInput(input: TenantWorkspaceActionInput) {
   const email = normalizeWorkspaceInviteEmail(input.firstAdminEmail);
 
   if (!email) {
-    fieldErrors.firstAdminEmail = "최초 관리자 이메일을 입력하세요.";
+    fieldErrors.firstAdminEmail = "최초 관리자 이메일을 입력해 주세요.";
   } else if (!emailPattern.test(email)) {
-    fieldErrors.firstAdminEmail = "올바른 이메일 형식으로 입력하세요.";
+    fieldErrors.firstAdminEmail = "올바른 이메일 형식으로 입력해 주세요.";
   }
 
   if (!input.firstAdminDisplayName.trim()) {
-    fieldErrors.firstAdminDisplayName = "최초 관리자 이름을 입력하세요.";
+    fieldErrors.firstAdminDisplayName = "최초 관리자 이름을 입력해 주세요.";
   }
 
   if (Object.keys(fieldErrors).length > 0) {

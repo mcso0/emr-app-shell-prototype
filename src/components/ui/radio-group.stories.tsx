@@ -94,7 +94,7 @@ function RadioGroupExample({
         </Field>
       ))}
     </RadioGroup>
-    {invalid ? <FieldError id={`${id}-error`}>선택값을 확인하세요.</FieldError> : null}
+    {invalid ? <FieldError id={`${id}-error`}>선택값을 확인해 주세요.</FieldError> : null}
     </div>
   );
 }
@@ -181,7 +181,7 @@ export const Horizontal: Story = {
 };
 
 export const Invalid: Story = {
-  play: async ({ canvas }) => { await expect(canvas.getByRole("radiogroup")).toHaveAttribute("aria-invalid", "true"); await expect(canvas.getByRole("alert")).toHaveTextContent("선택값을 확인하세요."); },
+  play: async ({ canvas }) => { await expect(canvas.getByRole("radiogroup")).toHaveAttribute("aria-invalid", "true"); await expect(canvas.getByRole("alert")).toHaveTextContent("선택값을 확인해 주세요."); },
   args: {
     invalid: true,
   },

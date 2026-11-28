@@ -816,7 +816,7 @@ function VeterinarianLaneHeader({
         </DropdownMenu>
         {hideDisabled ? (
           <span className="sr-only" id={hideDescriptionId}>
-            최소 1명의 수의사를 표시해야 해요
+            최소 1명의 수의사를 표시해야 합니다
           </span>
         ) : null}
       </div>
@@ -1322,7 +1322,7 @@ function getWalkInRouteErrorMessage(
     return "이 workspace에서 현장 접수를 생성할 권한이 없습니다.";
   }
 
-  return "접수를 만들지 못했어요. 입력값은 그대로 두었어요. 다시 시도해 주세요.";
+  return "접수를 만들지 못했습니다. 입력값은 그대로 두었습니다. 다시 시도해 주세요.";
 }
 
 function getAppointmentCheckInRouteErrorMessage(
@@ -1852,7 +1852,7 @@ const getWalkInTimeBlockMessage = (
   const treatmentEnd = toOperatingMinutes(operatingSchedule.treatmentEnd);
 
   if (currentOperatingMinutes < treatmentStart) {
-    return `아직 접수 시작 전입니다. 오늘 접수는 ${operatingSchedule.treatmentStart}부터 생성할 수 있어요.`;
+    return `아직 접수 시작 전입니다. 오늘 접수는 ${operatingSchedule.treatmentStart}부터 생성할 수 있습니다.`;
   }
 
   if (currentOperatingMinutes >= treatmentEnd) {
@@ -6908,8 +6908,8 @@ function ReceptionDiscardChangesDialog({
         cancelLabel="계속 작성"
         closeAriaLabel="작성 내용 버리기 확인 닫기"
         confirmLabel="나가기"
-        description="입력한 내용은 저장되지 않습니다. 환자 프로필로 돌아갈까요?"
-        title="작성 중인 내용을 버릴까요?"
+        description="입력한 내용은 저장되지 않습니다. 환자 프로필로 돌아가시겠습니까?"
+        title="작성 중인 내용을 버리시겠습니까?"
         onCancel={() => onOpenChange(false)}
         onConfirm={onDiscard}
       />
@@ -8100,7 +8100,7 @@ function ReceptionReservationFormDrawer({
           : !hasAvailableTimeOption
             ? "예약 가능한 시간이 없습니다. 날짜나 예상시간을 변경해 주세요."
             : date === todayDate && hasElapsedOptions
-              ? "오늘 예약은 현재 시각 이후만 선택할 수 있어요."
+              ? "오늘 예약은 현재 시각 이후만 선택할 수 있습니다."
               : undefined;
   const effectiveVeterinarianId =
     veterinarianId !== unassignedVeterinarianValue &&
@@ -11721,7 +11721,7 @@ export function ReceptionDrawer({
         <Dialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>접수를 취소할까요?</DialogTitle>
+              <DialogTitle>접수를 취소하시겠습니까?</DialogTitle>
               <DialogDescription>
                 취소하면 접수 캘린더에서는 사라지고 대기열에는 취소 상태로 남습니다.
               </DialogDescription>
@@ -12172,7 +12172,7 @@ export function ReceptionDrawer({
       <Dialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>접수를 취소할까요?</DialogTitle>
+            <DialogTitle>접수를 취소하시겠습니까?</DialogTitle>
             <DialogDescription>
               취소하면 접수 캘린더에서는 사라지고 대기열에는 취소 상태로 남습니다.
             </DialogDescription>

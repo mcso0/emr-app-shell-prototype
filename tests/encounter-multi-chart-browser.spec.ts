@@ -6,7 +6,7 @@ const createButton = (page: Page) =>
 async function openNewChartDialog(page: Page) {
   await createButton(page).click();
   const dialog = page.getByRole("dialog", {
-    name: "새 차트를 어느 진료에 추가할까요?",
+    name: "새 차트를 어느 진료에 추가하시겠습니까?",
   });
   await expect(dialog).toBeVisible();
   return dialog;
@@ -252,9 +252,9 @@ test("chart read errors fold without unlocking editing and reopen on a failed re
   await expect(soapError).toHaveCount(0);
   await expect(page.getByLabel("SOAP 블록 문서").getByRole("textbox")).toBeEditable();
   const orderError = page.getByTestId("chart-order-state-error");
-  await expect(orderError).toContainText("오더 정보를 불러오지 못했어요");
+  await expect(orderError).toContainText("오더 정보를 불러오지 못했습니다");
   await orderError.getByRole("button", { name: "안내 닫기" }).click();
-  await expect(page.getByTestId("chart-order-state-error-collapsed")).toContainText("오더 정보를 불러오지 못했어요");
+  await expect(page.getByTestId("chart-order-state-error-collapsed")).toContainText("오더 정보를 불러오지 못했습니다");
   await page.getByTestId("chart-order-state-error-collapsed").getByRole("button", { name: "다시 불러오기" }).click();
   await expect(orderError).toBeVisible();
   expect(orderWrites).toBe(0);
@@ -271,11 +271,11 @@ test("chart list retry reopens the error and never claims an empty chart", async
     else await route.continue();
   });
   await page.goto("/w/clair-demo/treatment?encounterId=encounter-kong-260501&patientId=patient-kong&modulePanel=open&aside=closed");
-  const error = page.getByRole("alert").filter({ hasText: "차트 목록을 불러오지 못했어요" });
+  const error = page.getByRole("alert").filter({ hasText: "차트 목록을 불러오지 못했습니다" });
   await expect(error).toBeVisible();
   await error.getByRole("button", { name: "안내 닫기" }).click();
   await expect(error).toHaveCount(0);
-  await expect(page.getByText("이 접수에 작성된 차트가 없어요")).toHaveCount(0);
+  await expect(page.getByText("이 접수에 작성된 차트가 없습니다")).toHaveCount(0);
   await page.getByRole("button", { name: "다시 시도", exact: true }).click();
   await expect(error).toBeVisible();
   failList = false;

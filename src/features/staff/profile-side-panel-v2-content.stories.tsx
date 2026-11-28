@@ -327,7 +327,7 @@ export const WorkStatusReadyAndNavigation: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "합성 업무 항목 더보기" }));
     await userEvent.click(await body.findByRole("menuitem", { name: "업무 보러가기" }));
     expect(await body.findByRole("dialog")).toBeInTheDocument();
-    expect(body.getByRole("heading", { name: "업무 화면으로 이동할까요?" })).toBeInTheDocument();
+    expect(body.getByRole("heading", { name: "업무 화면으로 이동하시겠습니까?" })).toBeInTheDocument();
     await userEvent.click(body.getByRole("button", { name: "취소" }));
     await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument());
     await userEvent.click(canvas.getByRole("button", { name: "이전 업무 더보기" }));
@@ -349,7 +349,7 @@ export const WorkStatusStates: Story = {
   parameters: { docs: { description: { story: "업무 목록의 로딩, 빈 상태와 오류 복구를 비교합니다." } } },
   render: () => <WorkStatusStatesSpecimen />,
   play: async ({ canvas }) => {
-    await waitFor(() => expect(canvas.getByText("배정된 업무가 없어요")).toBeVisible());
+    await waitFor(() => expect(canvas.getByText("배정된 업무가 없습니다")).toBeVisible());
     expect(canvas.getByRole("alert")).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "다시 시도" }));
     await waitFor(() => expect(canvas.getByRole("heading", { name: "합성 업무 항목" })).toBeVisible());

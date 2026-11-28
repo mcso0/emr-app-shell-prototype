@@ -127,7 +127,7 @@ export function StatusMessageEditor({
     } catch {
       setOptimisticValue(null);
       setDraft(confirmedValue);
-      setError("상태 메시지를 저장하지 못했어요.");
+      setError("상태 메시지를 저장하지 못했습니다.");
     } finally {
       setIsSaving(false);
       saveInFlightRef.current = false;
@@ -286,7 +286,7 @@ function ProfileImageUploadDialogContent({
     if (nextFile.size > maxAvatarBytes) {
       replacePreview(null);
       if (inputRef.current) inputRef.current.value = "";
-      setError("파일 크기는 5MB 이하여야 해요.");
+      setError("파일 크기는 5MB 이하여야 합니다.");
       return;
     }
     replacePreview(nextFile);
@@ -300,7 +300,7 @@ function ProfileImageUploadDialogContent({
       await onUpload(file, setUploadPhase);
       onOpenChange(false);
     } catch {
-      setError("프로필 사진을 업로드하지 못했어요.");
+      setError("프로필 사진을 업로드하지 못했습니다.");
     } finally {
       setUploadPhase(null);
     }
@@ -328,7 +328,7 @@ function ProfileImageUploadDialogContent({
       <DialogHeader className="pb-4 pr-8">
         <DialogTitle>프로필 이미지 업로드</DialogTitle>
         <DialogDescription>
-          512×512px 이상 정사각형 이미지를 권장해요. JPG, PNG, 정적 WebP · 최대 5MB
+          512×512px 이상 정사각형 이미지를 권장합니다. JPG, PNG, 정적 WebP · 최대 5MB
         </DialogDescription>
       </DialogHeader>
 
@@ -502,7 +502,7 @@ export function EditableProfileAvatar({
     try {
       await onRemove?.();
     } catch {
-      setMutationError("프로필 사진을 삭제하지 못했어요.");
+      setMutationError("프로필 사진을 삭제하지 못했습니다.");
     } finally {
       setRemoving(false);
     }

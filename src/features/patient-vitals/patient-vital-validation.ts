@@ -23,7 +23,7 @@ export const workspaceVitalKeyByField: Record<PatientVitalField, WorkspaceVitalK
 export function getPatientVitalValueError(key: PatientVitalField, value: unknown): string | undefined {
   if (value === null || value === undefined || value === "") return;
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return "0보다 큰 숫자를 입력해 주세요.";
-  if (value > patientVitalStorageLimits[key]) return "저장할 수 있는 범위를 넘었어요.";
+  if (value > patientVitalStorageLimits[key]) return "저장할 수 있는 범위를 넘었습니다.";
   const decimals = key === "weightKg" ? 2 : key === "temperatureC" ? 1 : 0;
   if (!decimals && !Number.isInteger(value)) return "정수로 입력해 주세요.";
   const scaled = value * 10 ** decimals;
@@ -83,16 +83,16 @@ export function getPatientVitalFieldWarnings(values: Partial<PatientVitalWriteIn
   const weight = values.weightKg;
   const prior = patient.weightKg;
   if (weight != null && (weight < .05 || weight > 200 || (prior != null && (weight < prior / 4 || weight > prior * 4)))) {
-    warnings.weightKg = `기존 체중과 차이가 커요. ${unit("weight", "kg")} 단위와 측정값을 확인해 주세요.`;
+    warnings.weightKg = `기존 체중과 차이가 큽니다. ${unit("weight", "kg")} 단위와 측정값을 확인해 주세요.`;
   }
-  if (values.temperatureC != null && (values.temperatureC < 30 || values.temperatureC > 45)) warnings.temperatureC = `체온이 매우 이례적이에요. ${unit("temperature", "°C")} 단위를 확인해 주세요.`;
+  if (values.temperatureC != null && (values.temperatureC < 30 || values.temperatureC > 45)) warnings.temperatureC = `체온이 매우 이례적입니다. ${unit("temperature", "°C")} 단위를 확인해 주세요.`;
   const ranges = [
     ["heartRateBpm", 20, 400, "심박수가"], ["respiratoryRateRpm", 5, 200, "호흡수가"],
     ["bloodPressureSystolicMmhg", 20, 400, "수축기 혈압이"], ["bloodPressureDiastolicMmhg", 10, 300, "이완기 혈압이"],
   ] as const;
   for (const [key, min, max, label] of ranges) {
     const value = values[key];
-    if (value != null && (value < min || value > max)) warnings[key] = `${label} 매우 이례적이에요. 측정값을 확인해 주세요.`;
+    if (value != null && (value < min || value > max)) warnings[key] = `${label} 매우 이례적입니다. 측정값을 확인해 주세요.`;
   }
   for (const key of Object.keys(warnings) as PatientVitalField[]) {
     if (settings && !settings.items.some((item) => item.key === workspaceVitalKeyByField[key] && item.enabled)) delete warnings[key];

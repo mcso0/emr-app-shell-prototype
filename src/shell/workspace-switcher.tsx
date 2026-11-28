@@ -197,7 +197,7 @@ export function WorkspaceSwitcher({
                 role="status"
                 className="mb-1 flex items-center justify-between gap-3 rounded-md bg-[var(--emr-status-warning-bg)] px-2.5 py-2 text-xs text-[var(--emr-text-secondary)]"
               >
-                <span>저장된 목록을 표시하고 있어요.</span>
+                <span>저장된 목록을 표시하고 있습니다.</span>
                 <Button
                   type="button"
                   variant="ghost"

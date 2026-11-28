@@ -167,7 +167,7 @@ for (const screen of screens) {
             button.matches(":disabled, [aria-disabled=true]"),
           ))).toBe(true);
           releaseCandidates?.();
-          const alert = page.getByRole("alert").filter({ hasText: "담당자 정보를 불러오지 못했어요. 다시 조회해 주세요." });
+          const alert = page.getByRole("alert").filter({ hasText: "담당자 정보를 불러오지 못했습니다. 다시 조회해 주세요." });
           await expect(alert).toBeVisible();
           if (awaitingClaim) {
             await expect(page.getByRole("rowheader", { name: "합성 업무", exact: true })).toBeVisible();
@@ -212,7 +212,7 @@ for (const screen of screens) {
           await page.keyboard.press("Escape");
         }
         await openCandidates();
-        await expect(page.getByText("담당자 목록을 불러오지 못했어요.", { exact: true })).toBeVisible();
+        await expect(page.getByText("담당자 목록을 불러오지 못했습니다.", { exact: true })).toBeVisible();
         await expect(page.getByRole("menuitem", { name: "변경 가능한 담당자가 없습니다.", exact: true })).toBeDisabled();
         expect(mutations).toEqual([]);
       } finally {

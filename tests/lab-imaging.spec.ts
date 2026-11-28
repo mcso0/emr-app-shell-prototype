@@ -644,7 +644,7 @@ test("lab workspace shows equipment receipts in the right panel", async ({ page 
   await expect(receiptPanel.getByText("검사 항목명")).toBeVisible();
 
   await receiptPanel.getByRole("button", { name: "결과 붙여넣기" }).click();
-  await expect(page.getByRole("dialog")).toContainText("검사결과를 붙여넣을까요?");
+  await expect(page.getByRole("dialog")).toContainText("검사결과를 붙여넣으시겠습니까?");
   await expect(page.getByRole("dialog")).toContainText("이전에 입력된 수치가 있으면 장비 수신값으로 덮어씁니다.");
   await page.getByRole("button", { name: "취소" }).click();
   await expect(receiptPanel.getByText("Catalyst One")).toHaveCount(0);

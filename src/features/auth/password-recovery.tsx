@@ -84,7 +84,7 @@ export function PasswordRecovery({ update = false, invalidLink = false }: { upda
   const terminal = state === "checking" || state === "invalid" || state === "check-error" || state === "success";
   return <AuthEntryScene><AuthEntryPanel>
     <form className={styles.form} noValidate onSubmit={submit} aria-busy={busy || state === "checking"}>
-      <AuthEntryHeading title={state === "success" ? "비밀번호 변경 완료" : update ? "새 비밀번호 설정" : "비밀번호 찾기"} description={!update && state !== "sent" ? "가입한 이메일로 비밀번호 재설정 안내를 받으세요." : undefined} />
+      <AuthEntryHeading title={state === "success" ? "비밀번호 변경 완료" : update ? "새 비밀번호 설정" : "비밀번호 찾기"} description={!update && state !== "sent" ? "가입한 이메일로 비밀번호 재설정 안내를 받을 수 있습니다." : undefined} />
       <div className={styles.stack}>
         {state === "checking" ? <AuthEntryNotice>재설정 링크를 확인하고 있습니다.</AuthEntryNotice> : state === "invalid" ? <>
           <AuthEntryNotice error>재설정 링크가 만료되었거나 이미 사용되었습니다. 메일을 다시 요청해 주세요.</AuthEntryNotice>

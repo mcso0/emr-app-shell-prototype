@@ -758,7 +758,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
             confirmButtonVariant="destructive"
             confirmLabel="저장하지 않고 전환"
             description={`작성 중인 내용은 저장되지 않습니다. 대상 워크스페이스: ${pendingWorkspaceSwitch.displayName}`}
-            title="워크스페이스를 전환할까요?"
+            title="워크스페이스를 전환하시겠습니까?"
             onCancel={cancelWorkspaceSwitch}
             onConfirm={confirmWorkspaceSwitch}
           />

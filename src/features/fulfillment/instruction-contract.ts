@@ -133,7 +133,7 @@ export function instructionCompletionConfirmation(
   ).length;
   return {
     title:
-      itemId && document.isSet ? "이 항목을 완료할까요?" : "오더를 완료할까요?",
+      itemId && document.isSet ? "이 항목을 완료하시겠습니까?" : "오더를 완료하시겠습니까?",
     description:
       document.isSet && !itemId && unfinished > 0
         ? `미완료 항목 ${unfinished}개도 함께 완료됩니다.`
@@ -145,19 +145,19 @@ export function instructionCompletionConfirmation(
 }
 
 export const instructionErrorMessages: Record<string, string> = {
-  order_work_on_hold: "수의사가 오더를 수정 중이에요. 수정이 끝난 뒤 다시 시도해 주세요.",
+  order_work_on_hold: "수의사가 오더를 수정 중입니다. 수정이 끝난 뒤 다시 시도해 주세요.",
   instruction_ack_required: "최신 지시사항을 확인한 뒤 다시 시도해 주세요.",
   revision_conflict:
-    "다른 사용자가 오더를 변경했어요. 최신 내용을 확인한 뒤 다시 시도해 주세요.",
+    "다른 사용자가 오더를 변경했습니다. 최신 내용을 확인한 뒤 다시 시도해 주세요.",
   permission_missing:
-    "현재 담당자에게 작업 권한이 있어요. 담당 상태를 확인해 주세요.",
+    "현재 담당자에게 작업 권한이 있습니다. 담당 상태를 확인해 주세요.",
   actual_execution_result_required: "수행 결과를 먼저 기록해 주세요.",
-  billing_locked: "수납에 반영된 오더는 완료를 해제할 수 없어요.",
+  billing_locked: "수납에 반영된 오더는 완료를 해제할 수 없습니다.",
   treatment_medication_link_required: "처치를 시작하려면 차트에서 약품 오더를 연결해 주세요.",
   treatment_medication_link_invalid: "처치를 시작하려면 차트에서 연결된 약품 오더를 확인해 주세요.",
-  work_item_unavailable: "이 오더를 더 이상 찾을 수 없어요.",
+  work_item_unavailable: "이 오더를 더 이상 찾을 수 없습니다.",
   invalid_transition:
-    "현재 상태에서는 이 작업을 할 수 없어요. 오더를 새로 확인해 주세요.",
+    "현재 상태에서는 이 작업을 할 수 없습니다. 오더를 새로 확인해 주세요.",
   idempotency_conflict:
-    "요청 내용을 확인할 수 없어요. 새로고침한 뒤 다시 시도해 주세요.",
+    "요청 내용을 확인할 수 없습니다. 새로고침한 뒤 다시 시도해 주세요.",
 };

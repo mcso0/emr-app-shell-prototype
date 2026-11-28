@@ -207,7 +207,7 @@ function EmptyTablePattern() {
                   현재 조건에 맞는 샘플 업무가 없습니다.
                 </p>
                 <p className="emr-text-dense text-muted-foreground">
-                  필터를 초기화하거나 다른 상태를 선택해 다시 확인하세요.
+                  필터를 초기화하거나 다른 상태를 선택해 다시 확인해 주세요.
                 </p>
               </div>
             </TableCell>

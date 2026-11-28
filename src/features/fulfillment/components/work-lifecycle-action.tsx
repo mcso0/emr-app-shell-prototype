@@ -103,8 +103,8 @@ export function FulfillmentWorkLifecycleAction({
     try {
       const succeeded = await onTransition(action, options);
       if (succeeded === "review_required") return false;
-      if (succeeded && !(action === "complete" && completeRequiresRecord)) toast.success(action === "claim" ? "담당자로 지정됐어요." : action === "unassign" ? "담당을 취소했어요." : ["assign", "handoff"].includes(action) ? "담당자를 변경했어요." : "업무 상태를 변경했어요.");
-      else if (!succeeded) toast.error("업무 상태를 변경하지 못했어요. 최신 상태를 확인해 주세요.");
+      if (succeeded && !(action === "complete" && completeRequiresRecord)) toast.success(action === "claim" ? "담당자로 지정되었습니다." : action === "unassign" ? "담당을 취소했습니다." : ["assign", "handoff"].includes(action) ? "담당자를 변경했습니다." : "업무 상태를 변경했습니다.");
+      else if (!succeeded) toast.error("업무 상태를 변경하지 못했습니다. 최신 상태를 확인해 주세요.");
       return succeeded;
     } catch {
       toast.error("연결을 확인하고 다시 시도해 주세요.");
@@ -123,7 +123,7 @@ export function FulfillmentWorkLifecycleAction({
       );
     } catch {
       setAssignees([]);
-      toast.error("담당자 목록을 불러오지 못했어요.");
+      toast.error("담당자 목록을 불러오지 못했습니다.");
     } finally {
       setAssigneesLoading(false);
     }
@@ -285,7 +285,7 @@ export function FulfillmentWorkLifecycleAction({
         <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon-sm" disabled={disabled} aria-label={`담당자 ${assignedToDisplayName ?? "지정됨"} 변경`} />} onClick={() => {
           setAssignees([]);
           setAssigneesLoading(true);
-          void loadEligibleAssignees().then(setAssignees).catch(() => toast.error("담당자 목록을 불러오지 못했어요.")).finally(() => setAssigneesLoading(false));
+          void loadEligibleAssignees().then(setAssignees).catch(() => toast.error("담당자 목록을 불러오지 못했습니다.")).finally(() => setAssigneesLoading(false));
         }}>
           <Avatar size="sm" title={assignedToDisplayName ?? "담당자"}><AvatarFallback>{(assignedToDisplayName ?? "담당").slice(0, 2)}</AvatarFallback></Avatar>
         </DropdownMenuTrigger>

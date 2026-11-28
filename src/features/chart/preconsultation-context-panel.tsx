@@ -148,13 +148,13 @@ export function ChartPreconsultationContextPanel({
           surface="content"
           title={
             permissionError
-              ? "차트 정보를 볼 권한이 없어요"
-              : "접수 정보를 불러오지 못했어요"
+              ? "차트 정보를 볼 권한이 없습니다"
+              : "접수 정보를 불러오지 못했습니다"
           }
           description={
             permissionError
               ? getContextErrorDescription(contextState.reason)
-              : "네트워크 상태를 확인한 뒤 다시 시도해 주세요. 대기 목록의 접수 정보는 변경되지 않았어요."
+              : "네트워크 상태를 확인한 뒤 다시 시도해 주세요. 대기 목록의 접수 정보는 변경되지 않았습니다."
           }
           secondaryAction={
             permissionError ? undefined : (
@@ -590,11 +590,11 @@ export function MemoSection({ context, patientMemo: memoOverride, guardianLoadin
         <MemoCard
           caution={patientCaution}
           label="환자"
-          value={patientMemo ?? "기록된 환자 주의사항이 없어요."}
+          value={patientMemo ?? "기록된 환자 주의사항이 없습니다."}
         />
         {guardianLoading ? <EmrMeasuredLoading label="보호자 메모를 불러오는 중입니다."><MemoCard label="보호자" value="가상 보호자 메모" /></EmrMeasuredLoading> : <MemoCard
           label="보호자"
-          value={context.guardian?.memo ?? "기록된 보호자 메모가 없어요."}
+          value={context.guardian?.memo ?? "기록된 보호자 메모가 없습니다."}
         />}
       </div>
     </section>
@@ -671,8 +671,8 @@ export function VitalSection({
         <div className="flex min-h-[88px] items-center justify-center gap-3 rounded-[var(--clair-radius-atomic-8)] border border-dashed border-[var(--emr-border-subtle)] bg-[var(--emr-surface-muted)] px-4 py-4 text-sm text-muted-foreground">
           <CdsMedicalActivityIcon className="size-6 shrink-0 text-[var(--emr-text-placeholder)]" aria-hidden="true" />
           <div>
-            <strong className="block text-[var(--emr-text-secondary)]">오늘 기록된 바이탈이 없어요</strong>
-            <p className="mt-0.5 text-xs">오늘 접수에서 측정하면 직전 방문 값과 비교해요.</p>
+            <strong className="block text-[var(--emr-text-secondary)]">오늘 기록된 바이탈이 없습니다</strong>
+            <p className="mt-0.5 text-xs">오늘 접수에서 측정하면 직전 방문 값과 비교합니다.</p>
           </div>
         </div>
       )}
@@ -1023,8 +1023,8 @@ function HistorySection({
         <div className="flex min-h-[88px] items-center justify-center gap-3 rounded-[var(--clair-radius-atomic-8)] border border-dashed border-[var(--emr-border-subtle)] bg-[var(--emr-surface-muted)] px-4 py-4 text-sm text-muted-foreground">
           <CdsUtilitiesHistoryIcon className="size-6 shrink-0 text-[var(--emr-text-placeholder)]" aria-hidden="true" />
           <div>
-            <strong className="block text-[var(--emr-text-secondary)]">이전 진료이력이 없어요</strong>
-            <p className="mt-0.5 text-xs">첫 방문 환자라 오늘 접수부터 이력이 쌓여요.</p>
+            <strong className="block text-[var(--emr-text-secondary)]">이전 진료이력이 없습니다</strong>
+            <p className="mt-0.5 text-xs">첫 방문 환자라 오늘 접수부터 이력이 쌓입니다.</p>
           </div>
         </div>
       )}

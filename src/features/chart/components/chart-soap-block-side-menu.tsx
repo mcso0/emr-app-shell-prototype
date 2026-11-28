@@ -322,7 +322,7 @@ export function ChartSoapPlusCommandMenu({
           maxWidth: position.inputWidth,
         }}
         value={query}
-        placeholder="필터 기준을 입력하세요"
+        placeholder="필터 기준을 입력해 주세요"
         aria-label="블록 명령 필터"
         aria-autocomplete="list"
         aria-controls="bn-suggestion-menu"

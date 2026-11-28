@@ -462,7 +462,7 @@ export function getSessionWorkspacePermissionRoleSummary(
     (item) => item.roleKey === roleKey
   );
 
-  if (!role) return "권한 역할을 선택하세요.";
+  if (!role) return "권한 역할을 선택해 주세요.";
   if (role.roleType === "owner") return "소유자 전용 위험 작업 포함";
   if (role.roleType === "admin") return "대부분의 병원 운영 권한";
   if (role.roleType === "standard") return "일반 운영 권한";
@@ -512,15 +512,15 @@ export function validateWorkspaceCreationInput(
   const fieldErrors: WorkspaceCreationFieldErrors = {};
 
   if (!input.hospitalName.trim()) {
-    fieldErrors.hospitalName = "병원/워크스페이스 이름을 입력하세요.";
+    fieldErrors.hospitalName = "병원/워크스페이스 이름을 입력해 주세요.";
   }
 
   if (!input.adminDisplayName.trim()) {
-    fieldErrors.adminDisplayName = "대표/관리자 이름을 입력하세요.";
+    fieldErrors.adminDisplayName = "대표/관리자 이름을 입력해 주세요.";
   }
 
   if (input.contactEmail.trim() && !emailPattern.test(input.contactEmail.trim())) {
-    fieldErrors.contactEmail = "올바른 이메일 형식으로 입력하세요.";
+    fieldErrors.contactEmail = "올바른 이메일 형식으로 입력해 주세요.";
   }
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -543,13 +543,13 @@ export function validateWorkspaceInvitationInput(
   const email = normalizeWorkspaceInviteEmail(input.email);
 
   if (!email) {
-    fieldErrors.email = "초대 이메일을 입력하세요.";
+    fieldErrors.email = "초대 이메일을 입력해 주세요.";
   } else if (!emailPattern.test(email)) {
-    fieldErrors.email = "올바른 이메일 형식으로 입력하세요.";
+    fieldErrors.email = "올바른 이메일 형식으로 입력해 주세요.";
   }
 
   if (input.roles.length === 0 || input.roles.some((role) => !isSessionWorkspaceRole(role))) {
-    fieldErrors.roles = "하나 이상의 역할을 선택하세요.";
+    fieldErrors.roles = "하나 이상의 역할을 선택해 주세요.";
   }
 
   const permissionRoleKey = input.permissionRoleKey ?? inferPermissionRoleKeyFromRoles(input.roles);
@@ -564,11 +564,11 @@ export function validateWorkspaceInvitationInput(
   );
 
   if (!availableRoleKeys.has(permissionRoleKey)) {
-    fieldErrors.permissionRoleKey = "권한 역할을 선택하세요.";
+    fieldErrors.permissionRoleKey = "권한 역할을 선택해 주세요.";
   }
 
   if (!availableJobPositionKeys.has(jobPositionKey)) {
-    fieldErrors.jobPositionKey = "직무를 선택하세요.";
+    fieldErrors.jobPositionKey = "직무를 선택해 주세요.";
   }
 
   if (!fieldErrors.email) {
@@ -586,7 +586,7 @@ export function validateWorkspaceInvitationInput(
     );
 
     if (hasPendingInvitation) {
-      fieldErrors.email = "이미 대기 중인 초대가 있습니다. 재발송을 사용하세요.";
+      fieldErrors.email = "이미 대기 중인 초대가 있습니다. 재발송을 사용해 주세요.";
     } else if (hasActiveMembership) {
       fieldErrors.email = "이미 활성 멤버로 등록된 이메일입니다.";
     }

@@ -295,7 +295,7 @@ export function OrderSetDrawer({
       if (!response.ok || !body.ok) {
         if (response.status === 409) {
           if (isEdit) await loadDetail(target.orderSetId);
-          toast.error("다른 변경이 먼저 저장되었습니다. 최신 내용을 다시 불러왔어요.");
+          toast.error("다른 변경이 먼저 저장되었습니다. 최신 내용을 다시 불러왔습니다.");
           return;
         }
         throw new Error(body.error?.message ?? "order_set_save_failed");
@@ -303,7 +303,7 @@ export function OrderSetDrawer({
       const saved = body.result?.orderSet;
       const savedId = saved?.orderSetId ?? (isEdit ? target.orderSetId : null);
       if (!savedId) throw new Error("order_set_save_result_missing");
-      toast.success(isEdit ? "Order 세트 revision을 저장했어요." : "Order 세트를 만들었어요.");
+      toast.success(isEdit ? "Order 세트 revision을 저장했습니다." : "Order 세트를 만들었습니다.");
       await onSaved(savedId);
     } catch {
       toast.error("Order 세트를 저장하지 못했습니다. 입력값과 권한을 확인해 주세요.");
@@ -330,11 +330,11 @@ export function OrderSetDrawer({
       );
       if (response.status === 409) {
         await loadDetail(detail.orderSetId);
-        toast.error("검토 대상이 변경되어 최신 내용을 다시 불러왔어요.");
+        toast.error("검토 대상이 변경되어 최신 내용을 다시 불러왔습니다.");
         return;
       }
       if (!response.ok) throw new Error("order_set_review_failed");
-      toast.success(action === "accept" ? "새 하위 revision을 반영했어요." : "이번 변경을 보류했어요.");
+      toast.success(action === "accept" ? "새 하위 revision을 반영했습니다." : "이번 변경을 보류했습니다.");
       await loadDetail(detail.orderSetId);
       await onSaved(detail.orderSetId);
     } catch {

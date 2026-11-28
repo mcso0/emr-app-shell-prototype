@@ -59,7 +59,7 @@ export function useWorkspaceRoleState(workspaceId: string) {
     } catch {
       setCatalogSnapshot(null);
       setCatalogStatus("error");
-      setCatalogError("역할 정보를 불러오지 못했습니다. 권한 또는 연결 상태를 확인한 뒤 다시 시도하세요.");
+      setCatalogError("역할 정보를 불러오지 못했습니다. 권한 또는 연결 상태를 확인한 뒤 다시 시도해 주세요.");
       return null;
     }
   }, [catalogApi, usesServerCatalog, workspaceId]);
@@ -122,7 +122,7 @@ export function useWorkspaceRoleState(workspaceId: string) {
         window.dispatchEvent(new Event("clair.workspaceRoleCatalog.v1"));
         return snapshot;
       } catch {
-        setCatalogError("역할 변경을 저장하지 못했습니다. 권한 또는 연결 상태를 확인한 뒤 다시 시도하세요.");
+        setCatalogError("역할 변경을 저장하지 못했습니다. 권한 또는 연결 상태를 확인한 뒤 다시 시도해 주세요.");
         return null;
       }
     },

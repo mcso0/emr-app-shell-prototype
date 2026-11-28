@@ -118,7 +118,7 @@ export const InlineHistorySearch: Story = { play: async ({ canvas }) => {
   await expect(fixture.requests.filter(request => request.method !== "GET")).toHaveLength(0);
 } };
 export const OrderReadErrorAndRetry: Story = { args: { scenario: "order-read-error" }, play: async ({ canvas }) => {
-  await waitFor(() => expect(canvas.getByTestId("chart-order-state-error")).toHaveTextContent("오더 정보를 불러오지 못했어요"), { timeout: 5000 });
+  await waitFor(() => expect(canvas.getByTestId("chart-order-state-error")).toHaveTextContent("오더 정보를 불러오지 못했습니다"), { timeout: 5000 });
   const reads = fixture.orderReads; fixture.recoverOrders();
   await userEvent.click(within(canvas.getByTestId("chart-order-state-error")).getByRole("button", { name: "다시 불러오기" })); await ready(canvas);
   await expect(fixture.orderReads).toBeGreaterThan(reads); await expect(canvas.queryByTestId("chart-order-state-error")).not.toBeInTheDocument();

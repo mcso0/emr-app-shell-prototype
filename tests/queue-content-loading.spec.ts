@@ -335,9 +335,9 @@ for (const historyStatus of [200, 403, 500]) {
     await expect(entry.getByText("Q-LIVE", { exact: true })).toBeVisible();
     await expect(entry.getByText("대기열 합성 청구", { exact: true })).toBeVisible();
     if (historyStatus === 200) {
-      await expect(entry.getByText("이전 수납 이력이 없어요.", { exact: true })).toBeVisible();
+      await expect(entry.getByText("이전 수납 이력이 없습니다.", { exact: true })).toBeVisible();
     } else {
-      const alert = entry.getByRole("alert").filter({ hasText: "이력을 불러오지 못했어요." });
+      const alert = entry.getByRole("alert").filter({ hasText: "이력을 불러오지 못했습니다." });
       await expect(alert).toBeVisible();
       await expect(alert.getByRole("button", { name: "다시 조회", exact: true })).toBeVisible();
     }
@@ -351,7 +351,7 @@ for (const historyStatus of [200, 403, 500]) {
       await expect(entry.getByRole("heading", { name: "대기열 합성 환자", exact: true })).toBeVisible();
       await expect(page.getByTestId("page-loading-state")).toHaveCount(0);
       releaseHistory();
-      await expect(entry.getByText("이전 수납 이력이 없어요.", { exact: true })).toBeVisible();
+      await expect(entry.getByText("이전 수납 이력이 없습니다.", { exact: true })).toBeVisible();
     }
     expect(writes).toEqual([]);
   });

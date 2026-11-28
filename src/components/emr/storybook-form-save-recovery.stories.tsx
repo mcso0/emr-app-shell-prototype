@@ -41,7 +41,7 @@ function SaveRecoveryExample({
 
   return (
     <form aria-label="샘플 메모 저장" className="grid max-w-xl gap-3" onSubmit={save}>
-      <p className="text-sm text-muted-foreground">합성 예제이며 실제로 저장하지 않아요.</p>
+      <p className="text-sm text-muted-foreground">합성 예제이며 실제로 저장하지 않습니다.</p>
       <Field>
         <FieldLabel htmlFor={memoId}>업무 메모</FieldLabel>
         <Input
@@ -55,18 +55,18 @@ function SaveRecoveryExample({
           }}
         />
       </Field>
-      <span role="status" className="sr-only">{pending ? "메모를 저장하고 있어요." : ""}</span>
+      <span role="status" className="sr-only">{pending ? "메모를 저장하고 있습니다." : ""}</span>
       {hasError ? (
         <EmrInlineAlert
           severity="error"
-          title="메모를 저장하지 못했어요."
+          title="메모를 저장하지 못했습니다."
           action={
             <Button type="submit" size="sm" disabled={pending || !memo.trim()}>
               {pending ? "저장 중…" : "다시 시도"}
             </Button>
           }
         >
-          입력한 내용은 그대로예요.
+          입력한 내용은 그대로입니다.
         </EmrInlineAlert>
       ) : (
         <>
@@ -78,7 +78,7 @@ function SaveRecoveryExample({
             {pending ? "저장 중…" : "저장"}
           </Button>
           {phase === "saved" ? (
-            <EmrInlineAlert severity="success" title="메모를 저장했어요.">
+            <EmrInlineAlert severity="success" title="메모를 저장했습니다.">
               {memo}
             </EmrInlineAlert>
           ) : null}
@@ -141,7 +141,7 @@ export const SaveFailureAndRetry: Story = {
     await expect(onSave).toHaveBeenNthCalledWith(1, draft);
 
     first.reject(new Error("Synthetic save failure"));
-    await expect(await canvas.findByRole("alert")).toHaveTextContent("메모를 저장하지 못했어요.");
+    await expect(await canvas.findByRole("alert")).toHaveTextContent("메모를 저장하지 못했습니다.");
     await expect(input).toHaveValue(draft);
     const retryButton = canvas.getByRole("button", { name: "다시 시도" });
     input.focus();
@@ -154,7 +154,7 @@ export const SaveFailureAndRetry: Story = {
     await expect(onSave).toHaveBeenNthCalledWith(2, draft);
 
     retry.resolve();
-    await expect(await canvas.findByText("메모를 저장했어요.")).toBeVisible();
+    await expect(await canvas.findByText("메모를 저장했습니다.")).toBeVisible();
     await expect(canvas.queryByRole("alert")).not.toBeInTheDocument();
     await expect(input).toHaveValue(draft);
     await expect(onSave).toHaveBeenCalledTimes(2);

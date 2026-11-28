@@ -96,8 +96,7 @@ export function ScheduleFixedWeekDialog({
         <DialogHeader>
           <DialogTitle>기본 근무 일괄 입력</DialogTitle>
           <DialogDescription>
-            선택한 직원에게 같은 요일과 시간을 채워요. 이미 입력된
-            근무·휴무·휴가는 그대로 유지됩니다.
+            선택한 직원에게 같은 요일과 시간을 채웁니다. 이미 입력된 근무·휴무·휴가는 그대로 유지됩니다.
           </DialogDescription>
         </DialogHeader>
 

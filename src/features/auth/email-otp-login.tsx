@@ -78,7 +78,7 @@ export function EmailOtpLogin({ initialEmail = "", next, invalidLink = false, on
 
   return <AuthEntryScene><AuthEntryPanel>
     <form noValidate onSubmit={submit} className={styles.form} aria-busy={Boolean(busy)}>
-      <AuthEntryHeading title={sentEmail ? "인증번호 입력" : "OTP 로그인"} description={sentEmail ? "메일에 적힌 인증번호를 입력해 주세요." : "비밀번호 없이 이메일 인증번호로 로그인하세요."} />
+      <AuthEntryHeading title={sentEmail ? "인증번호 입력" : "OTP 로그인"} description={sentEmail ? "메일에 적힌 인증번호를 입력해 주세요." : "비밀번호 없이 이메일 인증번호로 로그인해 주세요."} />
       <div className={styles.stack}>
         {sentEmail ? <>
           <p className={styles.description}>{sentEmail}<br />가입된 이메일이라면 인증번호 안내가 도착합니다. 스팸 메일함도 확인해 주세요.</p>
@@ -89,7 +89,7 @@ export function EmailOtpLogin({ initialEmail = "", next, invalidLink = false, on
             </InputOTP>
             <p id="otp-help" className={styles.hint}>받은 8자리 숫자를 입력해 주세요. 인증번호가 만료되면 다시 받아 주세요.</p>
           </div>
-          <div className={styles.otpMeta}><span>메일을 받지 못하셨나요?</span><button type="button" className={styles.textButton} disabled={Boolean(busy) || remaining > 0} onClick={() => void send()}>{busy === "send" ? "다시 받는 중" : remaining > 0 ? `다시 받기 (${remaining}초)` : "다시 받기"}</button></div>
+          <div className={styles.otpMeta}><span>메일을 받지 못하셨습니까?</span><button type="button" className={styles.textButton} disabled={Boolean(busy) || remaining > 0} onClick={() => void send()}>{busy === "send" ? "다시 받는 중" : remaining > 0 ? `다시 받기 (${remaining}초)` : "다시 받기"}</button></div>
         </> : <div className={styles.field}>
           <label htmlFor="otp-email">이메일</label>
           <Input id="otp-email" type="email" autoComplete="email" autoFocus value={email} disabled={Boolean(busy)} placeholder="이메일을 입력해주세요" onBlur={() => setEmailTouched(true)} onChange={(event) => { setEmail(event.target.value); setError(""); }} aria-invalid={invalidEmail} aria-describedby={invalidEmail ? "otp-email-error" : undefined} />

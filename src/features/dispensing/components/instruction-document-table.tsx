@@ -394,9 +394,9 @@ function OrderCard({
               ),
             ].join("\n"),
       );
-      notify(link ? "오더 링크를 복사했어요." : "오더 내용을 복사했어요.");
+      notify(link ? "오더 링크를 복사했습니다." : "오더 내용을 복사했습니다.");
     } catch {
-      notify("복사하지 못했어요. 브라우저의 클립보드 권한을 확인해 주세요.");
+      notify("복사하지 못했습니다. 브라우저의 클립보드 권한을 확인해 주세요.");
     }
   }
   const root = useRef<HTMLElement>(null);
@@ -687,7 +687,7 @@ function OrderCard({
           </p>
           {!visibleItems.length && (
             <div className="flex flex-col items-center gap-2 p-6">
-              <p className="text-sm text-muted-foreground">조건에 맞는 항목이 없어요.</p>
+              <p className="text-sm text-muted-foreground">조건에 맞는 항목이 없습니다.</p>
               <Button type="button" variant="outline" size="sm" onClick={clearFilter}>
                 필터 초기화
               </Button>

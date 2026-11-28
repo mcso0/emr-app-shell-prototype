@@ -95,12 +95,12 @@ export function updateDispensingPrescriptionWithUnits(inputs: Record<string, unk
   }
   if (key !== "doseUnit" || value === inputs.doseUnit) return { ok: true, inputs: updateDispensingPrescriptionInput(inputs, key, value) };
   if (typeof value !== "string" || !resolveDispensingDoseFactor(config, value, inputs.doseBasis).ok) {
-    return { ok: false, message: "이 약품에서 환산할 수 없는 단위예요. 단위 설정을 확인해 주세요." };
+    return { ok: false, message: "이 약품에서 환산할 수 없는 단위입니다. 단위 설정을 확인해 주세요." };
   }
   if (!inputs.doseUnit) return { ok: true, inputs: { ...inputs, doseUnit: value } };
   const converted = typeof inputs.dose === "number" && typeof inputs.doseUnit === "string"
     ? convertDispensingDose(config, inputs.dose, inputs.doseUnit, value, inputs.doseBasis) : null;
-  if (converted === null) return { ok: false, message: "현재 용량과 단위를 환산할 수 없어요. 처방 값과 제품 함량을 확인해 주세요." };
+  if (converted === null) return { ok: false, message: "현재 용량과 단위를 환산할 수 없습니다. 처방 값과 제품 함량을 확인해 주세요." };
   return { ok: true, inputs: { ...inputs, dose: converted, doseUnit: value } };
 }
 

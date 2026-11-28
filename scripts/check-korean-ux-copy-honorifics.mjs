@@ -14,6 +14,16 @@ const plainDeclarativePattern =
 const plainDeclarativeAllowedFiles = new Set([
   "src/features/inpatient/data.ts",
 ]);
+// Product copy uses 합니다체: facts end in ~습니다/~입니다, requests in ~해 주세요
+// and confirmations in ~하시겠습니까?. Flag 해요체 endings (~어요, ~예요, ~할까요?, ~하세요).
+const haeyoEndingPattern =
+  /[가-힣]요(?=\s*(?:[.!?…,;:)"'”]|$))/gu;
+const haeyoAllowedWords = /(?:주세요|아니요|필요|중요|주요|개요)$/;
+// Sample clinical records and guardian notes quote what a person wrote or said.
+const haeyoAllowedTexts = new Set([
+  "어제 저녁부터 오른쪽 앞다리를 들고 걸어요. 식욕은 평소와 같아요.",
+  "식후에 1회 1정씩 하루 1회, 3일간 투여하세요.",
+]);
 
 function walk(directory) {
   const files = [];
@@ -91,6 +101,28 @@ for (const file of walk(sourceRoot)) {
         });
       }
 
+      const shouldCheckHaeyo =
+        !file.includes(".stories.") &&
+        !haeyoAllowedTexts.has(copyText.trim());
+
+      if (shouldCheckHaeyo) {
+        haeyoEndingPattern.lastIndex = 0;
+        let haeyoMatch;
+
+        while ((haeyoMatch = haeyoEndingPattern.exec(copyText))) {
+          const preceding = copyText.slice(0, haeyoMatch.index + haeyoMatch[0].length);
+
+          if (haeyoAllowedWords.test(preceding)) continue;
+
+          failures.push({
+            file: relativeFile,
+            line: lineOf(sourceFile, node.getStart(sourceFile)),
+            match: copyText.slice(Math.max(0, haeyoMatch.index - 6), haeyoMatch.index + 2),
+          });
+          break;
+        }
+      }
+
       const shouldCheckPlainDeclarative =
         !file.includes(".stories.") &&
         !plainDeclarativeAllowedFiles.has(relativeFile);
@@ -121,7 +153,7 @@ if (failures.length > 0) {
     console.error(`- ${failure.file}:${failure.line} (${failure.match})`);
   }
   console.error(
-    "Rewrite product copy in 존댓말 or narrow the source boundary with a documented exception.",
+    "Rewrite product copy in 합니다체 (~습니다, ~해 주세요, ~하시겠습니까?) or narrow the source boundary with a documented exception.",
   );
   process.exit(1);
 }

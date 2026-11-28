@@ -147,7 +147,7 @@ function MyWorkEmptyState({ launchers }: { launchers: HomeLauncherAction[] }) {
     <div className="rounded-[var(--clair-radius-md)] border border-dashed border-border bg-[var(--emr-surface-muted)] p-4">
       <div className="grid gap-4 xl:grid-cols-[260px_minmax(0,1fr)]">
         <div className="min-w-0">
-          <h3 className="text-[16px] font-semibold leading-6">바로 시작할 업무를 선택하세요.</h3>
+          <h3 className="text-[16px] font-semibold leading-6">바로 시작할 업무를 선택해 주세요.</h3>
           <p className="mt-1 text-[13px] leading-5 text-muted-foreground">
             현재 요청된 내 업무는 없지만, 역할에 맞는 큐에서 업무를 시작할 수 있습니다.
           </p>

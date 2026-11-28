@@ -39,7 +39,7 @@ test("billing ownership survives reads, transfers authority, rejects stale and f
   const pay = page.getByRole("button", { name: "수납 완료", exact: true });
   await expect(pay).toBeDisabled();
   await claim.click();
-  await expect(page.getByText("담당자로 지정됐어요.", { exact: true })).toBeVisible();
+  await expect(page.getByText("담당자로 지정되었습니다.", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /담당자.*변경/ })).toBeEnabled();
   await expect(pay).toBeEnabled();
   await page.getByRole("button", { name: /담당자.*변경/ }).click();

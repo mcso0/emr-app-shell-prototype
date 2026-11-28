@@ -194,7 +194,7 @@ function buildOrderRecheckRequestedNotificationEvent({
   workspaceId: string;
 }): LiveNotificationEventInput {
   const titlePrefix = input.patientLabel ? `${input.patientLabel} ` : "";
-  const detail = `${input.requesterLabel}가 ${input.reason} 확인을 요청했습니다. 원본 오더에서 재확인 사유를 확인하세요.`;
+  const detail = `${input.requesterLabel}가 ${input.reason} 확인을 요청했습니다. 원본 오더에서 재확인 사유를 확인해 주세요.`;
 
   return {
     workspaceId,

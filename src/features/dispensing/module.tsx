@@ -2032,7 +2032,7 @@ function DispensingContentBody({
           kind="no-scope-result"
           priority="supporting"
           surface="content"
-          title="연결된 조제·처치 오더를 찾을 수 없어요"
+          title="연결된 조제·처치 오더를 찾을 수 없습니다"
           description={instructionTargetMissing ? "차트에서 지시서를 다시 열어 주세요." : undefined}
           primaryAction={instructionTargetMissing ? undefined :
             <Button variant="outline" onClick={() => void fulfillmentQueue.refresh()}>다시 조회</Button>}

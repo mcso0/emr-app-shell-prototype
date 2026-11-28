@@ -2219,7 +2219,7 @@ async function verifyActualDispenseUiCase(
   await input.fill("1.2");
   await expect(input).toHaveAttribute("aria-invalid", "false");
   await input.press("Tab");
-  await expect(page.getByText("실 조제량을 저장하지 못했어요.", { exact: true })).toBeVisible();
+  await expect(page.getByText("실 조제량을 저장하지 못했습니다.", { exact: true })).toBeVisible();
   await expect(input).toHaveValue("1.2");
   await input.focus();
   await page.keyboard.press("Enter");
@@ -2372,7 +2372,7 @@ test("chart Order draft autosaves Field Matrix values and enables explicit confi
   const confirmButton = actionBar.getByRole("button", { name: /\d+개 Order 확정/ });
   await expect(confirmButton).toBeEnabled();
   await confirmButton.click();
-  const confirmDialog = page.getByRole("dialog", { name: "오더 1건을 확정할까요?" });
+  const confirmDialog = page.getByRole("dialog", { name: "오더 1건을 확정하시겠습니까?" });
   await expect(confirmDialog.getByText("[CBC 검사] #BASO", { exact: true })).toBeVisible();
   await expect(confirmDialog).not.toContainText("공유 Draft");
   await confirmDialog.getByRole("button", { name: "취소" }).click();
@@ -2801,11 +2801,11 @@ test("chart prepares the new encounter while an earlier first-chart request is d
     await page.getByTestId(`order-queue-item-${second.encounter.id}`).click();
     await expect(page).toHaveURL(new RegExp(`encounterId=${second.encounter.id}`));
     await expect.poll(() => secondPutCount).toBe(1);
-    const preparationError = page.getByRole("alert").filter({ hasText: "진료 차트를 준비하지 못했어요" });
+    const preparationError = page.getByRole("alert").filter({ hasText: "진료 차트를 준비하지 못했습니다" });
     await expect(preparationError).toBeVisible();
     await preparationError.getByRole("button", { name: "안내 닫기" }).click();
     await expect(preparationError).toHaveCount(0);
-    await expect(page.getByText("이 접수에 작성된 차트가 없어요")).toHaveCount(0);
+    await expect(page.getByText("이 접수에 작성된 차트가 없습니다")).toHaveCount(0);
     await page.getByRole("button", { name: "다시 시도", exact: true }).click();
     await expect.poll(() => secondPutCount).toBe(2);
     await expect(page.getByLabel("SOAP 블록 문서").getByRole("textbox")).toBeEditable();
@@ -3227,14 +3227,14 @@ test("live patient chart history shows every chart by created_at and keeps past 
     .toBe(oldChartSameMinute.id);
   await expect(oldHistorySameMinuteItem).toHaveAttribute("data-selected", "true");
   await expect(oldHistoryItem).not.toHaveAttribute("data-selected", "true");
-  await expect(page.getByText("이 접수에 작성된 차트가 없어요")).toHaveCount(0);
+  await expect(page.getByText("이 접수에 작성된 차트가 없습니다")).toHaveCount(0);
   await expect(page.getByTestId("chart-historical-readonly-badge")).toBeVisible();
   await oldHistoryItem.click();
   await expect
     .poll(() => new URL(page.url()).searchParams.get("chartId"))
     .toBe(oldChartId);
   await expect(oldHistoryItem).toHaveAttribute("data-selected", "true");
-  await expect(page.getByText("이 접수에 작성된 차트가 없어요")).toHaveCount(0);
+  await expect(page.getByText("이 접수에 작성된 차트가 없습니다")).toHaveCount(0);
   await historyDateMode.getByRole("button", { name: "작성일 기준" }).click();
   await expect(oldHistoryItem).toHaveAttribute("data-selected", "true");
   await expect(
@@ -3251,7 +3251,7 @@ test("live patient chart history shows every chart by created_at and keeps past 
   await expect(aside.getByRole("button", { name: "+ 새 차트" })).toBeEnabled();
   await aside.getByRole("button", { name: "+ 새 차트" }).click();
   const newChartDialog = page.getByRole("dialog", {
-    name: "새 차트를 어느 진료에 추가할까요?",
+    name: "새 차트를 어느 진료에 추가하시겠습니까?",
   });
   await expect(newChartDialog).toBeVisible();
   const currentCandidate = newChartDialog.getByTestId(
@@ -3773,7 +3773,7 @@ test("an uncalled past reception stays waiting and warns before creating today's
   await expect(todayWaitingItem).toContainText("대기 중");
   await todayWaitingItem.click();
   await expect(
-    page.getByRole("dialog", { name: "지난 접수 건을 호출할까요?" }),
+    page.getByRole("dialog", { name: "지난 접수 건을 호출하시겠습니까?" }),
   ).toHaveCount(0);
   const todayCallDialog = page.getByRole("dialog", {
     name: "구름/구름 보호자을 호출하시겠습니까?",
@@ -3785,7 +3785,7 @@ test("an uncalled past reception stays waiting and warns before creating today's
   await waitingItem.click();
 
   const warningDialog = page.getByRole("dialog", {
-    name: "지난 접수 건을 호출할까요?",
+    name: "지난 접수 건을 호출하시겠습니까?",
   });
   await expect(warningDialog).toContainText("26.09.08에 등록된 접수");
   await expect(warningDialog).toContainText("차트는 오늘 날짜로 생성");
@@ -3810,7 +3810,7 @@ test("an uncalled past reception stays waiting and warns before creating today's
   await expect
     .poll(() => new URL(page.url()).searchParams.get("chartId"))
     .toBe(createdChartId);
-  await expect(page.getByText("이 접수에 작성된 차트가 없어요")).toHaveCount(0);
+  await expect(page.getByText("이 접수에 작성된 차트가 없습니다")).toHaveCount(0);
   await expect(page.getByTestId("chart-historical-readonly-badge")).toHaveCount(
     0,
   );
@@ -4300,11 +4300,11 @@ test("chart context bar keeps missing guardians non-interactive and explains una
   const vitalAction = page.getByRole("button", { name: "오늘 바이탈 입력" });
   await expect(vitalAction).toHaveAttribute("aria-disabled", "true");
   await expect(vitalAction).toHaveAccessibleDescription(
-    "바이탈을 입력할 권한이 없어요.",
+    "바이탈을 입력할 권한이 없습니다.",
   );
   await expect(vitalAction).toHaveAttribute(
     "title",
-    "바이탈을 입력할 권한이 없어요.",
+    "바이탈을 입력할 권한이 없습니다.",
   );
   await expect(
     page.getByRole("dialog", { name: "오늘 바이탈 입력" }),
@@ -5333,7 +5333,7 @@ test("chart preconsultation read error uses the shared recovery empty state", as
 
   const feedback = page.getByTestId("preconsultation-feedback-state");
   await expect(feedback).toHaveAttribute("data-kind", "read-error");
-  await expect(feedback).toContainText("접수 정보를 불러오지 못했어요");
+  await expect(feedback).toContainText("접수 정보를 불러오지 못했습니다");
   await expect(feedback).toContainText(
     "대기 목록의 접수 정보는 변경되지 않았어요.",
   );
@@ -6365,7 +6365,7 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(page.getByRole("button", { name: "차트 작성 완료" })).toBeVisible();
   await expect(page.getByTestId("chart-start-locked-state")).toHaveCount(0);
   await expect(page.getByLabel("환자 컨텍스트 정보")).toContainText("초코");
-  await expect(page.getByText("이 접수에 작성된 차트가 없어요")).toHaveCount(0);
+  await expect(page.getByText("이 접수에 작성된 차트가 없습니다")).toHaveCount(0);
   await expect(
     page.getByLabel("SOAP 블록 문서").getByRole("textbox"),
   ).toBeEditable();
@@ -7967,7 +7967,7 @@ test("chart safety context identifies the patient while order review shows only 
     selectionActions.getByRole("button", { name: /\d+개 Order 확정/ }),
   ).toBeEnabled();
   await selectionActions.getByRole("button", { name: /\d+개 Order 확정/ }).click();
-  const orderConfirmDialog = page.getByRole("dialog", { name: "오더 1건을 확정할까요?" });
+  const orderConfirmDialog = page.getByRole("dialog", { name: "오더 1건을 확정하시겠습니까?" });
   await expect(orderConfirmDialog.getByRole("listitem")).toContainText("CBC 검사");
   await expect(orderConfirmDialog.getByRole("listitem")).toContainText("35,000원");
   await expect(orderConfirmDialog.getByText("선택 오더 합계")).toBeVisible();
@@ -8156,7 +8156,7 @@ for (const [queueType, label, waiting] of [
     await expect(shortcut).toHaveCSS("opacity", "1");
     expect(await nameText.boundingBox()).toEqual(originalNamePosition);
     await shortcut.click();
-    const dialog = page.getByRole("dialog", { name: `${label} 지시서로 이동할까요?` });
+    const dialog = page.getByRole("dialog", { name: `${label} 지시서로 이동하시겠습니까?` });
     await expect(dialog).toContainText(name);
     expect(await dialog.getByText(name, { exact: true }).evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
     await expect(page).toHaveURL(/\/treatment\?/);
@@ -8174,7 +8174,7 @@ for (const [queueType, label, waiting] of [
     const confirm = dialog.getByRole("button", { name: "지시서로 이동", exact: true });
     if (denied) {
       await confirm.click();
-      await expect(dialog.getByRole("alert")).toHaveText("이 지시서를 볼 권한이 없어요.");
+      await expect(dialog.getByRole("alert")).toHaveText("이 지시서를 볼 권한이 없습니다.");
       await expect(page).toHaveURL(/\/treatment\?/);
       denied = false;
     } else {
@@ -8218,7 +8218,7 @@ for (const [queueType, label, waiting] of [
     if (waiting) {
       instructionItems = [sibling];
       await page.reload();
-      await expect(page.getByText("연결된 조제·처치 오더를 찾을 수 없어요")).toBeVisible();
+      await expect(page.getByText("연결된 조제·처치 오더를 찾을 수 없습니다")).toBeVisible();
       await expect(target).toHaveCount(0);
       await expect(page.getByRole("row").filter({ hasText: sibling.name })).toHaveCount(0);
     }
@@ -8239,7 +8239,7 @@ test("chart order review counts selected roots, matches scoped row charges, and 
   await page.getByRole("checkbox", { name: "복부 초음파 선택" }).check();
   const trigger = getChartSelectedOrderConfirmAction(page);
   await trigger.click();
-  const dialog = page.getByRole("dialog", { name: "오더 2건을 확정할까요?" });
+  const dialog = page.getByRole("dialog", { name: "오더 2건을 확정하시겠습니까?" });
   const rows = dialog.getByRole("listitem");
   await expect(rows).toHaveCount(2);
   await expect(rows.nth(0)).toContainText("CBC 검사");
@@ -8393,7 +8393,7 @@ test("chart mixed selection keeps confirmation and partial billing scoped", asyn
   // tests, so this interaction test does not leak confirmation state.
   await page.getByRole("checkbox", { name: "복부 초음파 선택" }).check();
   await getChartSelectedOrderConfirmAction(page).click();
-  const confirmDialog = page.getByRole("dialog", { name: "오더 1건을 확정할까요?" });
+  const confirmDialog = page.getByRole("dialog", { name: "오더 1건을 확정하시겠습니까?" });
   await confirmDialog.getByRole("button", { name: "1건 확정", exact: true }).click();
   await expect(confirmDialog).toBeHidden();
 
@@ -8629,7 +8629,7 @@ test("chart order table edits quantity, commits draft changes, and deletes rows"
     .click({ force: true });
   const deleteDialog = page.getByRole("dialog");
 
-  await expect(deleteDialog.getByText("오더를 삭제할까요?")).toBeVisible();
+  await expect(deleteDialog.getByText("오더를 삭제하시겠습니까?")).toBeVisible();
   await expect(deleteDialog).toContainText(
     "선택한 1개 오더가 현재 Plan에서 제거됩니다.",
   );
@@ -8691,7 +8691,7 @@ test("chart row actions keep three Figma slots without replacing checkbox select
 
   await draftActions.getByRole("button", { name: "CBC 검사 확정" }).click();
   const confirmationDialog = page.getByRole("dialog", {
-    name: "오더 1건을 확정할까요?",
+    name: "오더 1건을 확정하시겠습니까?",
   });
   await expect(confirmationDialog.getByRole("listitem")).toContainText("CBC 검사");
   const preservedSelection = page.locator(
@@ -8819,7 +8819,7 @@ test("chart order add announces success only after the candidate is persisted", 
 
   releaseSave();
   await expect(
-    page.getByText("1개 Order 후보를 추가하고 저장했어요."),
+    page.getByText("1개 Order 후보를 추가하고 저장했습니다."),
   ).toBeVisible();
 
   await page
@@ -8829,7 +8829,7 @@ test("chart order add announces success only after the candidate is persisted", 
     .getByRole("dialog")
     .getByRole("button", { name: "삭제", exact: true })
     .click();
-  await expect(page.getByText("오더를 삭제했어요.")).toBeVisible();
+  await expect(page.getByText("오더를 삭제했습니다.")).toBeVisible();
 });
 
 test("chart order added during an in-flight save can be removed without resurrection", async ({
@@ -9298,7 +9298,7 @@ test("chart queue selection changes the selected encounter", async ({
   await expect(lockedState).toContainText("담당 수의사");
   await expect(lockedState).toContainText("이수지");
   await expect(lockedState).toContainText("기록된 바이탈이 없어요");
-  await expect(lockedState).toContainText("이전 진료이력이 없어요");
+  await expect(lockedState).toContainText("이전 진료이력이 없습니다");
   await expect(page.getByText("진단 입력 전입니다.")).toHaveCount(0);
   await expect(page.getByLabel("SOAP 블록 문서")).toHaveCount(0);
 
@@ -9767,7 +9767,7 @@ async function verifyChartConfirmationRetry(page: Page) {
   await detail.getByRole("button", { name: "저장하고 닫기" }).click();
   await page.getByRole("checkbox", { name: "CBC 검사 선택" }).check();
   await getChartSelectedOrderConfirmAction(page).click();
-  const confirmDialog = page.getByRole("dialog", { name: "오더 1건을 확정할까요?" });
+  const confirmDialog = page.getByRole("dialog", { name: "오더 1건을 확정하시겠습니까?" });
   const confirmButton = confirmDialog.getByRole("button", {
     name: "1건 확정",
   });
@@ -10724,7 +10724,7 @@ test("chart order add searches active workspace catalog and adds a draft row", a
     .getByRole("checkbox", { name: "[CBC 검사] #BASO 선택" })
     .click();
   await getChartSelectedOrderConfirmAction(page).click();
-  const confirmDialog = page.getByRole("dialog", { name: "오더 1건을 확정할까요?" });
+  const confirmDialog = page.getByRole("dialog", { name: "오더 1건을 확정하시겠습니까?" });
   await expect(confirmDialog).toBeVisible();
   const orderActionResponse = page.waitForResponse(
     (response) =>
@@ -11351,7 +11351,7 @@ test("chart confirmation continues after an ambiguous draft response only when r
     .fill(`${displayName} updated`);
   await page.getByRole("checkbox", { name: `${displayName} 선택` }).check();
   await getChartSelectedOrderConfirmAction(page).click();
-  const confirmDialog = page.getByRole("dialog", { name: "오더 1건을 확정할까요?" });
+  const confirmDialog = page.getByRole("dialog", { name: "오더 1건을 확정하시겠습니까?" });
   await confirmDialog.getByRole("button", { name: "1건 확정" }).click();
 
   await expect.poll(() => draftPatchCount).toBe(1);
@@ -11794,7 +11794,7 @@ test("chart quick-add reuses warm results but requires fresh authority before ad
     await input.press("Enter");
     await expect(page.locator('tr[data-testid^="chart-order-row-"]')).toHaveCount(before);
     release();
-    await expect(page.getByText("최신 목록을 확인하지 못했어요.")).toBeVisible();
+    await expect(page.getByText("최신 목록을 확인하지 못했습니다.")).toBeVisible();
     await expect(option).toBeDisabled();
     responseStatus = 200;
     await page.getByRole("button", { name: "다시 시도", exact: true }).click();
@@ -11898,9 +11898,9 @@ test("chart empty notice waits for a successful list and dismissal stays encount
   try {
     await page.goto(`/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/treatment?encounterId=${first.encounter.id}&modulePanel=open&aside=closed`);
     await expect(page.getByText("진료 차트를 준비하는 중", { exact: true })).toBeVisible();
-    await expect(page.getByText("이 접수에 작성된 차트가 없어요")).toHaveCount(0);
+    await expect(page.getByText("이 접수에 작성된 차트가 없습니다")).toHaveCount(0);
     releaseList();
-    const empty = page.getByRole("status").filter({ hasText: "이 접수에 작성된 차트가 없어요" });
+    const empty = page.getByRole("status").filter({ hasText: "이 접수에 작성된 차트가 없습니다" });
     await expect(empty).toBeVisible();
     await empty.getByRole("button", { name: "안내 닫기" }).focus();
     await page.keyboard.press("Enter");

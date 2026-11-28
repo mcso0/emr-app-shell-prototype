@@ -181,7 +181,7 @@ export function WorkspaceEntryLoadingScreen({
         className="emr-text-metadata absolute top-[calc(50%+62px)] w-full px-4 text-center font-medium text-[var(--clair-color-atomic-neutral-500)] opacity-0"
         data-splash-message="true"
       >
-        진료 공간을 준비하고 있어요
+        진료 공간을 준비하고 있습니다
       </p>
     </div>
   );

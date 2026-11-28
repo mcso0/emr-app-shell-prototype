@@ -154,7 +154,7 @@ function getAuthSessionNotice(reason: string | null) {
 
   if (reason === "invite_existing_account") {
     return {
-      title: "초대받은 이메일로 로그인하세요.",
+      title: "초대받은 이메일로 로그인해 주세요.",
       description: "로그인 후 초대 화면으로 돌아가 워크스페이스 멤버십을 활성화합니다.",
       tone: "warning",
     } as const;
@@ -162,7 +162,7 @@ function getAuthSessionNotice(reason: string | null) {
 
   if (reason === "invite_email_otp") {
     return {
-      title: "초대받은 이메일로 계속하세요.",
+      title: "초대받은 이메일로 계속해 주세요.",
       description: "계정 확인 후 초대 화면으로 돌아가 워크스페이스 멤버십을 활성화합니다.",
       tone: "warning",
     } as const;
@@ -171,7 +171,7 @@ function getAuthSessionNotice(reason: string | null) {
   if (reason === "unauthorized") {
     return {
       title: "이 워크스페이스에 접근할 권한이 없습니다.",
-      description: "다른 계정으로 로그인하거나 병원 관리자에게 초대를 요청하세요.",
+      description: "다른 계정으로 로그인하거나 병원 관리자에게 초대를 요청해 주세요.",
       tone: "danger",
     } as const;
   }
@@ -528,12 +528,12 @@ export function LoginForm() {
             ? "비밀번호는 8자 이상으로 설정해 주세요."
             : errorMessage === "invite-password-mismatch"
               ? "비밀번호 확인이 일치하지 않습니다."
-              : "초대 이메일 인증 또는 비밀번호 설정을 진행할 수 없습니다. 초대 링크와 인증 코드를 확인하세요."
+              : "초대 이메일 인증 또는 비밀번호 설정을 진행할 수 없습니다. 초대 링크와 인증 코드를 확인해 주세요."
           : usesSupabaseProvider
           ? getEmailAuthError(caught)
           : errorMessage === "mock-demo-account-not-found"
             ? loginEmailNotFoundErrorMessage
-          : "로그인 처리 중 문제가 발생했습니다. 잠시 후 다시 시도하세요."
+          : "로그인 처리 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요."
       );
       setIsSubmitting(false);
     }
@@ -549,7 +549,7 @@ export function LoginForm() {
   return (
     <AuthEntryScene>
             <LoginDialogForm onSubmit={handleSubmit}>
-              <AuthEntryHeading title={isInviteOtpLogin ? "초대 이메일 인증" : "로그인"} description={!isDefaultPasswordLogin ? isInviteOtpLogin ? "초대받은 이메일로 인증 코드를 받아 계정 확인을 이어갑니다." : "초대받은 워크스페이스에 연결하려면 초대 이메일 계정으로 로그인하세요." : undefined} />
+              <AuthEntryHeading title={isInviteOtpLogin ? "초대 이메일 인증" : "로그인"} description={!isDefaultPasswordLogin ? isInviteOtpLogin ? "초대받은 이메일로 인증 코드를 받아 계정 확인을 이어갑니다." : "초대받은 워크스페이스에 연결하려면 초대 이메일 계정으로 로그인해 주세요." : undefined} />
                 {authSessionNotice ? (
                   <div
                     role="status"
@@ -603,7 +603,7 @@ export function LoginForm() {
                           ? `${inviteEmail} 주소로 인증 코드를 보냅니다.`
                           : isInviteLogin && inviteEmail
                             ? `${inviteEmail} 계정으로 로그인해야 이 초대를 수락할 수 있습니다.`
-                            : "초대받은 이메일을 입력하세요."}
+                            : "초대받은 이메일을 입력해 주세요."}
                       </FieldDescription>
                     ) : null}
                   </Field>

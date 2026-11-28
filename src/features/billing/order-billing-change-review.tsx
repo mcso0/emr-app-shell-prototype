@@ -76,7 +76,7 @@ export function OrderBillingChangeReview({ workspaceId, invoiceId, reviewKey, on
   {changes.map(change => <div key={change.proposalId} className="mt-3 border-t pt-3"><h3 className="text-sm font-medium">{change.before.billingName}</h3>
    <dl className="my-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">{(Object.keys(labels) as (keyof OrderFinancialValues)[]).filter(key => change.before[key] !== change.proposed[key]).map(key => <div className="contents" key={key}><dt className="text-muted-foreground">{labels[key]}</dt><dd>{format(change.before[key])} → {format(change.proposed[key])}</dd></div>)}</dl>
    <Button size="sm" disabled={busy || blocked || !change.canApprove} onClick={() => void approve(change)}>{busy ? "반영 중…" : "확인 후 금액 반영"}</Button>
-   {!change.canApprove && <p className="mt-2 text-xs text-muted-foreground">현재 수납 담당자만 결제 전에 반영할 수 있어요.</p>}
+   {!change.canApprove && <p className="mt-2 text-xs text-muted-foreground">현재 수납 담당자만 결제 전에 반영할 수 있습니다.</p>}
   </div>)}
   {error && <div role="alert" className="mt-3 text-sm"><p>{error}</p><Button variant="outline" size="sm" disabled={busy} onClick={() => setReload(n => n + 1)}>최신 변경안 조회</Button></div>}
  </section>;

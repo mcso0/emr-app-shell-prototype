@@ -176,9 +176,9 @@ export function createChartOrderDraftSaveExecutor({
           ) {
             toast.error(
               conflict
-                ? "다른 기기에서 오더가 변경됐어요. 현재 편집값을 유지한 채 충돌을 해결해 주세요."
+                ? "다른 기기에서 오더가 변경되었습니다. 현재 편집값을 유지한 채 충돌을 해결해 주세요."
                 : result.denialReason === "permission_missing"
-                  ? "오더 수정 권한이 없어 저장하지 못했어요."
+                  ? "오더 수정 권한이 없어 저장하지 못했습니다."
                   : getChartOrderPersistenceErrorMessage(
                       result.denialReason ?? result.error,
                     ),
@@ -195,7 +195,7 @@ export function createChartOrderDraftSaveExecutor({
           setOrderDraftSaveState("error");
           orderDraftFailedAutoSaveVersionRef.current =
             attemptedDraftEditVersion;
-          toast.error("저장 응답의 금액 범위를 확인하지 못했어요.");
+          toast.error("저장 응답의 금액 범위를 확인하지 못했습니다.");
           return false;
         }
 
@@ -239,8 +239,8 @@ export function createChartOrderDraftSaveExecutor({
         if (attemptedRemovedRootOrderIds.size > 0) {
           toast.success(
             attemptedRemovedRootOrderIds.size === 1
-              ? "오더를 삭제했어요."
-              : `${attemptedRemovedRootOrderIds.size}개 오더를 삭제했어요.`,
+              ? "오더를 삭제했습니다."
+              : `${attemptedRemovedRootOrderIds.size}개 오더를 삭제했습니다.`,
           );
         }
         const acknowledgedAdditionCount = Array.from(
@@ -250,13 +250,13 @@ export function createChartOrderDraftSaveExecutor({
         ).length;
         if (acknowledgedAdditionCount > 0) {
           toast.success(
-            `${acknowledgedAdditionCount}개 Order 후보를 추가하고 저장했어요.`,
+            `${acknowledgedAdditionCount}개 Order 후보를 추가하고 저장했습니다.`,
           );
         }
       }
 
       setOrderDraftSaveState("saved");
-      if (!silent) toast.success("Order 업데이트를 저장했어요.");
+      if (!silent) toast.success("Order 업데이트를 저장했습니다.");
       return true;
     })();
 
