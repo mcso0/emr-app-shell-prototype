@@ -107,3 +107,25 @@ The Korean result report is
 `docs/completed/design/2026-07-23-korean-ux-copy-honorific-correction-report.html`.
 Broader UX writing principles remain a separate follow-up after this
 honorific-only correction is reviewed.
+
+## Follow-up: 합니다체 unification — 2026-11-28
+
+The owner decided to unify all product copy to `합니다체`, which closes the
+remaining `해요체` question above. About 440 strings in 72 app files were
+rewritten (`~어요` → `~습니다`/`~입니다`, `~하세요` → `~해 주세요`,
+`~할까요?` → `~하시겠습니까?`). Storybook fixtures and the tests that assert the
+copy were updated with them. `ux-copy:check` now also flags `해요체` endings
+outside `.stories.` files. Two sample clinical texts are allowed because they
+quote what a person wrote or said. Developer-only Storybook descriptions were
+not rewritten.
+
+Verification:
+
+- `ux-copy:check`, `tsc --noEmit`, ESLint on changed files and `docs:check` passed.
+- Full Vitest: 223 failures on the branch versus 225 on clean `origin/main`
+  `32bd2315`. The failures are pre-existing (mostly Storybook router mocks). Two
+  branch-only failures passed 3 of 3 reruns.
+- Changed Playwright specs: 466 passed and 191 failed. Copy assertions were
+  traced. Only two stale substring assertions were caused by this change, and
+  they were fixed. The remaining failing assertion strings are also absent from
+  `origin/main` source. Four reruns fail at the same lines on clean `origin/main`.

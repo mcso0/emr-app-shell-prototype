@@ -463,7 +463,7 @@ export function StaffOperationalProfilePanel({
           {requestState === "loading" ? (
             <StaffProfileLoading />
           ) : requestState === "error" ? (
-            <EmrProfilePanelState state="error" label="운영 프로필을 불러오지 못했어요" onRetry={loadProfile} />
+            <EmrProfilePanelState state="error" label="운영 프로필을 불러오지 못했습니다" onRetry={loadProfile} />
           ) : profile && response ? (
             <div className="grid gap-4">
               <TodayShiftSection
@@ -751,20 +751,20 @@ function TodayShiftSection({
         {error ? (
           <EmrInlineAlert
             severity="error"
-            title="오늘 근무를 불러오지 못했어요"
+            title="오늘 근무를 불러오지 못했습니다"
             action={
               <Button type="button" size="sm" variant="outline" onClick={onRetry}>
                 다시 시도
               </Button>
             }
           >
-            조회 실패를 휴무로 표시하지 않았어요.
+            조회 실패를 휴무로 표시하지 않았습니다.
           </EmrInlineAlert>
         ) : currentWork ? (
           <CurrentWorkSummary currentWork={currentWork} todayDate={todayDate} />
         ) : (
           <p className="flex min-h-[72px] items-center rounded-xl border border-dashed border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)] px-4 text-sm text-[var(--emr-text-tertiary)]">
-            오늘 게시된 근무가 없어요
+            오늘 게시된 근무가 없습니다
           </p>
         )}
       </div>
@@ -782,11 +782,11 @@ function ScheduleNavigationSection({
     <section aria-labelledby="staff-schedule-heading" className="px-2">
       <SectionTitle id="staff-schedule-heading">일정</SectionTitle>
       {!onOpenSchedule ? (
-        <EmrProfilePanelState state="empty" label="표시할 일정이 없어요" />
+        <EmrProfilePanelState state="empty" label="표시할 일정이 없습니다" />
       ) : (
         <div className="mt-3 flex min-h-[72px] items-center justify-between gap-3 rounded-xl border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] px-4">
           <p className="text-sm text-[var(--emr-text-tertiary)]">
-            근무 일정은 일정 화면에서 확인할 수 있어요
+            근무 일정은 일정 화면에서 확인할 수 있습니다
           </p>
           <Button
             type="button"
@@ -1060,9 +1060,9 @@ async function copyValue(value: string, label: string) {
       textarea.remove();
       if (!copied) throw new Error("clipboard_write_failed");
     }
-    toast.success(`${label}을 복사했어요`);
+    toast.success(`${label}을 복사했습니다`);
   } catch {
-    toast.error(`${label}을 복사하지 못했어요`);
+    toast.error(`${label}을 복사하지 못했습니다`);
   }
 }
 

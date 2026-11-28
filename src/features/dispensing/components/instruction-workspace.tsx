@@ -88,8 +88,8 @@ function ReopenConfirmation({ controller, onChanged, onClose }: Props & { onClos
   const canClose = !busy || Boolean(controller.error);
 
   return <Dialog open onOpenChange={open => { if (!open && canClose) onClose(); }}>
-    <EmrDialogShell title="진행 중으로 변경할까요?"
-      description={document.isSet ? "선택한 항목만 다시 진행해요. 기존 수행기록은 유지돼요." : "기존 수행기록은 유지돼요."}
+    <EmrDialogShell title="진행 중으로 변경하시겠습니까?"
+      description={document.isSet ? "선택한 항목만 다시 진행합니다. 기존 수행기록은 유지됩니다." : "기존 수행기록은 유지됩니다."}
       showCloseButton={canClose}
       secondaryAction={<Button variant="outline" disabled={!canClose} onClick={onClose}>취소</Button>}
       primaryAction={<Button disabled={!canSubmit} onClick={async () => {
@@ -111,7 +111,7 @@ function ReopenConfirmation({ controller, onChanged, onClose }: Props & { onClos
         </RadioGroup>
       ) : <p className="break-words text-sm font-medium">{document.name}</p>}
       {(stale || controller.error) && <p role="alert" className="mt-3 text-sm text-destructive">
-        {stale ? "업무 상태가 변경됐어요. 창을 닫고 최신 상태를 확인해 주세요." : controller.error}
+        {stale ? "업무 상태가 변경되었습니다. 창을 닫고 최신 상태를 확인해 주세요." : controller.error}
       </p>}
     </EmrDialogShell>
   </Dialog>;
@@ -269,7 +269,7 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
       ) : null}
       {!prework && document.canTakeover ? <Button size="sm" disabled={busy} onClick={() => setTakeover(true)}>담당하기</Button> : null}
       <Dialog open={takeover} onOpenChange={(open) => { if (!busy) setTakeover(open); }}>
-        <EmrDialogShell title="담당자를 변경할까요?"
+        <EmrDialogShell title="담당자를 변경하시겠습니까?"
           description={`해당 업무는 ${document.mainAssigneeName ?? "다른 담당자"}님이 담당자로 지정된 업무입니다. 담당을 변경하고 ${continuingRerequest ? "업무를 이어갑니다." : "바로 업무를 시작합니다."} 요청 수의사에게 사유가 전달됩니다.`}
           secondaryAction={<Button variant="outline" disabled={busy} onClick={() => setTakeover(false)}>취소</Button>}
           primaryAction={<Button disabled={busy || !reason.trim() || !document.canTakeover} onClick={async () => {
@@ -383,7 +383,7 @@ export function InstructionBody({
           title="수의사가 오더를 수정 중입니다."
           icon={<EmrSidePanelStateIcon state="hold" aria-hidden="true" />}
         >
-          지시서는 볼 수 있어요. 수정이 끝나면 업무를 이어갈 수 있어요.
+          지시서는 볼 수 있습니다. 수정이 끝나면 업무를 이어갈 수 있습니다.
         </EmrInlineAlert>
       )}
       {controller.instructionReview && <TaskInstructionReview controller={controller.instructionReview}
@@ -428,7 +428,7 @@ export function InstructionBody({
       ) : null}
       {document && !document.items.length ? (
         <p className="p-6 text-sm text-muted-foreground">
-          표시할 오더가 없어요.
+          표시할 오더가 없습니다.
         </p>
       ) : null}
       {notice ? (
@@ -491,7 +491,7 @@ export function InstructionBody({
             ))}
           </ol>
           {!historyEvents.length ? (
-            <p className="text-sm text-muted-foreground">수정 이력이 없어요.</p>
+            <p className="text-sm text-muted-foreground">수정 이력이 없습니다.</p>
           ) : null}
         </EmrDialogShell>
       </Dialog>
@@ -526,7 +526,7 @@ function InstructionEdit({ controller, onChanged, onClose, completed = false }: 
       }}>{controller.busy ? "저장 중" : "저장"}</Button>}>
       <Textarea aria-label="공통 지시" maxLength={5000} value={draft} disabled={busy || stale} onChange={event => setDraft(event.target.value)} />
       {(stale || controller.error) && <p role="alert" className="mt-2 text-sm text-destructive">
-        {stale ? "지시서가 변경됐어요. 창을 닫고 최신 내용을 확인해 주세요." : controller.error}
+        {stale ? "지시서가 변경되었습니다. 창을 닫고 최신 내용을 확인해 주세요." : controller.error}
       </p>}
     </EmrDialogShell>
   </Dialog>;

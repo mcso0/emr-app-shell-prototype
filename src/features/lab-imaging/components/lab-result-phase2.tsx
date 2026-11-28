@@ -67,7 +67,7 @@ export function LabResultRowDetail({ result, row, staffInstruction, finding, onF
           <Textarea id={`lab-finding-${row.id}`} className="h-[76px] min-h-[76px] max-h-[76px] resize-none overflow-y-auto bg-card p-[7px] !text-[12px] !leading-4 !tracking-[0.3px] font-medium shadow-[var(--clair-shadow-xs)]" maxLength={4096}
             disabled={!phase2?.canEdit}
             value={finding} onChange={event => onFindingChange(event.target.value)}
-            placeholder="항목별 검사 소견을 입력하세요. 자동으로 저장됩니다." />
+            placeholder="항목별 검사 소견을 입력해 주세요. 자동으로 저장됩니다." />
         </div>
       </div>
       <div className="relative hidden md:block" aria-hidden="true"><span className="absolute inset-y-2 left-1/2 w-px -translate-x-1/2 bg-[var(--clair-color-atomic-black-alpha-6)]" /></div>
@@ -276,7 +276,7 @@ export function LabResultAttachmentArea({ result, row, attachments: sourceAttach
     <DialogContent className="sm:max-w-md" initialFocus={cancelDelete} finalFocus={() =>
       document.querySelector<HTMLElement>("[data-testid='lab-viewer-delete']") ?? returnFocus()}>
       <DialogTitle>첨부 파일 삭제</DialogTitle>
-      <p className="emr-text-dense">{currentDelete?.name}을(를) 삭제할까요? 목록에서 바로 사라지고 복구할 수 없습니다.</p>
+      <p className="emr-text-dense">{currentDelete?.name}을(를) 삭제하시겠습니까? 목록에서 바로 사라지고 복구할 수 없습니다.</p>
       {deleteError ? <p role="alert" className="text-destructive">{deleteError}</p> : null}
       <div className="flex justify-end gap-2"><Button ref={cancelDelete} variant="outline" disabled={deleting} onClick={() => { setPendingDelete(null); setDeleteError(null); }}>취소</Button><Button variant="destructive" disabled={deleting} onClick={() => void deleteAttachment()}>{deleting ? "삭제 중" : "삭제"}</Button></div>
     </DialogContent>
@@ -398,7 +398,7 @@ function AttachmentCard({ item, url, downloadUrl, canDelete, onPreview, onDelete
         </> : thumbnailState !== "error" && pdf ? <LabAttachmentPdfThumbnail key={attempt} url={url}
           onReady={() => setThumbnailState("ready")} onError={() => setThumbnailState("error")} />
           : thumbnailState === "error" ? <div className="flex h-full w-full items-start justify-center pt-2">
-            <span role="status" className="flex items-center gap-1.5 whitespace-nowrap text-[10px] leading-4" title="미리보기를 불러오지 못했어요.">
+            <span role="status" className="flex items-center gap-1.5 whitespace-nowrap text-[10px] leading-4" title="미리보기를 불러오지 못했습니다.">
               <AttachmentTypeIcon mimeType={item.mimeType} size="sm" />읽기 실패
             </span>
           </div> : <div className="flex flex-col items-center gap-1">
@@ -452,7 +452,7 @@ function AttachmentListFileIcon({ mimeType, url, imageFailed, onError }: { mimeT
     {/* eslint-disable-next-line @next/next/no-img-element */}
     <img src={url} loading="lazy" alt="" className="size-full object-cover" onError={onError} />
   </span>;
-  return <span className="flex size-4 shrink-0 items-center justify-center" aria-label={imageFailed ? "이미지 미리보기 읽기 실패" : attachmentTypeLabel(mimeType)} title={imageFailed ? "미리보기를 불러오지 못했어요. 작업 메뉴에서 다시 불러올 수 있어요." : undefined}><AttachmentTypeIcon mimeType={mimeType} size="sm" /></span>;
+  return <span className="flex size-4 shrink-0 items-center justify-center" aria-label={imageFailed ? "이미지 미리보기 읽기 실패" : attachmentTypeLabel(mimeType)} title={imageFailed ? "미리보기를 불러오지 못했습니다. 작업 메뉴에서 다시 불러올 수 있습니다." : undefined}><AttachmentTypeIcon mimeType={mimeType} size="sm" /></span>;
 }
 
 function AttachmentTypeIcon({ mimeType, size }: { mimeType: string; size: "sm" | "lg" }) {
@@ -590,7 +590,7 @@ export function LabOverallFinding({ result, phase2, readStatus, refresh, paused 
         <div className="p-2.5">
           <Textarea id={`lab-overall-finding-${result.id}`} aria-label="검사결과 종합소견" className="h-32 min-h-32 resize-none overflow-y-auto bg-background emr-text-dense" maxLength={10000}
             disabled={!phase2?.canEdit} value={value} onChange={event => autosave.change(event.target.value)}
-            placeholder={phase2 ? "전체 검사 결과에 대한 종합소견을 입력하세요. 자동으로 저장됩니다." : "종합소견을 불러오는 중입니다."} />
+            placeholder={phase2 ? "전체 검사 결과에 대한 종합소견을 입력해 주세요. 자동으로 저장됩니다." : "종합소견을 불러오는 중입니다."} />
         </div>
       </div>
       <div className="relative hidden md:block" aria-hidden="true"><span className="absolute inset-y-2 left-1/2 w-px -translate-x-1/2 bg-[var(--clair-color-atomic-black-alpha-6)]" /></div>

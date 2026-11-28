@@ -36,7 +36,7 @@ for (const [message, status] of [["permission_missing", 403], ["work_item_unavai
 
 test("completion confirmation excludes cancelled and completed items", () => {
   expect(instructionCompletionConfirmation(syntheticInstruction).unfinished).toBe(2);
-  expect(instructionCompletionConfirmation(syntheticInstruction, syntheticInstruction.items[0].id).title).toBe("이 항목을 완료할까요?");
+  expect(instructionCompletionConfirmation(syntheticInstruction, syntheticInstruction.items[0].id).title).toBe("이 항목을 완료하시겠습니까?");
 });
 
 test("document summary waits for explicit set finalization", () => {

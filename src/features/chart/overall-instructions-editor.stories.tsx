@@ -179,7 +179,7 @@ export const DispensingOnly: Story = {
   play: async ({ canvasElement }) => {
     const screen = within(canvasElement.ownerDocument.body);
     await userEvent.click(within(canvasElement).getByRole("button", { name: "총괄 지시사항" }));
-    await screen.findByRole("heading", { name: "어디에 지시를 작성할까요?" });
+    await screen.findByRole("heading", { name: "어디에 지시를 작성하시겠습니까?" });
     const dialog = screen.getByRole("dialog");
     const scopeNames = instructionScopeSchema.options.map(scope => instructionScopeLabels[scope].replace(/ 지시$/, ""));
     await expect(within(dialog).getAllByRole("button").filter(node => scopeNames.includes(node.textContent ?? "")).map(node => node.textContent)).toEqual(scopeNames);
@@ -223,7 +223,7 @@ export const DispensingOnly: Story = {
     if (screen.queryByRole("menu")) await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
     await userEvent.click(screen.getByRole("button", { name: "조제 지시 입력란 삭제" }));
-    await screen.findByRole("heading", { name: "어디에 지시를 작성할까요?" });
+    await screen.findByRole("heading", { name: "어디에 지시를 작성하시겠습니까?" });
     await expect(screen.getByRole("dialog").querySelector('[data-slot="dialog-footer"]')).toBeNull();
     await expect(screen.getByRole("button", { name: "진료" })).toHaveAttribute("aria-disabled", "true");
   },
@@ -239,7 +239,7 @@ export const FirstLoadSpinner: Story = {
     await expect(status.textContent).toBe("");
     await expect(status.querySelector("svg")).not.toBeNull();
     await expect(screen.getByRole("dialog").querySelector('[data-slot="dialog-footer"]')).toBeNull();
-    await screen.findByRole("heading", { name: "어디에 지시를 작성할까요?" });
+    await screen.findByRole("heading", { name: "어디에 지시를 작성하시겠습니까?" });
   },
 };
 

@@ -45,7 +45,7 @@ const meta = {
   render: (args) => <Field className="max-w-sm">
     <FieldLabel>합성 입력 예시</FieldLabel>
     <Input {...args} />
-    {args["aria-invalid"] ? <FieldError>전화번호 형식을 확인하세요.</FieldError> : null}
+    {args["aria-invalid"] ? <FieldError>전화번호 형식을 확인해 주세요.</FieldError> : null}
   </Field>,
 } satisfies Meta<typeof Input>;
 
@@ -113,7 +113,7 @@ export const Disabled: Story = {
 export const Invalid: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("textbox")).toHaveAttribute("aria-invalid", "true");
-    await expect(canvas.getByRole("alert")).toHaveTextContent("전화번호 형식을 확인하세요.");
+    await expect(canvas.getByRole("alert")).toHaveTextContent("전화번호 형식을 확인해 주세요.");
   },
   args: {
     "aria-invalid": true,

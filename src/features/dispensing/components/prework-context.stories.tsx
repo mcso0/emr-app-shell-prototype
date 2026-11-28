@@ -89,7 +89,7 @@ function Example(args: Args) {
           onEntered={() => setEntered(true)}
         />
       ) : controller.error ? <p role="alert">{controller.error}</p> : (
-        <p role="status">업무를 불러오는 중이에요.</p>
+        <p role="status">업무를 불러오는 중입니다.</p>
       )}
     </div>
   );
@@ -455,7 +455,7 @@ export const TakeoverRetry: Story = {
     );
     const body = within(canvasElement.ownerDocument.body);
     const dialog = within(
-      await body.findByRole("dialog", { name: "담당자를 변경할까요?" }),
+      await body.findByRole("dialog", { name: "담당자를 변경하시겠습니까?" }),
     );
     await waitFor(() => expect(dialog.getByText("합성 기존 담당자 → 나")).toBeVisible());
     const confirm = dialog.getByRole("button", { name: "담당 변경" });
@@ -500,7 +500,7 @@ export const RequesterCompletion: Story = {
     const complete = await body.findByRole("menuitem", { name: "조제 완료" });
     await expect(complete).toHaveFocus();
     await userEvent.keyboard("{Enter}");
-    await expect(await body.findByRole("dialog", { name: "오더를 완료할까요?" })).toBeInTheDocument();
+    await expect(await body.findByRole("dialog", { name: "오더를 완료하시겠습니까?" })).toBeInTheDocument();
   },
 };
 export const Narrow: Story = {
@@ -537,7 +537,7 @@ export const LongOrderName: Story = {
 export const ReadDenied: Story = {
   args: { denied: true },
   play: async ({ canvas }) => {
-    await canvas.findByText("바이탈 조회 권한이 없어요.");
+    await canvas.findByText("바이탈 조회 권한이 없습니다.");
     await expect(
       canvas.getByRole("button", { name: "환자 정보" }),
     ).toBeDisabled();

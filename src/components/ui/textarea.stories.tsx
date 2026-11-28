@@ -38,13 +38,13 @@ const meta = {
   args: {
     "aria-label": "합성 상담 메모",
     disabled: false,
-    placeholder: "샘플 상담 메모를 입력하세요.",
+    placeholder: "샘플 상담 메모를 입력해 주세요.",
     rows: 4,
   },
   render: (args) => <Field className="max-w-md">
     <FieldLabel>합성 상담 메모</FieldLabel>
     <Textarea {...args} />
-    {args["aria-invalid"] ? <FieldError>최소 한 줄 이상 입력하세요.</FieldError> : null}
+    {args["aria-invalid"] ? <FieldError>최소 한 줄 이상 입력해 주세요.</FieldError> : null}
   </Field>,
 } satisfies Meta<typeof Textarea>;
 
@@ -99,7 +99,7 @@ export const WithContent: Story = {
 export const Invalid: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("textbox")).toHaveAttribute("aria-invalid", "true");
-    await expect(canvas.getByRole("alert")).toHaveTextContent("최소 한 줄 이상 입력하세요.");
+    await expect(canvas.getByRole("alert")).toHaveTextContent("최소 한 줄 이상 입력해 주세요.");
   },
   args: {
     "aria-invalid": true,

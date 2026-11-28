@@ -118,7 +118,7 @@ test("dirty walk-in asks before discarding and keeps the draft when continued", 
   await purpose.fill("기침 재진");
   await page.getByRole("button", { name: "취소", exact: true }).click();
 
-  const confirm = page.getByRole("dialog", { name: "작성 중인 내용을 버릴까요?" });
+  const confirm = page.getByRole("dialog", { name: "작성 중인 내용을 버리시겠습니까?" });
   await expect(confirm).toBeVisible();
   await confirm.getByRole("button", { name: "계속 작성" }).click();
   await expect(purpose).toHaveValue("기침 재진");
@@ -137,7 +137,7 @@ test("dirty header close uses the same discard guard", async ({ page }) => {
   await purpose.fill("헤더 닫기 초안");
   await page.getByRole("button", { name: "환자 프로필로 돌아가기" }).click();
 
-  const confirm = page.getByRole("dialog", { name: "작성 중인 내용을 버릴까요?" });
+  const confirm = page.getByRole("dialog", { name: "작성 중인 내용을 버리시겠습니까?" });
   await expect(confirm).toBeVisible();
   await confirm.getByRole("button", { name: "계속 작성" }).click();
   await expect(purpose).toHaveValue("헤더 닫기 초안");
@@ -361,7 +361,7 @@ test("walk-in failure preserves the draft for retry", async ({ page }) => {
 
   await expect(
     page.getByText(
-      "접수를 만들지 못했어요. 입력값은 그대로 두었어요. 다시 시도해 주세요.",
+      "접수를 만들지 못했습니다. 입력값은 그대로 두었습니다. 다시 시도해 주세요.",
     ),
   ).toBeVisible();
   await expect(form).toBeVisible();

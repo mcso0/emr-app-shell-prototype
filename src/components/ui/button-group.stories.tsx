@@ -23,7 +23,7 @@ function FulfillmentGroupCaller() {
 }
 
 function ButtonGroupExample({ size, disabled }: ButtonGroupExampleArgs) {
-  const [message, setMessage] = useState("합성 작업을 선택하세요.");
+  const [message, setMessage] = useState("합성 작업을 선택해 주세요.");
   return (
     <div className="grid justify-items-start gap-3">
       <ButtonGroup aria-label="합성 작업 묶음">

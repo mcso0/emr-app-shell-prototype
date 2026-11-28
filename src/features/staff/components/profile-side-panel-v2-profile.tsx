@@ -27,7 +27,7 @@ export function ProfileAvailabilitySummary({
     return (
       <EmrInlineAlert
         severity="error"
-        title="근무 가능 일정을 불러오지 못했어요"
+        title="근무 가능 일정을 불러오지 못했습니다"
         action={
           onRetry ? (
             <Button type="button" size="sm" variant="outline" onClick={onRetry}>

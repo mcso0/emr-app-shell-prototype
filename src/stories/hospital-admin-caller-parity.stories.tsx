@@ -232,7 +232,7 @@ export const SpaceCategoryCreateRenameAndDelete: Story = { args: { kind: "spaces
   await userEvent.click(settings.getByRole("button", { name: "추가" })); await expect(await settings.findByText("합성 입원 공간", { exact: true })).toBeVisible();
   await userEvent.click(settings.getByRole("button", { name: "합성 입원 공간 이름 수정" })); const name = settings.getByRole("textbox", { name: "카테고리 이름" });
   await userEvent.clear(name); await userEvent.type(name, "합성 회복 공간"); await userEvent.click(settings.getByRole("button", { name: "저장" }));
-  await userEvent.click(await settings.findByRole("button", { name: "합성 회복 공간 삭제" })); const confirmation = await visibleDialog(canvasElement, "카테고리를 삭제할까요?");
+  await userEvent.click(await settings.findByRole("button", { name: "합성 회복 공간 삭제" })); const confirmation = await visibleDialog(canvasElement, "카테고리를 삭제하시겠습니까?");
   await userEvent.click(confirmation.getByRole("button", { name: "삭제" })); await waitFor(() => expect(settings.queryByText("합성 회복 공간", { exact: true })).not.toBeInTheDocument());
   await userEvent.click(settings.getByRole("button", { name: "닫기" })); await waitFor(() => expect(within(canvasElement.ownerDocument.body).queryByRole("dialog")).not.toBeInTheDocument());
   await expect(getHospitalCommands().map(command => (command.body as { action: string }).action)).toEqual(["category.create", "category.rename", "category.delete"]);
@@ -242,9 +242,9 @@ export const SpaceCreateEditAndDelete: Story = { args: { kind: "spaces" }, play:
   const name = canvas.getByRole("textbox", { name: "공간 이름" }); await userEvent.type(name, "합성 진료실"); await userEvent.click(canvas.getByRole("button", { name: "추가" }));
   await userEvent.click(await canvas.findByRole("button", { name: "합성 진료실 수정" })); const edit = canvas.getByRole("textbox", { name: "공간 이름" });
   await userEvent.clear(edit); await userEvent.type(edit, "합성 격리실"); await userEvent.click(canvas.getByRole("button", { name: "저장" }));
-  await userEvent.click(await canvas.findByRole("button", { name: "합성 격리실 삭제" })); let dialog = await visibleDialog(canvasElement, "공간을 삭제할까요?");
+  await userEvent.click(await canvas.findByRole("button", { name: "합성 격리실 삭제" })); let dialog = await visibleDialog(canvasElement, "공간을 삭제하시겠습니까?");
   await userEvent.click(dialog.getByRole("button", { name: "취소" })); const body = within(canvasElement.ownerDocument.body); await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument());
-  await expect(canvas.getByText("합성 격리실", { exact: true })).toBeVisible(); await userEvent.click(canvas.getByRole("button", { name: "합성 격리실 삭제" })); dialog = await visibleDialog(canvasElement, "공간을 삭제할까요?");
+  await expect(canvas.getByText("합성 격리실", { exact: true })).toBeVisible(); await userEvent.click(canvas.getByRole("button", { name: "합성 격리실 삭제" })); dialog = await visibleDialog(canvasElement, "공간을 삭제하시겠습니까?");
   await userEvent.click(dialog.getByRole("button", { name: "삭제" })); await waitFor(() => expect(canvas.queryByText("합성 격리실", { exact: true })).not.toBeInTheDocument());
   await userEvent.click(canvas.getByRole("button", { name: "공간 관리로 돌아가기" })); await expect(canvas.getByRole("button", { name: "진료 공간, 2개 공간" })).toBeVisible();
   await expect(getHospitalCommands().map(command => (command.body as { action: string }).action)).toEqual(["space.create", "space.update", "space.delete"]);
@@ -264,9 +264,9 @@ export const SpaceEmpty: Story = { args: { kind: "spaces", scenario: "empty" }, 
 export const VitalToggleSaveAndCancel: Story = { args: { kind: "vitals" }, play: async ({ canvas, canvasElement }) => {
   const toggle = await canvas.findByRole("switch", { name: "체온 사용" }); await expect(toggle).toHaveAttribute("aria-checked", "true"); toggle.focus(); await userEvent.keyboard(" ");
   await expect(toggle).toHaveAttribute("aria-checked", "false"); await expect(canvas.getByRole("combobox", { name: "체온 표시 단위" })).toBeDisabled();
-  await userEvent.click(canvas.getByRole("button", { name: "변경사항 저장" })); let dialog = await visibleDialog(canvasElement, "바이탈 설정을 저장할까요?");
+  await userEvent.click(canvas.getByRole("button", { name: "변경사항 저장" })); let dialog = await visibleDialog(canvasElement, "바이탈 설정을 저장하시겠습니까?");
   await userEvent.click(dialog.getByRole("button", { name: "취소" })); const body = within(canvasElement.ownerDocument.body); await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument()); await expect(getHospitalCommands()).toHaveLength(0);
-  await userEvent.click(canvas.getByRole("button", { name: "변경사항 저장" })); dialog = await visibleDialog(canvasElement, "바이탈 설정을 저장할까요?"); await userEvent.click(dialog.getByRole("button", { name: "저장" }));
+  await userEvent.click(canvas.getByRole("button", { name: "변경사항 저장" })); dialog = await visibleDialog(canvasElement, "바이탈 설정을 저장하시겠습니까?"); await userEvent.click(dialog.getByRole("button", { name: "저장" }));
   await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument()); await expect(canvas.queryByTestId("hospital-settings-change-bar")).not.toBeInTheDocument(); await expect(toggle).toHaveAttribute("aria-checked", "false");
   await expect(getHospitalCommands().at(-1)).toMatchObject({ method: "PUT", body: { items: expect.arrayContaining([expect.objectContaining({ key: "temperature", enabled: false, inputRequired: false, displayUnit: "°C" })]) } });
 } };
@@ -274,14 +274,14 @@ export const VitalRequiredConfirmation: Story = { args: { kind: "vitals" }, play
   const action = await canvas.findByRole("button", { name: "체중 작업" }); action.focus(); await userEvent.keyboard("{Enter}");
   const body = within(canvasElement.ownerDocument.body); const required = await body.findByRole("menuitem", { name: "필수 입력으로 설정" }); await waitFor(() => expect(required).toBeVisible()); await userEvent.click(required);
   await expect(canvas.getByRole("button", { name: "체중 필수 입력 안내" })).toBeVisible(); await userEvent.click(canvas.getByRole("switch", { name: "체중 사용" }));
-  const dialog = await visibleDialog(canvasElement, "필수 입력 항목을 비활성화할까요?"); await userEvent.click(dialog.getByRole("button", { name: "필수 입력 해제 후 비활성화" }));
+  const dialog = await visibleDialog(canvasElement, "필수 입력 항목을 비활성화하시겠습니까?"); await userEvent.click(dialog.getByRole("button", { name: "필수 입력 해제 후 비활성화" }));
   await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument()); await expect(canvas.getByRole("switch", { name: "체중 사용" })).toHaveAttribute("aria-checked", "false"); await expect(canvas.queryByRole("button", { name: "체중 필수 입력 안내" })).not.toBeInTheDocument();
 } };
 export const VitalDeleteUndoAndAdd: Story = { args: { kind: "vitals" }, play: async ({ canvas, canvasElement }) => {
   const body = within(canvasElement.ownerDocument.body);
   const removeWeight = async () => {
     await userEvent.click(canvas.getByRole("button", { name: "체중 작업" })); const item = await body.findByRole("menuitem", { name: "삭제하기" }); await waitFor(() => expect(item).toBeVisible()); await userEvent.click(item);
-    const dialog = await visibleDialog(canvasElement, "체중을 목록에서 제거할까요?"); await userEvent.click(dialog.getByRole("button", { name: "목록에서 제거" }));
+    const dialog = await visibleDialog(canvasElement, "체중을 목록에서 제거하시겠습니까?"); await userEvent.click(dialog.getByRole("button", { name: "목록에서 제거" }));
     await waitFor(() => expect(canvas.queryByTestId("vital-setting-row-weight")).not.toBeInTheDocument()); await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument());
   };
   await canvas.findByRole("button", { name: "체중 작업" }); await removeWeight(); await userEvent.click(await body.findByRole("button", { name: "되돌리기" })); await expect(canvas.getByTestId("vital-setting-row-weight")).toBeVisible();

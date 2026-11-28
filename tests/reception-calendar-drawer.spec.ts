@@ -195,7 +195,7 @@ test("reception profile-origin Escape respects the discard guard and restores th
   await page.getByRole("button", { name: "직원 운영 프로필 닫기", exact: true }).click();
   await expect(purpose).toHaveValue("Synthetic drawer draft");
   await purpose.press("Escape");
-  const confirm = page.getByRole("dialog", { name: "작성 중인 내용을 버릴까요?" });
+  const confirm = page.getByRole("dialog", { name: "작성 중인 내용을 버리시겠습니까?" });
   await expect(confirm).toBeVisible();
   await confirm.getByRole("button", { name: "계속 작성", exact: true }).click();
   await expect(purpose).toHaveValue("Synthetic drawer draft");

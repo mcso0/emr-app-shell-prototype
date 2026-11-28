@@ -78,9 +78,9 @@ function WorkEntryAction({ mode, authorityKey, assigneeName, context, children, 
       if (!mounted.current) return;
       if (result === "review_required") setOpenedAuthority(null);
       else if (result) { setOpenedAuthority(null); setReason(""); onEntered?.(); }
-      else setFailure("처리하지 못했어요. 담당 상태를 확인한 뒤 다시 시도해 주세요.");
+      else setFailure("처리하지 못했습니다. 담당 상태를 확인한 뒤 다시 시도해 주세요.");
     } catch {
-      if (mounted.current) setFailure("연결을 확인한 뒤 다시 시도해 주세요. 입력한 사유는 유지돼요.");
+      if (mounted.current) setFailure("연결을 확인한 뒤 다시 시도해 주세요. 입력한 사유는 유지됩니다.");
     } finally {
       pending.current = false;
       if (mounted.current) setSubmitting(false);
@@ -91,14 +91,14 @@ function WorkEntryAction({ mode, authorityKey, assigneeName, context, children, 
     <EmrWorkEntryTrigger label={label} size={size} disabled={saving} onClick={open} menuAction={menuAction} />
     <Dialog open={openedAuthority !== null} onOpenChange={(open) => { if (!open) close(); }}>
       <EmrDialogShell variant="confirm"
-        title={mode === "start" ? "업무를 시작할까요?" : mode === "takeover" ? "담당자를 변경할까요?" : mode === "blocked" ? "담당 상태를 확인해 주세요" : "이 업무를 담당할까요?"}
-        description={description ?? (mode === "start" ? "현재 담당자로 업무를 진행해요." : mode === "takeover" ? `${assigneeName ?? "다른 담당자"}님이 담당하는 업무예요. 변경 사유는 요청 수의사에게 전달돼요.` : mode === "blocked" ? (assigneeName ? `${assigneeName}의 담당 변경 또는 인계가 필요해요.` : "이 업무의 담당 권한을 확인해 주세요.") : "나를 담당자로 지정하고 업무 화면을 열어요. 실제 업무는 아직 시작하지 않아요.")}
+        title={mode === "start" ? "업무를 시작하시겠습니까?" : mode === "takeover" ? "담당자를 변경하시겠습니까?" : mode === "blocked" ? "담당 상태를 확인해 주세요" : "이 업무를 담당하시겠습니까?"}
+        description={description ?? (mode === "start" ? "현재 담당자로 업무를 진행합니다." : mode === "takeover" ? `${assigneeName ?? "다른 담당자"}님이 담당하는 업무입니다. 변경 사유는 요청 수의사에게 전달됩니다.` : mode === "blocked" ? (assigneeName ? `${assigneeName}의 담당 변경 또는 인계가 필요합니다.` : "이 업무의 담당 권한을 확인해 주세요.") : "나를 담당자로 지정하고 업무 화면을 엽니다. 실제 업무는 아직 시작하지 않습니다.")}
         secondaryAction={<Button variant="outline" disabled={saving} onClick={close}>{mode === "blocked" ? "닫기" : "취소"}</Button>}
         primaryAction={mode === "blocked" ? undefined : <Button disabled={saving || stale || (mode === "takeover" && !reason.trim())} onClick={() => void submit()}>{saving ? "처리 중" : confirmLabel}</Button>}>
         {context && <div className="mb-4 rounded-lg border border-border px-4 py-3 text-sm">{context}</div>}
         {children}
         {mode === "takeover" && <><label htmlFor={inputId} className="mb-2 block text-sm font-medium">담당 변경 사유</label><Textarea id={inputId} maxLength={1000} value={reason} disabled={saving} onChange={event => setReason(event.target.value)} /></>}
-        {(stale || error || failure) && <p role="alert" className="mt-3 text-sm text-destructive">{stale ? "업무 내용이나 담당자가 변경됐어요. 창을 닫고 최신 상태를 확인해 주세요." : error || failure}</p>}
+        {(stale || error || failure) && <p role="alert" className="mt-3 text-sm text-destructive">{stale ? "업무 내용이나 담당자가 변경되었습니다. 창을 닫고 최신 상태를 확인해 주세요." : error || failure}</p>}
       </EmrDialogShell>
     </Dialog>
   </>;

@@ -698,7 +698,7 @@ export function PersonalSettingsForm({
                     <PersonalPasswordDialog disabled={!live || saving} />
                   </SettingsRow>
                   <SettingsRow
-                    label="비밀번호를 잊으셨나요?"
+                    label="비밀번호를 잊으셨습니까?"
                     description="이메일로 재설정 안내를 받을 수 있습니다."
                   >
                     <Button
@@ -833,7 +833,7 @@ export function PersonalSettingsForm({
         }}
       >
         <EmrConfirmDialogContent
-          title="변경사항을 되돌릴까요?"
+          title="변경사항을 되돌리시겠습니까?"
           description="저장하지 않은 변경사항을 되돌립니다. 이미 저장된 항목은 유지됩니다."
           cancelLabel="계속 편집"
           confirmLabel="변경사항 되돌리기"

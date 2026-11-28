@@ -2538,7 +2538,7 @@ test("patient guardian registration dialogs keep dim backdrop without zoom motio
 
         await closePath.close(page, registrationDialog);
         await expect(
-          page.getByRole("dialog", { name: "입력을 취소할까요?" }),
+          page.getByRole("dialog", { name: "입력을 취소하시겠습니까?" }),
         ).toHaveCount(0);
         await expect(page.locator('[data-slot="dialog-content"]')).toHaveCount(0);
       });
@@ -2784,13 +2784,13 @@ for (const popup of [
     await input.press("Escape");
     await expect(page.getByRole("listbox", { name: popup.list, exact: true })).toHaveCount(0);
     await expect(input).toHaveAttribute("aria-expanded", "false");
-    await expect(page.getByRole("dialog", { name: "입력을 취소할까요?" })).toHaveCount(0);
+    await expect(page.getByRole("dialog", { name: "입력을 취소하시겠습니까?" })).toHaveCount(0);
     await expect(registration).toHaveAttribute("data-open", "");
     await expect(input).toBeFocused();
     await expect(input).toHaveValue(popup.query);
 
     await input.press("Escape");
-    const confirmation = page.getByRole("dialog", { name: "입력을 취소할까요?" });
+    const confirmation = page.getByRole("dialog", { name: "입력을 취소하시겠습니까?" });
     await expect(confirmation).toBeVisible();
     await confirmation.getByRole("button", { name: "계속 작성", exact: true }).click();
     await expect(input).toHaveValue(popup.query);
@@ -3699,7 +3699,7 @@ test("patient guardian registration asks before leaving dirty drafts", async ({
   await page.getByRole("button", { exact: true, name: "취소" }).click();
 
   await expect(
-    page.getByRole("heading", { name: "입력을 취소할까요?" }),
+    page.getByRole("heading", { name: "입력을 취소하시겠습니까?" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "계속 작성" }).click();
   await expect(page.getByLabel("보호자명")).toHaveValue("임시보호자");
@@ -5818,7 +5818,7 @@ test("walk-in vital validation preserves input and explains only non-empty error
   await diastolic.fill("");
   await weight.fill("10000");
   await temperature.focus();
-  await expect(rows.getByText("저장할 수 있는 범위를 넘었어요.")).toBeVisible();
+  await expect(rows.getByText("저장할 수 있는 범위를 넘었습니다.")).toBeVisible();
   await expect(createButton).toHaveAttribute("aria-disabled", "true");
 
   await weight.fill("");
@@ -5877,16 +5877,16 @@ test("walk-in flags a plausible-format vital outlier but still creates after con
     "walk-in-vital-weightKg-warning",
   );
   await expect(
-    form.getByText("기존 체중과 차이가 커요. kg 단위와 측정값을 확인해 주세요."),
+    form.getByText("기존 체중과 차이가 큽니다. kg 단위와 측정값을 확인해 주세요."),
   ).toBeVisible();
   await expect(
-    form.getByText("체온이 매우 이례적이에요. °C 단위를 확인해 주세요."),
+    form.getByText("체온이 매우 이례적입니다. °C 단위를 확인해 주세요."),
   ).toBeVisible();
   await expect(
-    form.getByText("심박수가 매우 이례적이에요. 측정값을 확인해 주세요."),
+    form.getByText("심박수가 매우 이례적입니다. 측정값을 확인해 주세요."),
   ).toBeVisible();
   await expect(
-    form.getByText("호흡수가 매우 이례적이에요. 측정값을 확인해 주세요."),
+    form.getByText("호흡수가 매우 이례적입니다. 측정값을 확인해 주세요."),
   ).toBeVisible();
 
   const confirmCreate = page
@@ -5969,7 +5969,7 @@ test("walk-in links a server vital rejection to the field and keeps the draft", 
   await expect(weight).toHaveValue("8.7");
   await expect(
     page.getByText(
-      "접수를 만들지 못했어요. 입력값은 그대로 두었어요. 다시 시도해 주세요.",
+      "접수를 만들지 못했습니다. 입력값은 그대로 두었습니다. 다시 시도해 주세요.",
     ),
   ).toBeVisible();
 });
@@ -7975,7 +7975,7 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
   ).toBeVisible();
 
   await detailDrawer.getByTestId("reception-encounter-cancel-open").click();
-  await expect(page.getByRole("dialog")).toContainText("접수를 취소할까요?");
+  await expect(page.getByRole("dialog")).toContainText("접수를 취소하시겠습니까?");
   await page.getByTestId("reception-encounter-cancel-confirm").click();
 
   await expect(page.getByText("접수가 취소되었습니다")).toBeVisible();

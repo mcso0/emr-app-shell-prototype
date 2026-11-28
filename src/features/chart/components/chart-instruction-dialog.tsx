@@ -31,7 +31,7 @@ export function ChartInstructionDialog({
         variant="wide-form"
         className="sm:max-w-[min(1200px,95vw)]"
         title={controller.document?.name ?? "조제·처치 지시서"}
-        description="작업 상태와 지시사항을 확인하고 오더를 완료할 수 있어요."
+        description="작업 상태와 지시사항을 확인하고 오더를 완료할 수 있습니다."
         footer={
           <InstructionActions workspaceId={workspaceId} controller={controller} onChanged={onChanged} />
         }

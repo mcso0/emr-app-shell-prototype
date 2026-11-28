@@ -111,7 +111,7 @@ for (const queueType of ["dispensing", "treatment"] as const) {
     if (queueType === "treatment") {
       sourceChartAvailable = false;
       await page.reload();
-      await expect(page.getByText("오더 차트를 열지 못했어요", { exact: true })).toBeVisible();
+      await expect(page.getByText("오더 차트를 열지 못했습니다", { exact: true })).toBeVisible();
       await expect(page).toHaveURL(new RegExp(`/treatment\\?.*chartId=${originChartId}`));
     }
   });
@@ -1633,7 +1633,7 @@ for (const queueType of ["dispensing", "treatment"] as const) {
     const heading = page.getByRole("heading", { name: `${label} 지시서`, exact: true });
     const claim = async () => {
       await prework.getByRole("button", { name: "담당하기", exact: true }).click();
-      await page.getByRole("dialog", { name: "이 업무를 담당할까요?" }).getByRole("button", { name: "담당하기", exact: true }).click();
+      await page.getByRole("dialog", { name: "이 업무를 담당하시겠습니까?" }).getByRole("button", { name: "담당하기", exact: true }).click();
       await expect(heading).toBeVisible();
       await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
       await expect(inProgress.getByTestId(cardId)).toBeVisible();
@@ -1648,7 +1648,7 @@ for (const queueType of ["dispensing", "treatment"] as const) {
     };
     await unassign();
     if (queueType === "dispensing") {
-      await expect(page.getByRole("alert").filter({ hasText: "변경을 저장하지 못했어요." })).toBeVisible();
+      await expect(page.getByRole("alert").filter({ hasText: "변경을 저장하지 못했습니다." })).toBeVisible();
       await expect(heading).toBeVisible();
       await expect(inProgress.getByTestId(cardId)).toBeVisible();
       await unassign();

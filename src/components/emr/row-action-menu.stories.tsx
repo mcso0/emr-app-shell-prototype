@@ -179,14 +179,14 @@ async function verifyWorkMenu(canvasElement: HTMLElement, unavailable: boolean) 
   }
   action.focus();
   await userEvent.keyboard("{Enter}");
-  let dialog = await body.findByRole("dialog", { name: "업무 화면으로 이동할까요?" });
+  let dialog = await body.findByRole("dialog", { name: "업무 화면으로 이동하시겠습니까?" });
   await expect(dialog).toHaveTextContent("합성 동물 A · 합성 보호자 A · 합성 검사 업무");
   await userEvent.click(within(dialog).getByRole("button", { name: "취소" }));
   await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument());
   await expect(result).toHaveTextContent("이동 요청: 없음");
   ({ trigger, menu } = await openMenu(canvasElement, "합성 검사 업무 더보기", " "));
   await userEvent.click(within(menu).getByRole("menuitem", { name: "업무 보러가기" }));
-  dialog = await body.findByRole("dialog", { name: "업무 화면으로 이동할까요?" });
+  dialog = await body.findByRole("dialog", { name: "업무 화면으로 이동하시겠습니까?" });
   await userEvent.click(within(dialog).getByRole("button", { name: "이동" }));
   await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument());
   await expect(result).toHaveTextContent("이동 요청: story-row-menu-work");

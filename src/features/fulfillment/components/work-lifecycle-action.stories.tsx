@@ -115,7 +115,7 @@ export const FailedReturn: Story = {
     const existingToastIds = new Set(toast.getToasts().map((item) => item.id));
     return () => {
       for (const item of toast.getToasts()) {
-        if (!existingToastIds.has(item.id) && "title" in item && item.title === "업무 상태를 변경하지 못했어요. 최신 상태를 확인해 주세요.") toast.dismiss(item.id);
+        if (!existingToastIds.has(item.id) && "title" in item && item.title === "업무 상태를 변경하지 못했습니다. 최신 상태를 확인해 주세요.") toast.dismiss(item.id);
       }
     };
   },

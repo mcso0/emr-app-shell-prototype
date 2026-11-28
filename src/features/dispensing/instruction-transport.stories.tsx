@@ -106,7 +106,7 @@ export const LostResponseRetry: Story = {
     );
     await userEvent.click(canvas.getByRole("button", { name: "연속 저장" }));
     await expect(await canvas.findByRole("alert")).toHaveTextContent(
-      "변경 결과를 확인하지 못했어요",
+      "변경 결과를 확인하지 못했습니다",
     );
     await expect(requests).toHaveLength(1);
     await userEvent.click(canvas.getByRole("button", { name: "연속 저장" }));
@@ -128,7 +128,7 @@ export const ConflictKeepsCurrentDocument: Story = {
     );
     await userEvent.click(canvas.getByRole("button", { name: "연속 저장" }));
     await expect(await canvas.findByRole("alert")).toHaveTextContent(
-      "다른 사용자가 오더를 변경했어요",
+      "다른 사용자가 오더를 변경했습니다",
     );
     await expect(canvas.getByLabelText("지시서")).toHaveTextContent(
       "첫 번째 지시서",

@@ -167,12 +167,12 @@ export function PatientOrderPrework({ workItem, label, actions, children, encoun
           id: guardianId ?? "",
           name: field(guardianRow, "name") ?? workItem.guardianName ?? "—",
           memo:
-            !guardianId ? "보호자 메모를 확인할 수 없어요." : field(guardianProfile, "memo") ??
+            !guardianId ? "보호자 메모를 확인할 수 없습니다." : field(guardianProfile, "memo") ??
             (guardian.overviewStatus === "ready"
               ? undefined
               : guardian.overviewStatus === "denied"
                 ? "보호자 메모 조회 권한 없음"
-                : "보호자 메모를 불러오지 못했어요."),
+                : "보호자 메모를 불러오지 못했습니다."),
         }
       : undefined,
   };
@@ -249,11 +249,11 @@ export function PatientOrderPrework({ workItem, label, actions, children, encoun
               <p className="text-sm text-muted-foreground">
                 {currentVitals?.status === "denied" ||
                 settings.status === "denied"
-                  ? "바이탈 조회 권한이 없어요."
+                  ? "바이탈 조회 권한이 없습니다."
                   : currentVitals?.status === "error" ||
                       settings.status === "error"
-                    ? "바이탈 정보를 불러오지 못했어요."
-                    : "바이탈 정보를 불러오는 중이에요."}
+                    ? "바이탈 정보를 불러오지 못했습니다."
+                    : "바이탈 정보를 불러오는 중입니다."}
               </p>
               {(currentVitals?.status === "error" ||
                 settings.status === "error") && (
@@ -279,8 +279,8 @@ export function PatientOrderPrework({ workItem, label, actions, children, encoun
             {history.status === "loading" ? <PatientHistoryLoading /> : history.status !== "ready" ? (
               <p className="text-sm text-muted-foreground">
                 {history.status === "permission_denied"
-                    ? "이력 조회 권한이 없어요."
-                    : "이력을 불러오지 못했어요."}
+                    ? "이력 조회 권한이 없습니다."
+                    : "이력을 불러오지 못했습니다."}
               </p>
             ) : historyItems.length ? (
               <Fragment>
@@ -335,7 +335,7 @@ export function PatientOrderPrework({ workItem, label, actions, children, encoun
               </Fragment>
             ) : (
               <p className="rounded-lg border border-dashed border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
-                이전 {label} 이력이 없어요.
+                이전 {label} 이력이 없습니다.
               </p>
             )}
             {(history.status === "error" || history.readError) && (

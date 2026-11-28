@@ -926,14 +926,14 @@ test("workspace switcher retries a failed membership list read", async ({ page }
   await page.getByTestId("workspace-switcher").click();
 
   const popover = page.getByTestId("workspace-switcher-popover");
-  await expect(popover.getByText("저장된 목록을 표시하고 있어요.")).toBeVisible();
+  await expect(popover.getByText("저장된 목록을 표시하고 있습니다.")).toBeVisible();
 
   shouldFail = false;
   await popover.getByRole("button", { name: "다시 시도" }).click();
   await expect(
     popover.getByTestId("workspace-switcher-option-workspace-hanbit")
   ).toBeVisible();
-  await expect(popover.getByText("저장된 목록을 표시하고 있어요.")).toHaveCount(0);
+  await expect(popover.getByText("저장된 목록을 표시하고 있습니다.")).toHaveCount(0);
 });
 
 test("workspace switcher confirms before leaving unsaved work", async ({ page }) => {
@@ -956,7 +956,7 @@ test("workspace switcher confirms before leaving unsaved work", async ({ page })
     .getByTestId(`workspace-switcher-option-${saveSessionWorkspaceBId}`)
     .click();
 
-  const dialog = page.getByRole("dialog", { name: "워크스페이스를 전환할까요?" });
+  const dialog = page.getByRole("dialog", { name: "워크스페이스를 전환하시겠습니까?" });
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "계속 작성" }).click();
   await expect(page).toHaveURL(new RegExp(`/w/${saveSessionWorkspaceId}/treatment`));

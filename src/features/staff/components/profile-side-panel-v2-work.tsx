@@ -214,11 +214,11 @@ export function ProfileWorkStatusTab({
   }
 
   if (state === "empty") {
-    return <EmrProfilePanelState state="empty" label="배정된 업무가 없어요" description="현재 이 구성원에게 배정된 업무가 없습니다." />;
+    return <EmrProfilePanelState state="empty" label="배정된 업무가 없습니다" description="현재 이 구성원에게 배정된 업무가 없습니다." />;
   }
 
   if (state === "error") {
-    return <EmrProfilePanelState state="error" label="업무 현황을 불러오지 못했어요" description="잠시 후 다시 확인해 주세요." onRetry={onRetry} />;
+    return <EmrProfilePanelState state="error" label="업무 현황을 불러오지 못했습니다" description="잠시 후 다시 확인해 주세요." onRetry={onRetry} />;
   }
 
 
@@ -228,7 +228,7 @@ export function ProfileWorkStatusTab({
       {nextPageError ? (
         <EmrInlineAlert
           severity="error"
-          title="이전 업무를 더 불러오지 못했어요"
+          title="이전 업무를 더 불러오지 못했습니다"
           action={
             onRetryNextPage ? (
               <Button type="button" size="sm" variant="outline" onClick={onRetryNextPage}>
@@ -237,7 +237,7 @@ export function ProfileWorkStatusTab({
             ) : undefined
           }
         >
-          이미 불러온 업무는 그대로 유지돼요.
+          이미 불러온 업무는 그대로 유지됩니다.
         </EmrInlineAlert>
       ) : null}
       {hasNextPage ? (
@@ -269,7 +269,7 @@ export function WorkNavigationDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>업무 화면으로 이동할까요?</DialogTitle>
+          <DialogTitle>업무 화면으로 이동하시겠습니까?</DialogTitle>
           <DialogDescription>
             {item
               ? [item.patientName, item.guardianName, item.title]

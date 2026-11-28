@@ -114,7 +114,7 @@ const membersPlay: Story["play"] = async ({ canvasElement, args }) => {
   await expect(dialog.getByRole("radiogroup", { name: "권한 역할" })).toBeVisible();
   await expect(dialog.getByRole("radiogroup", { name: "직무" })).toBeVisible();
   await userEvent.click(dialog.getByRole("button", { name: "초대 만들기" }));
-  await expect(await dialog.findByText("초대 이메일을 입력하세요.")).toBeVisible(); await expect(requests).toHaveLength(0);
+  await expect(await dialog.findByText("초대 이메일을 입력해 주세요.")).toBeVisible(); await expect(requests).toHaveLength(0);
   await userEvent.click(dialog.getByRole("button", { name: "닫기" }));
   await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument());
   await userEvent.click(invite); dialogElement = await body.findByRole("dialog", { name: "직원 초대" }); await waitFor(() => expect(dialogElement).toBeVisible()); dialog = within(dialogElement);

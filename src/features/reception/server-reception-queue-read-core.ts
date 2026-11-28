@@ -237,7 +237,7 @@ function buildWaitingOver30mNotificationEvent({
     toastPolicy: "role_active",
     title: `대기 ${waitingMinutes}분 경과: ${patientLabel}`,
     preview: "데스크 안내 필요 · 보호자에게 예상 대기 시간을 안내해 주세요.",
-    detail: `${patientLabel} 보호자가 ${waitingMinutes}분째 대기 중입니다. 접수 화면에서 대기 상태를 확인하세요.`,
+    detail: `${patientLabel} 보호자가 ${waitingMinutes}분째 대기 중입니다. 접수 화면에서 대기 상태를 확인해 주세요.`,
     workTypeLabel: "접수",
     sourceLabel: `접수 대기 · ${patientLabel}`,
     sourceActionLabel: "접수 대기 열기",

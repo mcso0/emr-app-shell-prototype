@@ -815,7 +815,7 @@ export function WorkspaceMembershipManagement({
         if (canceled) return;
         setServerCatalog(null);
         setCatalogReadError(
-          "역할 카탈로그를 불러오지 못했습니다. 역할 및 권한에서 다시 시도하세요.",
+          "역할 카탈로그를 불러오지 못했습니다. 역할 및 권한에서 다시 시도해 주세요.",
         );
       }
     };
@@ -1143,7 +1143,7 @@ export function WorkspaceMembershipManagement({
 
         if (result.denialReason === "duplicate_pending_invitation") {
           setFieldErrors({
-            email: "이미 대기 중인 초대가 있습니다. 재발송을 사용하세요.",
+            email: "이미 대기 중인 초대가 있습니다. 재발송을 사용해 주세요.",
           });
           return;
         }
@@ -1475,7 +1475,7 @@ export function WorkspaceMembershipManagement({
     if (!archivingMembership || !session) return;
     const reason = archiveReason.trim();
     if (!reason) {
-      setArchiveError("구성원 보관 사유를 입력하세요.");
+      setArchiveError("구성원 보관 사유를 입력해 주세요.");
       return;
     }
 
@@ -2457,7 +2457,7 @@ function getMembershipMutationErrorMessage(reason: string) {
     return "최소 1명의 활성 소유자가 필요합니다.";
   }
   if (reason === "invalid_roles") {
-    return "하나 이상의 역할을 선택하세요.";
+    return "하나 이상의 역할을 선택해 주세요.";
   }
   return "멤버십 변경 대상을 찾을 수 없습니다.";
 }

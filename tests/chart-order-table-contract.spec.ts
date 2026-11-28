@@ -810,7 +810,7 @@ test("synthetic linked adjustment fixture exposes the paired editor", async ({
     adjustmentPercent: -12,
     adjustmentSource: "percent",
   });
-  await expect(page.getByText("청구 전 값을 저장하지 못했어요.").last()).toBeVisible();
+  await expect(page.getByText("청구 전 값을 저장하지 못했습니다.").last()).toBeVisible();
   await expect(percent).toHaveValue("-12");
   await expect(amount).toHaveValue("-12000");
   await expect(reason).toHaveValue("자유 사유");

@@ -98,7 +98,7 @@ function Example({
     refresh: () => setError(null),
     mutate: async (intent: InstructionIntent) => {
       if (failed) {
-        setError("변경을 저장하지 못했어요. 다시 시도해 주세요.");
+        setError("변경을 저장하지 못했습니다. 다시 시도해 주세요.");
         return false;
       }
       setDocument((previous) => ({
@@ -198,7 +198,7 @@ export const SetInstruction: Story = {
     await expect(completion.getByRole("button", { name: "조제 완료" })).toBeEnabled();
     await userEvent.click(completion.getByRole("button", { name: "업무 상태 변경" }));
     await userEvent.click(await body.findByRole("menuitem", { name: "완료 항목 다시 진행" }));
-    const reopen = within(await body.findByRole("dialog", { name: "진행 중으로 변경할까요?" }));
+    const reopen = within(await body.findByRole("dialog", { name: "진행 중으로 변경하시겠습니까?" }));
     await userEvent.click(reopen.getByRole("radio", { name: "합성 품목 A" }));
     await userEvent.click(reopen.getByRole("button", { name: "진행 중으로 변경" }));
     await expect(canvas.getByRole("button", { name: "합성 품목 A 완료" })).toBeEnabled();

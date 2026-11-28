@@ -75,7 +75,7 @@ export const MockProviderFailure: Story = {
     await userEvent.type(canvas.getByRole("textbox", { name: "이메일" }), syntheticLoginEmail);
     await userEvent.type(canvas.getByLabelText("비밀번호", { exact: true }), "SyntheticLogin1!");
     await userEvent.click(canvas.getByRole("button", { name: "로그인" }));
-    await waitFor(() => { expect(canvas.getByText("로그인 처리 중 문제가 발생했습니다. 잠시 후 다시 시도하세요.")).toBeVisible(); expect(canvas.getByRole("button", { name: "로그인" })).toBeEnabled(); });
+    await waitFor(() => { expect(canvas.getByText("로그인 처리 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.")).toBeVisible(); expect(canvas.getByRole("button", { name: "로그인" })).toBeEnabled(); });
     await expect(useMockAuthStore.getState().session).toBeNull();
     await expect(loginRequests).toHaveLength(0);
   },
@@ -89,7 +89,7 @@ export const InviteOtpRetry: Story = {
     await expect(email).toHaveValue(syntheticLoginEmail);
     await expect(email).toHaveAttribute("readonly");
     await userEvent.click(canvas.getByRole("button", { name: "인증 코드 받기" }));
-    await waitFor(() => expect(canvas.getByText("초대 이메일 인증 또는 비밀번호 설정을 진행할 수 없습니다. 초대 링크와 인증 코드를 확인하세요.")).toBeVisible());
+    await waitFor(() => expect(canvas.getByText("초대 이메일 인증 또는 비밀번호 설정을 진행할 수 없습니다. 초대 링크와 인증 코드를 확인해 주세요.")).toBeVisible());
     await userEvent.click(canvas.getByRole("button", { name: "인증 코드 받기" }));
     await waitFor(() => expect(canvas.getByText("인증 코드를 보냈습니다.")).toBeVisible());
     await expect(loginRequests).toHaveLength(2);
@@ -97,7 +97,7 @@ export const InviteOtpRetry: Story = {
     const code = canvas.getByRole("textbox", { name: "인증 코드" });
     await userEvent.type(code, "11111111");
     await userEvent.click(canvas.getByRole("button", { name: "인증하고 초대 화면으로 돌아가기" }));
-    await waitFor(() => expect(canvas.getByText("초대 이메일 인증 또는 비밀번호 설정을 진행할 수 없습니다. 초대 링크와 인증 코드를 확인하세요.")).toBeVisible());
+    await waitFor(() => expect(canvas.getByText("초대 이메일 인증 또는 비밀번호 설정을 진행할 수 없습니다. 초대 링크와 인증 코드를 확인해 주세요.")).toBeVisible());
     await userEvent.clear(code);
     await userEvent.type(code, "00000000");
     const router = getRouter();

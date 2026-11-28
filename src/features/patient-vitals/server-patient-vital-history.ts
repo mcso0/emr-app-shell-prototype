@@ -103,7 +103,7 @@ function historyError(message: string | undefined, fallback: string) {
     return Response.json({ ok: false, error: "measurement_unavailable" }, { status: 404 });
   }
   if (message?.includes("required_vital_value_missing")) {
-    return Response.json({ ok: false, error: "invalid_input", reloadSettings: true, fieldErrors: { vitals: "바이탈 필수 입력 설정이 바뀌었어요. 다시 불러온 뒤 필수 항목을 입력해 주세요." } }, { status: 400 });
+    return Response.json({ ok: false, error: "invalid_input", reloadSettings: true, fieldErrors: { vitals: "바이탈 필수 입력 설정이 바뀌었습니다. 다시 불러온 뒤 필수 항목을 입력해 주세요." } }, { status: 400 });
   }
   if (message?.includes("invalid_blood_pressure")) {
     return Response.json({ ok: false, error: "invalid_input", fieldErrors: { bloodPressureDiastolicMmhg: "수축기보다 작게 입력해 주세요." } }, { status: 400 });

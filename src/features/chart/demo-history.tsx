@@ -81,7 +81,7 @@ export function DemoHistorySection({
         {!!items.length && <Badge variant="outline">{items.length}</Badge>}
       </div>
       <p className="emr-text-metadata text-muted-foreground">청담 워크스페이스의 읽기 전용 보관 이력입니다.</p>
-      {unavailable && <p role="status" className="emr-text-metadata text-muted-foreground">시연 이력을 불러오지 못했어요.</p>}
+      {unavailable && <p role="status" className="emr-text-metadata text-muted-foreground">시연 이력을 불러오지 못했습니다.</p>}
       {items.map(item => (
         <details key={item.id} className="min-w-0 rounded-lg border bg-card p-3" data-testid="cheongdam-demo-history-item">
           <summary className="cursor-pointer wrap-anywhere emr-text-body font-medium">

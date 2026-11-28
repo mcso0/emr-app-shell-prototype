@@ -187,7 +187,7 @@ for (const fails of [false, true]) {
     await quantity(page).fill("2");
     await page.evaluate(() => window.__clairSetNotificationNavigationDirty?.(true));
     await selectWorkspace(page, workspaceBId);
-    const dialog = page.getByRole("dialog", { name: "워크스페이스를 전환할까요?" });
+    const dialog = page.getByRole("dialog", { name: "워크스페이스를 전환하시겠습니까?" });
     await expect(dialog).toBeVisible(); expect(s.saves).toHaveLength(0);
     await dialog.getByRole("button", { name: "저장하지 않고 전환", exact: true }).click();
     await expect.poll(() => s.saves.length).toBe(1);
@@ -214,7 +214,7 @@ for (const selectsAgain of [false, true]) {
     await quantity(page).fill("2");
     await page.evaluate(() => window.__clairSetNotificationNavigationDirty?.(true));
     await selectWorkspace(page, workspaceBId);
-    const dialog = page.getByRole("dialog", { name: "워크스페이스를 전환할까요?" });
+    const dialog = page.getByRole("dialog", { name: "워크스페이스를 전환하시겠습니까?" });
     await dialog.getByRole("button", { name: "저장하지 않고 전환", exact: true }).click();
     await expect.poll(() => s.saves.length).toBe(1);
     await dialog.getByRole("button", { name: "계속 작성", exact: true }).click();

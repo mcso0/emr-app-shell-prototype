@@ -1608,7 +1608,7 @@ test("hospital space management supports category and terminal space CRUD with f
   await categoryDialog
     .getByRole("button", { name: "추가", exact: true })
     .click();
-  await expect(page.getByText("카테고리를 추가했어요.")).toBeVisible();
+  await expect(page.getByText("카테고리를 추가했습니다.")).toBeVisible();
   await expect(
     categoryDialog.getByText("입원 공간", { exact: true }),
   ).toBeVisible();
@@ -1623,7 +1623,7 @@ test("hospital space management supports category and terminal space CRUD with f
   await categoryDialog
     .getByRole("button", { name: "저장", exact: true })
     .click();
-  await expect(page.getByText("카테고리 이름을 변경했어요.")).toBeVisible();
+  await expect(page.getByText("카테고리 이름을 변경했습니다.")).toBeVisible();
   await expect(
     categoryDialog.getByText("입원·격리 공간", { exact: true }),
   ).toBeVisible();
@@ -1632,12 +1632,12 @@ test("hospital space management supports category and terminal space CRUD with f
     .getByRole("button", { name: "입원·격리 공간 삭제" })
     .click();
   const emptyCategoryDeleteDialog = page.getByRole("dialog", {
-    name: "카테고리를 삭제할까요?",
+    name: "카테고리를 삭제하시겠습니까?",
   });
   await emptyCategoryDeleteDialog
     .getByRole("button", { name: "삭제", exact: true })
     .click();
-  await expect(page.getByText("카테고리를 삭제했어요.")).toBeVisible();
+  await expect(page.getByText("카테고리를 삭제했습니다.")).toBeVisible();
   await expect(
     categoryDialog.getByText("입원·격리 공간", { exact: true }),
   ).toHaveCount(0);
@@ -1702,24 +1702,24 @@ test("hospital space management supports category and terminal space CRUD with f
   const spaceInput = screen.getByPlaceholder("예: 진료실 3");
   await spaceInput.fill("진료실 3");
   await screen.getByRole("button", { name: "추가", exact: true }).click();
-  await expect(page.getByText("공간을 추가했어요.")).toBeVisible();
+  await expect(page.getByText("공간을 추가했습니다.")).toBeVisible();
   await expect(screen.getByText("진료실 3", { exact: true })).toBeVisible();
 
   await screen.getByRole("button", { name: "진료실 3 수정" }).click();
   const editSpaceInput = screen.getByRole("textbox", { name: "공간 이름" });
   await editSpaceInput.fill("진료실 3A");
   await screen.getByRole("button", { name: "저장", exact: true }).click();
-  await expect(page.getByText("공간 정보를 변경했어요.")).toBeVisible();
+  await expect(page.getByText("공간 정보를 변경했습니다.")).toBeVisible();
   await expect(screen.getByText("진료실 3A", { exact: true })).toBeVisible();
 
   await screen.getByRole("button", { name: "진료실 3A 삭제" }).click();
   const spaceDeleteDialog = page.getByRole("dialog", {
-    name: "공간을 삭제할까요?",
+    name: "공간을 삭제하시겠습니까?",
   });
   await spaceDeleteDialog
     .getByRole("button", { name: "삭제", exact: true })
     .click();
-  await expect(page.getByText("공간을 삭제했어요.")).toBeVisible();
+  await expect(page.getByText("공간을 삭제했습니다.")).toBeVisible();
   await expect(screen.getByText("진료실 3A", { exact: true })).toHaveCount(0);
   await screen.getByRole("button", { name: "공간 관리로 돌아가기" }).click();
   await expect(
@@ -1754,7 +1754,7 @@ test("hospital space management moves spaces before deleting a populated categor
 
   await categoryDialog.getByRole("button", { name: "처치 공간 삭제" }).click();
   const deleteDialog = page.getByRole("dialog", {
-    name: "카테고리를 삭제할까요?",
+    name: "카테고리를 삭제하시겠습니까?",
   });
   await expect(deleteDialog).toContainText(
     "등록된 공간은 선택한 카테고리로 이동",
@@ -1762,7 +1762,7 @@ test("hospital space management moves spaces before deleting a populated categor
   await deleteDialog.getByRole("combobox", { name: "공간 이동 대상" }).click();
   await page.getByRole("option", { name: "진료 공간" }).click();
   await deleteDialog.getByRole("button", { name: "삭제", exact: true }).click();
-  await expect(page.getByText("카테고리를 삭제했어요.")).toBeVisible();
+  await expect(page.getByText("카테고리를 삭제했습니다.")).toBeVisible();
   await expect(
     categoryDialog.getByText("처치 공간", { exact: true }),
   ).toHaveCount(0);
@@ -1936,7 +1936,7 @@ test("hospital vital settings confirm required and enabled conflicts and restore
 
   await weight.getByRole("switch", { name: "체중 사용" }).click();
   const actionDialog = page.getByTestId("vital-settings-action-dialog");
-  await expect(actionDialog).toContainText("필수 입력 항목을 비활성화할까요?");
+  await expect(actionDialog).toContainText("필수 입력 항목을 비활성화하시겠습니까?");
   await actionDialog.getByRole("button", { name: "취소" }).click();
   await expect(weight.getByRole("switch", { name: "체중 사용" })).toBeChecked();
 
@@ -1947,7 +1947,7 @@ test("hospital vital settings confirm required and enabled conflicts and restore
 
   await weight.getByRole("button", { name: "체중 작업" }).click();
   await page.getByRole("menuitem", { name: "필수 입력으로 설정" }).click();
-  await expect(actionDialog).toContainText("사용하지 않는 항목을 필수 입력으로 설정할까요?");
+  await expect(actionDialog).toContainText("사용하지 않는 항목을 필수 입력으로 설정하시겠습니까?");
   await actionDialog.getByRole("button", { name: "사용 켜고 필수 입력으로 설정" }).click();
   await expect(weight.getByRole("switch", { name: "체중 사용" })).toBeChecked();
   await expect(weight.getByRole("button", { name: "체중 필수 입력 안내" })).toBeVisible();
@@ -2607,7 +2607,7 @@ test("hospital admin role screen stays compact and keyboard-safe", async ({
   await expect(roleDialog).toBeVisible();
   await roleDialog.getByRole("button", { name: "역할 저장" }).click();
   await expect(roleDialog.getByRole("alert")).toContainText(
-    "커스텀 역할 이름을 입력하세요.",
+    "커스텀 역할 이름을 입력해 주세요.",
   );
   await page.keyboard.press("Escape");
   await expect(

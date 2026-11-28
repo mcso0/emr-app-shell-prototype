@@ -299,13 +299,13 @@ function validateInvitationInput(input: WorkspaceInvitationInput) {
   const fieldErrors: WorkspaceInvitationFieldErrors = {};
 
   if (!input.email) {
-    fieldErrors.email = "초대 이메일을 입력하세요.";
+    fieldErrors.email = "초대 이메일을 입력해 주세요.";
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) {
-    fieldErrors.email = "올바른 이메일 형식으로 입력하세요.";
+    fieldErrors.email = "올바른 이메일 형식으로 입력해 주세요.";
   }
 
   if (input.roles.length === 0) {
-    fieldErrors.roles = "하나 이상의 역할을 선택하세요.";
+    fieldErrors.roles = "하나 이상의 역할을 선택해 주세요.";
   }
 
   if (Object.keys(fieldErrors).length > 0) {

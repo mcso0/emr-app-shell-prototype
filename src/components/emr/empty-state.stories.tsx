@@ -768,7 +768,7 @@ function ReadErrorRecoveryExample() {
   return (
     <EmptyStatePreviewShell>
       <EmrEmptyState
-        description="네트워크 상태를 확인한 뒤 다시 시도해 주세요. 대기 목록의 접수 정보는 변경되지 않았어요."
+        description="네트워크 상태를 확인한 뒤 다시 시도해 주세요. 대기 목록의 접수 정보는 변경되지 않았습니다."
         kind="read-error"
         primaryAction={<EmptyStatePrimaryButton size="lg">다시 시도</EmptyStatePrimaryButton>}
         priority="local-recovery"
@@ -777,7 +777,7 @@ function ReadErrorRecoveryExample() {
         size="lg"
         surface="content"
         testId="read-error-recovery"
-        title="접수 정보를 불러오지 못했어요"
+        title="접수 정보를 불러오지 못했습니다"
       />
     </EmptyStatePreviewShell>
   );
@@ -906,7 +906,7 @@ const stateExamples: Array<
     priority: "local-recovery",
     size: "lg",
     surface: "content",
-    title: "접수 정보를 불러오지 못했어요",
+    title: "접수 정보를 불러오지 못했습니다",
   },
 ];
 

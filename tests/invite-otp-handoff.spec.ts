@@ -61,7 +61,7 @@ test("invite OTP login locks email and returns to invite after mock verification
 
   await expect(page.getByRole("heading", { name: "초대 이메일 인증" })).toBeVisible();
   await expect(page.getByTestId("auth-session-notice")).toContainText(
-    "초대받은 이메일로 계속하세요."
+    "초대받은 이메일로 계속해 주세요."
   );
   await expect(page.getByLabel("이메일")).toHaveValue("vet@hanbit.test");
   await expect(page.getByLabel("이메일")).toHaveAttribute("readonly", "");

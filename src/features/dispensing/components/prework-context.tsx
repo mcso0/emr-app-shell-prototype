@@ -244,7 +244,7 @@ export function DispensingPreworkContext({ controller, focusedItemId, workItem, 
         />
         {items.length ? (
           <PreworkOrderTable key={document.rootTaskId} document={document} items={items} label={label} focusedItemId={focusedItemId} />
-        ) : <p className="text-sm text-muted-foreground">요청된 오더가 없어요.</p>}
+        ) : <p className="text-sm text-muted-foreground">요청된 오더가 없습니다.</p>}
       </Section>
       {review
         ? <TaskInstructionReview controller={review} renderInstructions={renderInstructions}

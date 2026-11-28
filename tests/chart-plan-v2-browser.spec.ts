@@ -63,7 +63,7 @@ test("V2 chart plan confirms first, then records explicit actual after refresh",
   await expect(page.getByRole("checkbox", { name: `${name} 선택` })).toBeVisible();
   await page.getByRole("checkbox", { name: `${name} 선택` }).check();
   await page.getByRole("toolbar", { name: "선택 행 작업" }).getByRole("button", { name: /\d+개 Order 확정/ }).click();
-  const dialog = page.getByRole("dialog", { name: "오더 1건을 확정할까요?" });
+  const dialog = page.getByRole("dialog", { name: "오더 1건을 확정하시겠습니까?" });
   await expect(dialog.getByLabel(`${name} 실제 수행`, { exact: true })).toHaveCount(0);
   await expect(dialog).toHaveCSS("opacity", "1");
   await expect(dialog).toHaveCSS("background-color", "rgb(255, 255, 255)");

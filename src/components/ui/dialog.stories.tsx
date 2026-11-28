@@ -88,7 +88,7 @@ const meta = {
     triggerLabel: { control: "text" },
     showCloseButton: { control: "boolean", description: "API 예제의 우측 닫기 아이콘 표시입니다. Escape 동작에는 영향을 주지 않습니다." },
   },
-  args: { description: "역할 권한 변경을 저장하지 않았습니다. 변경사항을 버리고 이동할까요?", showCloseButton: true, title: "저장하지 않은 변경사항이 있습니다", triggerLabel: "편집 화면 나가기" },
+  args: { description: "역할 권한 변경을 저장하지 않았습니다. 변경사항을 버리고 이동하시겠습니까?", showCloseButton: true, title: "저장하지 않은 변경사항이 있습니다", triggerLabel: "편집 화면 나가기" },
   render: (args) => <DialogExample {...args} />,
 } satisfies Meta<DialogStoryArgs>;
 export default meta;

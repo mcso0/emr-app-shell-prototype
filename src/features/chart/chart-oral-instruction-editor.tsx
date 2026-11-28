@@ -30,7 +30,7 @@ function Editor({ workspaceId, chartId, disabled, close }: { workspaceId: string
         const parsed = oralInstructionSchema.safeParse(body.document);
         if (!response.ok || !body.ok || !parsed.success) throw new Error();
         setDocument(parsed.data); setDraft(parsed.data.instruction); setError(null);
-      } catch { if (!abort.signal.aborted) setError("지시사항을 불러오지 못했어요. 다시 조회해 주세요."); }
+      } catch { if (!abort.signal.aborted) setError("지시사항을 불러오지 못했습니다. 다시 조회해 주세요."); }
       finally { if (!abort.signal.aborted) setLoading(false); }
     })();
     return () => abort.abort();
@@ -43,17 +43,17 @@ function Editor({ workspaceId, chartId, disabled, close }: { workspaceId: string
       const body = await response.json();
       const parsed = oralInstructionSchema.safeParse(body.document);
       if (!response.ok || !body.ok || !parsed.success) {
-        setError(body.error === "revision_conflict" ? "다른 사용자가 지시사항을 변경했어요. 입력 내용을 확인하고 다시 조회해 주세요." : "저장하지 못했어요. 입력 내용은 유지됩니다.");
+        setError(body.error === "revision_conflict" ? "다른 사용자가 지시사항을 변경했습니다. 입력 내용을 확인하고 다시 조회해 주세요." : "저장하지 못했습니다. 입력 내용은 유지됩니다.");
         return;
       }
       setDocument(parsed.data); close();
-    } catch { setError("저장 결과를 확인하지 못했어요. 다시 조회해 주세요."); }
+    } catch { setError("저장 결과를 확인하지 못했습니다. 다시 조회해 주세요."); }
     finally { setSaving(false); }
   }
   return <EmrDialogShell title="경구제 전체 지시사항" description="현재 차트의 경구제 오더 전체에 적용됩니다."
     secondaryAction={<Button variant="outline" disabled={saving} onClick={close}>취소</Button>}
     primaryAction={<Button disabled={loading || saving || disabled || !document?.canEdit || draft === document.instruction} onClick={() => void save()}>{saving ? "저장 중" : "저장"}</Button>}>
-    {loading ? <p role="status">지시사항을 불러오는 중이에요.</p> : <Textarea aria-label="경구제 전체 지시사항" maxLength={5000} value={draft} disabled={saving || disabled || !document?.canEdit} onChange={e => setDraft(e.target.value)} />}
+    {loading ? <p role="status">지시사항을 불러오는 중입니다.</p> : <Textarea aria-label="경구제 전체 지시사항" maxLength={5000} value={draft} disabled={saving || disabled || !document?.canEdit} onChange={e => setDraft(e.target.value)} />}
     {error && <div role="alert"><p>{error}</p><Button variant="outline" disabled={saving} onClick={() => { setLoading(true); setRetry(n => n + 1); }}>다시 조회</Button></div>}
     {!!document?.history.length && <details className="mt-3 text-sm"><summary>변경 이력</summary>{document.history.map(item => <div className="mt-2 whitespace-pre-wrap" key={item.revision}><time>{item.createdAt}</time>{item.actorName && <span> · {item.actorName}</span>}<p>{item.instruction || "지시사항 삭제"}</p></div>)}</details>}
   </EmrDialogShell>;

@@ -45,16 +45,16 @@ export const confirmedOrderContextSchema = z.object({
 });
 export type ConfirmedOrderContext = z.infer<typeof confirmedOrderContextSchema>;
 export const confirmedOrderErrors: Record<string, string> = {
-  permission_missing: "이 내용을 수정할 권한이 없어요.", current_assignee_required: "현재 수납 담당자만 확인할 수 있어요.",
-  revision_conflict: "다른 사람이 내용을 변경했어요. 입력은 보존했어요. 최신 내용을 다시 조회해 주세요.",
-  idempotency_conflict: "같은 요청의 내용이 달라졌어요. 최신 내용을 다시 조회해 주세요.",
-  payment_locked: "결제 처리 중이거나 완료된 건이에요. 수납 정정·환불 경로를 이용해 주세요.",
-  order_unavailable: "수정 가능한 오더를 찾지 못했어요.",
-  order_work_on_hold: "다른 창에서 이 오더를 수정 중이에요. 수정이 끝난 뒤 다시 열어 주세요.",
-  order_edit_session_expired: "수정 시간이 만료됐어요. 최신 내용을 다시 조회해 주세요.",
+  permission_missing: "이 내용을 수정할 권한이 없습니다.", current_assignee_required: "현재 수납 담당자만 확인할 수 있습니다.",
+  revision_conflict: "다른 사람이 내용을 변경했습니다. 입력은 보존했습니다. 최신 내용을 다시 조회해 주세요.",
+  idempotency_conflict: "같은 요청의 내용이 달라졌습니다. 최신 내용을 다시 조회해 주세요.",
+  payment_locked: "결제 처리 중이거나 완료된 건입니다. 수납 정정·환불 경로를 이용해 주세요.",
+  order_unavailable: "수정 가능한 오더를 찾지 못했습니다.",
+  order_work_on_hold: "다른 창에서 이 오더를 수정 중입니다. 수정이 끝난 뒤 다시 열어 주세요.",
+  order_edit_session_expired: "수정 시간이 만료되었습니다. 최신 내용을 다시 조회해 주세요.",
   invalid_input: "입력값을 확인해 주세요.", billing_review_required: "기존 수납 검토를 먼저 처리해 주세요.",
   billing_owner_required: "세트의 청구 담당 항목에서 금액을 수정해 주세요.",
-  unavailable: "내용을 불러오거나 저장하지 못했어요. 다시 시도해 주세요.",
+  unavailable: "내용을 불러오거나 저장하지 못했습니다. 다시 시도해 주세요.",
 };
 
 export const orderFinancialLabels: Record<keyof OrderFinancialValues, string> = {

@@ -824,11 +824,11 @@ function InviteBlockedCard({
         >
           {record.status === "accepted"
             ? "이미 활성화된 멤버십은 다시 만들지 않습니다. 같은 이메일 계정으로 로그인하면 워크스페이스로 이동할 수 있습니다."
-            : "병원 관리자에게 재요청하거나 다른 계정으로 로그인해 초대 상태를 확인하세요."}
+            : "병원 관리자에게 재요청하거나 다른 계정으로 로그인해 초대 상태를 확인해 주세요."}
         </EmrInlineAlert>
         {reinviteError ? (
           <EmrInlineAlert severity="error" title={reinviteError}>
-            잠시 후 다시 시도하거나 관리자에게 문의하세요.
+            잠시 후 다시 시도하거나 관리자에게 문의해 주세요.
           </EmrInlineAlert>
         ) : null}
         {record.status === "accepted" && record.workspace ? (
@@ -879,7 +879,7 @@ function ReinviteRequestDialog({
           <DialogDescription>
             {isSuccess
               ? "병원 관리자에게 재요청 알림이 전송됩니다."
-              : "네트워크 상태를 확인한 뒤 다시 요청하거나 관리자에게 문의하세요."}
+              : "네트워크 상태를 확인한 뒤 다시 요청하거나 관리자에게 문의해 주세요."}
           </DialogDescription>
         </DialogHeader>
         {isSuccess ? (

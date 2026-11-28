@@ -132,8 +132,8 @@ export function WorkspaceSpaceManagementScreen({
             name: categoryDraft.value,
           },
       categoryDraft.mode === "create"
-        ? "카테고리를 추가했어요."
-        : "카테고리 이름을 변경했어요.",
+        ? "카테고리를 추가했습니다."
+        : "카테고리 이름을 변경했습니다.",
     );
     if (next) setCategoryDraft(null);
   };
@@ -148,7 +148,7 @@ export function WorkspaceSpaceManagementScreen({
           ? { moveTargetCategoryId }
           : {}),
       },
-      "카테고리를 삭제했어요.",
+      "카테고리를 삭제했습니다.",
     );
     if (!next) return;
     if (selectedCategoryId === categoryToDelete.id) setSelectedCategoryId(null);
@@ -173,8 +173,8 @@ export function WorkspaceSpaceManagementScreen({
             name: spaceDraft.value,
           },
       spaceDraft.mode === "create"
-        ? "공간을 추가했어요."
-        : "공간 정보를 변경했어요.",
+        ? "공간을 추가했습니다."
+        : "공간 정보를 변경했습니다.",
     );
     if (next) setSpaceDraft(null);
   };
@@ -183,7 +183,7 @@ export function WorkspaceSpaceManagementScreen({
     if (!spaceToDelete) return;
     const next = await runMutation(
       { action: "space.delete", spaceId: spaceToDelete.id },
-      "공간을 삭제했어요.",
+      "공간을 삭제했습니다.",
     );
     if (!next) return;
     setSpaceToDelete(null);
@@ -227,7 +227,7 @@ export function WorkspaceSpaceManagementScreen({
           <SpaceManagementLoading />
         ) : status === "denied" ? (
           <SpaceManagementState
-            description="병원 설정 조회 권한이 있는 구성원에게 문의하세요."
+            description="병원 설정 조회 권한이 있는 구성원에게 문의해 주세요."
             kind="no-permission"
             title="공간 관리를 볼 권한이 없습니다"
           />
@@ -293,7 +293,7 @@ export function WorkspaceSpaceManagementScreen({
       >
         <DialogContent showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle>카테고리를 삭제할까요?</DialogTitle>
+            <DialogTitle>카테고리를 삭제하시겠습니까?</DialogTitle>
             <DialogDescription>
               {categoryToDelete?.spaces.length
                 ? "등록된 공간은 선택한 카테고리로 이동한 뒤 이 카테고리를 삭제합니다."
@@ -359,7 +359,7 @@ export function WorkspaceSpaceManagementScreen({
       >
         <DialogContent showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle>공간을 삭제할까요?</DialogTitle>
+            <DialogTitle>공간을 삭제하시겠습니까?</DialogTitle>
             <DialogDescription>
               {spaceToDelete?.name}을 공간 목록에서 삭제합니다.
             </DialogDescription>

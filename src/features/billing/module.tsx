@@ -3317,11 +3317,11 @@ function BillingPreworkHistory({ detail }: { detail: BillingDetail }) {
   }, [actorHeaders, guardianId, workspaceId, key]);
   const rows = result?.ok ? result.rows.filter(row => row.invoiceId !== detail.invoice.id) : [];
   return <EmrWorkEntrySection title="과거 수납 이력">
-    {!guardianId ? <p className="text-sm text-muted-foreground">보호자 정보를 확인할 수 없어 이력을 표시하지 못했어요.</p>
-      : !result ? <p className="text-sm text-muted-foreground">이력을 불러오는 중이에요.</p>
-      : !result.ok ? <div role="alert" className="text-sm">이력을 불러오지 못했어요. <Button variant="outline" onClick={() => setRetry(value => value + 1)}>다시 조회</Button></div>
+    {!guardianId ? <p className="text-sm text-muted-foreground">보호자 정보를 확인할 수 없어 이력을 표시하지 못했습니다.</p>
+      : !result ? <p className="text-sm text-muted-foreground">이력을 불러오는 중입니다.</p>
+      : !result.ok ? <div role="alert" className="text-sm">이력을 불러오지 못했습니다. <Button variant="outline" onClick={() => setRetry(value => value + 1)}>다시 조회</Button></div>
       : rows.length ? rows.map(row => <div key={row.invoiceId} className="flex flex-wrap justify-between gap-4 rounded-lg border border-border p-4 text-sm"><time>{new Date(row.activityAt).toLocaleDateString("ko-KR")}</time><span>{formatAmount(row.totalAmount)}</span><span>{row.status === "paid" ? "수납 완료" : row.status === "refunded" ? "환불" : row.status === "voided" ? "취소" : row.status === "unpaid" ? "미수" : "대기"}</span></div>)
-      : <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">이전 수납 이력이 없어요.</p>}
+      : <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">이전 수납 이력이 없습니다.</p>}
   </EmrWorkEntrySection>;
 }
 
@@ -3659,7 +3659,7 @@ export function BillingContent({
       scopeKey={`${workspaceId}:${effectiveDetail.invoice.id}`} authorityKey={`${editOwnership.data.revision}:${editOwnership.data.canManage}:${editOwnership.data.assignedToUserId}:${editOwnership.data.pauseReason}:${editOwnership.availabilityRevision}`}
       mode={editOwnership.data.pauseReason ? "blocked" : editOwnership.canExecute ? "start" : editOwnership.data.canManage && !editOwnership.data.assignedToUserId ? "claim" : "blocked"}
       assigneeName={editOwnership.data.assignedToDisplayName} onEntered={entry.enter}
-      description={editOwnership.data.pauseReason ? "오더 수정 중입니다. 수정이 끝난 뒤 다시 진행해 주세요." : editOwnership.canExecute ? "수납 업무 화면을 열어요. 결제는 별도로 확인해요." : undefined}
+      description={editOwnership.data.pauseReason ? "오더 수정 중입니다. 수정이 끝난 뒤 다시 진행해 주세요." : editOwnership.canExecute ? "수납 업무 화면을 엽니다. 결제는 별도로 확인합니다." : undefined}
       context={<><strong>{effectiveDetail.invoice.invoiceNo}</strong><p>미수금 {formatAmount(getBillingBalance(effectiveDetail))}</p></>}
       onConfirm={() => editOwnership.data?.pauseReason ? Promise.resolve(false) : editOwnership.canExecute ? Promise.resolve(true) : editOwnership.transition("claim")} />
       : <Button size="sm" variant="outline" onClick={() => void editOwnership.refresh()}>담당 상태 다시 조회</Button>}>
@@ -4210,7 +4210,7 @@ export function BillingRightPanel() {
               ) : null}
 
               {orderReviewBlocked && <EmrInlineAlert severity="info" title={orderReview?.pending ? "청구 변경 확인 대기" : "청구 변경 확인 중"} className="mt-3">
-                수납 담당자가 변경 내용을 확인하면 결제할 수 있어요.
+                수납 담당자가 변경 내용을 확인하면 결제할 수 있습니다.
               </EmrInlineAlert>}
               <div className="mt-5 emr-text-dense font-semibold">
                 읽기 전용 수납 정보

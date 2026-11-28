@@ -27,7 +27,7 @@ export function ChartSoapBlockEditor() {
   const [documentJson, setDocumentJson] = useState("");
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [notice, setNotice] = useState(
-    "블록 왼쪽의 + 또는 / 명령으로 내용을 추가해 보세요.",
+    "블록 왼쪽의 + 또는 / 명령으로 내용을 추가할 수 있습니다.",
   );
   const editor = useCreateBlockNote({
     schema: chartSoapBlockSchema,
@@ -36,8 +36,8 @@ export function ChartSoapBlockEditor() {
       ...ko,
       placeholders: {
         ...ko.placeholders,
-        default: "내용을 입력하거나, ‘/’를 입력하세요",
-        emptyDocument: "내용을 입력하거나, ‘/’를 입력하세요",
+        default: "내용을 입력하거나, ‘/’를 입력해 주세요",
+        emptyDocument: "내용을 입력하거나, ‘/’를 입력해 주세요",
       },
     },
   });
@@ -58,7 +58,7 @@ export function ChartSoapBlockEditor() {
 
   const resetToBlank = () => {
     editor.replaceBlocks(editor.document, [{ type: "paragraph" }]);
-    setNotice("빈 문서로 초기화했습니다. / 또는 왼쪽 +로 템플릿을 추가해 보세요.");
+    setNotice("빈 문서로 초기화했습니다. / 또는 왼쪽 +로 템플릿을 추가할 수 있습니다.");
     updateDocumentJson();
   };
 
@@ -74,7 +74,7 @@ export function ChartSoapBlockEditor() {
           <div className={styles.eyebrow}>실제 BlockNote · 저장되지 않는 시안</div>
           <h1 className={styles.title}>SOAP 블록 문서</h1>
           <p className={styles.description}>
-            블록 위에 마우스를 올려 왼쪽 +와 드래그 핸들을 사용하거나, / 명령과 텍스트 선택 툴바를 시험해 보세요.
+            블록 위에 마우스를 올려 왼쪽 +와 드래그 핸들을 사용하거나, / 명령과 텍스트 선택 툴바를 사용할 수 있습니다.
           </p>
         </div>
         <div className={styles.headerActions}>

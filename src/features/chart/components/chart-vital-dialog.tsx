@@ -192,7 +192,7 @@ function OpenChartVitalDialog({ actorHeaders, encounterId, mode, onOpenChange, o
       setDraft(createVitalDialogDraft(vital, vitalSettings));
       setTouched(new Set());
       setFeedback("");
-      try { await onSaved(vital); } catch { setFeedback("바이탈은 저장됐지만 화면을 갱신하지 못했어요."); }
+      try { await onSaved(vital); } catch { setFeedback("바이탈은 저장됐지만 화면을 갱신하지 못했습니다."); }
     } catch {
       if (mountedRef.current) setErrors({ vitals: getVitalSaveErrorMessage() });
     } finally { if (mountedRef.current) setSaving(false); }
@@ -219,9 +219,9 @@ function OpenChartVitalDialog({ actorHeaders, encounterId, mode, onOpenChange, o
         data-testid="chart-vital-dialog" data-mode={mode}>
         <DialogClose render={<Button variant="ghost" size="icon-sm" className={styles.close} disabled={saving} aria-label="바이탈 이력 닫기" />}><CdsActionsXIcon className="size-4" /></DialogClose>
         {showBodyState ? <div className={styles.bodyState}>
-          {status === "loading" ? <EmrContentLoadingState title="바이탈 이력을 불러오고 있어요." testId="chart-vital-history-loading" />
-            : status === "error" ? <EmrEmptyState kind="read-error" surface="content" size="sm" reserveActionSpace={false} title="바이탈 이력을 불러오지 못했어요." primaryAction={<Button variant="outline" size="sm" onClick={retryHistory}>다시 시도</Button>} testId="chart-vital-history-error" />
-              : <EmrEmptyState kind="no-data" surface="content" size="sm" reserveActionSpace={false} title="측정한 바이탈 이력이 없어요." testId="chart-vital-history-empty" />}
+          {status === "loading" ? <EmrContentLoadingState title="바이탈 이력을 불러오고 있습니다." testId="chart-vital-history-loading" />
+            : status === "error" ? <EmrEmptyState kind="read-error" surface="content" size="sm" reserveActionSpace={false} title="바이탈 이력을 불러오지 못했습니다." primaryAction={<Button variant="outline" size="sm" onClick={retryHistory}>다시 시도</Button>} testId="chart-vital-history-error" />
+              : <EmrEmptyState kind="no-data" surface="content" size="sm" reserveActionSpace={false} title="측정한 바이탈 이력이 없습니다." testId="chart-vital-history-empty" />}
         </div> : <>
         <VitalHistoryList groups={groups} expanded={expanded} activeId={active?.id} newId={newRecord?.id} saving={saving} status={status}
           nextCursor={nextCursor} loadingMore={loadingMore} moreFailed={moreFailed} onLoadMore={loadMore}
@@ -229,7 +229,7 @@ function OpenChartVitalDialog({ actorHeaders, encounterId, mode, onOpenChange, o
           onSelect={(record) => { if ("encounterId" in record) selectRecord(record); }} />
         <form className={styles.editor} onSubmit={(event) => { event.preventDefault(); if (status === "ready" && dirty && valid && !saving && canWrite) requestSave(); }}>
           <div className={styles.editorHeader}><span className={styles.editorTitle}>바이탈 정보</span>{active ? <Badge size="md" variant="secondary" className={cn(styles.timestamp, newRecord && styles.draftTimestamp)}><CdsFilesClockIcon className="size-3" />{newRecord ? `${seoulTime(active.measuredAt)} 미저장` : `${shortDay(active.measuredAt)} ${seoulTime(active.measuredAt)} 측정`}</Badge> : null}</div>
-          {status !== "ready" ? <EmrInlineAlert severity={status === "error" ? "error" : "info"} title={status === "error" ? "이력을 다시 불러오지 못했어요." : "이력을 다시 불러오고 있어요."} action={status === "error" ? <Button variant="outline" size="sm" onClick={() => discardThen(retryHistory)}>다시 시도</Button> : undefined} /> : null}
+          {status !== "ready" ? <EmrInlineAlert severity={status === "error" ? "error" : "info"} title={status === "error" ? "이력을 다시 불러오지 못했습니다." : "이력을 다시 불러오고 있습니다."} action={status === "error" ? <Button variant="outline" size="sm" onClick={() => discardThen(retryHistory)}>다시 시도</Button> : undefined} /> : null}
           <VitalEntryFields draft={draft} errors={visibleErrors} warnings={warnings} disabled={status !== "ready" || !active || !canWrite || saving} firstInputRef={firstInputRef}
             onChange={(key, value) => { setDraft((current) => ({ ...current, [key]: value })); setErrors((current) => ({ ...current, [key]: undefined, vitals: undefined })); setFeedback(""); }}
             onBlur={(key) => setTouched((current) => new Set([...current, key]))} vitalSettings={vitalSettings} />
@@ -239,7 +239,7 @@ function OpenChartVitalDialog({ actorHeaders, encounterId, mode, onOpenChange, o
         </>}
       </EmrDialogShell>
       <Dialog open={Boolean(confirmation)} onOpenChange={(nextOpen) => { if (!nextOpen) setConfirmation(null); }}>
-        <EmrConfirmDialogContent overlayClassName="supports-backdrop-filter:backdrop-blur-none" title={confirmation?.kind === "discard" ? "작성 중인 내용을 취소할까요?" : confirmation?.kind === "save" && confirmation.past ? "과거 바이탈 이력을 수정할까요?" : "바이탈 값을 모두 비울까요?"}
+        <EmrConfirmDialogContent overlayClassName="supports-backdrop-filter:backdrop-blur-none" title={confirmation?.kind === "discard" ? "작성 중인 내용을 취소하시겠습니까?" : confirmation?.kind === "save" && confirmation.past ? "과거 바이탈 이력을 수정하시겠습니까?" : "바이탈 값을 모두 비우시겠습니까?"}
           description={confirmation?.kind === "discard" ? "저장하지 않은 변경사항은 사라집니다." : <>{selected ? `${shortDay(selected.measuredAt)} ${seoulTime(selected.measuredAt)} 측정 기록에 수정값을 반영합니다.` : null}{confirmation?.kind === "save" && confirmation.clear ? " 측정 기록은 유지되고 입력값만 비워집니다." : null}</>}
           cancelLabel="돌아가기" confirmLabel={confirmation?.kind === "discard" ? "취소하기" : "저장"}
           onCancel={() => setConfirmation(null)} onConfirm={() => { const action = confirmation; setConfirmation(null); if (action?.kind === "discard") action.action(); else if (action?.kind === "save") void saveVital(); }} />
@@ -310,7 +310,7 @@ function VitalHistoryList({ groups, expanded, activeId, newId, saving, status, n
         </Button>)}</div>
         </motion.div>
       </section>)}
-      {moreFailed ? <EmrInlineAlert severity="error" title="이전 이력을 불러오지 못했어요." className={styles.historyFeedback} action={<Button variant="ghost" size="sm" onClick={onLoadMore}>다시 시도</Button>} /> : null}
+      {moreFailed ? <EmrInlineAlert severity="error" title="이전 이력을 불러오지 못했습니다." className={styles.historyFeedback} action={<Button variant="ghost" size="sm" onClick={onLoadMore}>다시 시도</Button>} /> : null}
       {nextCursor && !moreFailed ? <div data-vital-history-sentinel className={styles.historyMessage}><Button variant="ghost" size="sm" disabled={loadingMore} onClick={onLoadMore}>{loadingMore ? "불러오는 중" : "이전 이력 불러오기"}</Button></div> : null}
     </nav>
   </ScrollArea>;
@@ -409,16 +409,16 @@ function getVitalSettingForInputKey(
 }
 
 function getVitalSaveErrorMessage(error?: string) {
-  if (error === "measurement_conflict") return "다른 사용자가 이 기록을 수정했어요. 기록을 다시 불러온 뒤 수정해 주세요.";
-  if (error === "measurement_unavailable") return "이 측정 기록을 찾을 수 없어요. 이력을 다시 불러와 주세요.";
+  if (error === "measurement_conflict") return "다른 사용자가 이 기록을 수정했습니다. 기록을 다시 불러온 뒤 수정해 주세요.";
+  if (error === "measurement_unavailable") return "이 측정 기록을 찾을 수 없습니다. 이력을 다시 불러와 주세요.";
   if (error === "stale_status") {
-    return "대기 중이거나 진료 중인 접수에서만 바이탈을 저장할 수 있어요.";
+    return "대기 중이거나 진료 중인 접수에서만 바이탈을 저장할 수 있습니다.";
   }
   if (error === "vital_value_required") {
     return "새 바이탈은 한 가지 이상 입력해 주세요.";
   }
   if (error === "permission_missing" || error === "vital_writer_role_required") {
-    return "바이탈을 입력할 권한이 없어요.";
+    return "바이탈을 입력할 권한이 없습니다.";
   }
-  return "바이탈을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.";
+  return "바이탈을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.";
 }

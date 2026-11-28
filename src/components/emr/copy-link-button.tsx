@@ -42,9 +42,9 @@ export async function copyWorkspaceSurfaceLink({
 
   try {
     await navigator.clipboard.writeText(new URL(route, window.location.origin).href);
-    toast.success("링크를 복사했어요.");
+    toast.success("링크를 복사했습니다.");
   } catch {
-    toast.error("링크를 복사하지 못했어요.");
+    toast.error("링크를 복사하지 못했습니다.");
   }
 }
 

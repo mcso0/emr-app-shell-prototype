@@ -73,7 +73,7 @@ function ControlledSelect({
         </SelectGroup>
       </SelectContent>
     </Select>
-    {invalid ? <FieldError>업무 유형을 확인하세요.</FieldError> : null}
+    {invalid ? <FieldError>업무 유형을 확인해 주세요.</FieldError> : null}
     </Field>
   );
 }
@@ -185,7 +185,7 @@ export const SmallToolbarFilter: Story = {
 export const Invalid: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("combobox")).toHaveAttribute("aria-invalid", "true");
-    await expect(canvas.getByRole("alert")).toHaveTextContent("업무 유형을 확인하세요.");
+    await expect(canvas.getByRole("alert")).toHaveTextContent("업무 유형을 확인해 주세요.");
   },
   args: {
     invalid: true,
@@ -232,7 +232,7 @@ function SelectSectionsExample(args: SelectArgs) {
           </SelectGroup>
         </SelectContent>
       </Select>
-      {invalid ? <FieldError>업무 유형을 확인하세요.</FieldError> : null}
+      {invalid ? <FieldError>업무 유형을 확인해 주세요.</FieldError> : null}
       </Field>
     );
 }

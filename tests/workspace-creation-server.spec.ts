@@ -65,9 +65,9 @@ test("workspace creation server route denies missing actor and invalid input", a
     ok: false,
     error: "invalid_input",
     fieldErrors: {
-      hospitalName: "병원/워크스페이스 이름을 입력하세요.",
-      adminDisplayName: "대표/관리자 이름을 입력하세요.",
-      contactEmail: "올바른 이메일 형식으로 입력하세요.",
+      hospitalName: "병원/워크스페이스 이름을 입력해 주세요.",
+      adminDisplayName: "대표/관리자 이름을 입력해 주세요.",
+      contactEmail: "올바른 이메일 형식으로 입력해 주세요.",
     },
   });
 });

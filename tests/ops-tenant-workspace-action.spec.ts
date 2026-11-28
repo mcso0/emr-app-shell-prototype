@@ -107,7 +107,7 @@ test("ops tenant workspace action core exposes safe audit hook and invalid input
     status: 400,
     error: "invalid_input",
     fieldErrors: {
-      firstAdminEmail: "올바른 이메일 형식으로 입력하세요.",
+      firstAdminEmail: "올바른 이메일 형식으로 입력해 주세요.",
     },
   });
 });

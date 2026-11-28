@@ -42,7 +42,7 @@ export const RepresentativeReview: Story = {
     ).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "빈 문서" }));
     await expect(
-      canvas.getByText("빈 문서로 초기화했습니다. / 또는 왼쪽 +로 템플릿을 추가해 보세요."),
+      canvas.getByText("빈 문서로 초기화했습니다. / 또는 왼쪽 +로 템플릿을 추가할 수 있습니다."),
     ).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "샘플 복원" }));
     await expect(canvas.getByText("기본 SOAP 샘플을 복원했습니다.")).toBeVisible();

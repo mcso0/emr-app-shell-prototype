@@ -616,9 +616,9 @@ function buildClinicalResultCompletedNotificationEvent({
     priority: "normal",
     toastPolicy: "role_active",
     title: "검사 결과가 도착했습니다",
-    preview: "담당 수의사 확인 대기 · 결과 화면에서 세부 수치를 확인하세요.",
+    preview: "담당 수의사 확인 대기 · 결과 화면에서 세부 수치를 확인해 주세요.",
     detail:
-      "검사 결과 입력이 완료되었습니다. 담당 수의사는 원본 검사 결과 화면에서 세부 수치와 판정을 확인하세요.",
+      "검사 결과 입력이 완료되었습니다. 담당 수의사는 원본 검사 결과 화면에서 세부 수치와 판정을 확인해 주세요.",
     workTypeLabel: "검사",
     sourceLabel: `임상병리검사 · ${resultLabel}`,
     sourceActionLabel: "검사 결과 열기",

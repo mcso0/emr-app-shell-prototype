@@ -2146,7 +2146,7 @@ function buildBillingWaitingReadyNotificationEvent({
       ? `${patientLabel} 수납 준비가 완료되었습니다`
       : "수납 준비가 완료되었습니다",
     preview: "완료된 오더가 수납 후보에 반영되었습니다.",
-    detail: `${orderLabel} 오더가 수납 후보에 반영되었습니다. 수납 화면에서 보호자 안내 준비를 확인하세요.`,
+    detail: `${orderLabel} 오더가 수납 후보에 반영되었습니다. 수납 화면에서 보호자 안내 준비를 확인해 주세요.`,
     workTypeLabel: "수납",
     sourceLabel: "수납 · 후보 목록",
     sourceActionLabel: "수납 후보 열기",

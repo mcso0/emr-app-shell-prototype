@@ -23,14 +23,14 @@ export function useContextVitalEditor({
   const isCurrentMeasurement = latestVitals.vital?.encounterId === encounterId;
   const disabled = !encounterIsActive || !latestVitals.canWriteVitals || latestVitals.vitalSettingsStatus !== "ready";
   const disabledReason = !encounterIsActive
-    ? "진료가 끝난 접수의 바이탈은 여기서 수정할 수 없어요."
+    ? "진료가 끝난 접수의 바이탈은 여기서 수정할 수 없습니다."
     : latestVitals.vitalSettingsStatus !== "ready"
-      ? "바이탈 입력 설정을 확인하지 못했어요."
+      ? "바이탈 입력 설정을 확인하지 못했습니다."
       : latestVitals.status === "loading"
-      ? "바이탈 입력 권한을 확인하고 있어요."
+      ? "바이탈 입력 권한을 확인하고 있습니다."
       : latestVitals.status === "error"
-        ? "바이탈 입력 권한을 확인하지 못했어요."
-        : "바이탈을 입력할 권한이 없어요.";
+        ? "바이탈 입력 권한을 확인하지 못했습니다."
+        : "바이탈을 입력할 권한이 없습니다.";
   const vitalAction: ContextBarVitalAction = {
     ariaLabel: isCurrentMeasurement ? "오늘 바이탈 수정" : "오늘 바이탈 입력",
     disabled,
@@ -51,7 +51,7 @@ export function useContextVitalEditor({
         onOpenChange={(open) => setOpenEncounterId(open ? encounterId : null)}
         onSaved={async (vital) => {
           await latestVitals.replaceVital(vital);
-          toast.success("바이탈을 저장했어요.");
+          toast.success("바이탈을 저장했습니다.");
         }}
         vitalSettings={latestVitals.vitalSettings}
         workspaceId={workspaceId}

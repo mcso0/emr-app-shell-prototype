@@ -701,7 +701,7 @@ function validatePositiveNumber(
   ) {
     fieldErrors[key] =
       maxValue !== undefined && typeof value === "number" && value > maxValue
-        ? "저장할 수 있는 범위를 넘었어요."
+        ? "저장할 수 있는 범위를 넘었습니다."
         : message;
   }
 }

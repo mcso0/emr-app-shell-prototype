@@ -111,11 +111,11 @@ export function validatePersonalProfileInput(
   const initials = input.initials.trim();
 
   if (!input.displayName.trim()) {
-    fieldErrors.displayName = "이름을 입력하세요.";
+    fieldErrors.displayName = "이름을 입력해 주세요.";
   }
 
   if (initials.length < 1 || initials.length > 3) {
-    fieldErrors.initials = "이니셜은 1~3자로 입력하세요.";
+    fieldErrors.initials = "이니셜은 1~3자로 입력해 주세요.";
   }
 
   if (Object.keys(fieldErrors).length > 0) {

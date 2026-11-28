@@ -4257,7 +4257,7 @@ function PatientGuardianRegistrationButton({
 
       <Dialog open={confirmCloseOpen} onOpenChange={setConfirmCloseOpen}>
         <EmrConfirmDialogContent
-          title="입력을 취소할까요?"
+          title="입력을 취소하시겠습니까?"
           description="작성 중인 내용은 저장되지 않습니다."
           cancelLabel="계속 작성"
           confirmLabel="취소하고 나가기"

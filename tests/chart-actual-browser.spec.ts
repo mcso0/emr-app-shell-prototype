@@ -95,7 +95,7 @@ test("chart confirmation requires explicit actual input and sends a separate att
   expect((bounds?.y ?? 0) + (bounds?.height ?? 0)).toBeLessThanOrEqual(844);
   await page.screenshot({ path: "/tmp/wp07-chart-actual-confirmation-mobile.png" });
   await continueButton.click();
-  const dialog = page.getByRole("dialog", { name: "오더 1건을 확정할까요?" });
+  const dialog = page.getByRole("dialog", { name: "오더 1건을 확정하시겠습니까?" });
   const confirm = dialog.getByRole("button", { name: "1건 확정", exact: true });
   await expect(dialog.getByText(name, { exact: true })).toBeVisible();
   await expect(dialog.getByText("0원", { exact: true })).toHaveCount(2);

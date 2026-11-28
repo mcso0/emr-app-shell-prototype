@@ -41,7 +41,7 @@ test("catalog individual with no B3 hash still shows its scoped execution plan",
 });
 
 test("missing task and legacy plans do not claim a stored execution plan", () => {
-  expect(history()).toContain("수행 계획 snapshot을 확인하지 못했어요");
+  expect(history()).toContain("수행 계획 snapshot을 확인하지 못했습니다");
   expect(history({ tasks: [{ ...task, effectiveSnapshot: { legacyBackfill: true } }] })).not.toContain("Task 계획 보관됨");
 });
 

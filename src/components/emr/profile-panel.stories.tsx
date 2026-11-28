@@ -85,7 +85,7 @@ function Specimen({ kind, state, longContent }: SpecimenProps) {
                       ? "프로필을 불러오는 중입니다"
                       : effectiveState === "denied"
                         ? "프로필 조회 권한이 없습니다"
-                        : "프로필을 불러오지 못했어요"
+                        : "프로필을 불러오지 못했습니다"
                   }
                   onRetry={() => setEffectiveState("ready")}
                 />
