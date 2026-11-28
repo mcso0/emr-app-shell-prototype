@@ -317,7 +317,7 @@ export function EmrEmptyState({
           data-slot="copy"
         >
           {eyebrow ? (
-            <div className="emr-text-metadata font-medium text-[var(--clair-color-atomic-black-alpha-36)]">
+            <div className="emr-text-metadata font-medium text-[var(--emr-text-tertiary)]">
               {eyebrow}
             </div>
           ) : null}
@@ -325,7 +325,7 @@ export function EmrEmptyState({
             className={cn(
               resolvedSize === "xl"
                 ? "font-semibold text-[var(--clair-color-atomic-black-alpha-64)]"
-                : "font-medium text-[var(--clair-color-atomic-black-alpha-48)]",
+                : "font-medium text-[var(--clair-color-atomic-black-alpha-64)]",
               sizeClasses.title,
             )}
           >
@@ -334,7 +334,7 @@ export function EmrEmptyState({
           {description ? (
             <p
               className={cn(
-                "[overflow-wrap:break-word] [text-wrap:pretty] [word-break:keep-all] text-[var(--clair-color-atomic-black-alpha-36)]",
+                "[overflow-wrap:break-word] [text-wrap:pretty] [word-break:keep-all] text-[var(--emr-text-tertiary)]",
                 sizeClasses.description,
               )}
             >

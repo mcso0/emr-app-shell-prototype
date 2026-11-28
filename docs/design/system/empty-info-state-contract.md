@@ -162,7 +162,7 @@ The shared component follows the CDS.V2 EmptyPlaceholder visual tiers. The `lg`/
 | `md` | Side panel and large tables; product usage label `mg` | 40px area, 24px icon slot, 10px radius, 4px bottom wrapper space | Pretendard Medium 14/20 | Pretendard Medium 14/20 | 8px | 24px |
 | `sm` | Modal and small table areas | No icon slot | Pretendard Medium 14/20 | Pretendard Medium 14/20 | 8px | 24px |
 
-The icon artwork is supplied by the caller/current motion-icon mapping; Figma defines the slot and tone, not a required asset. `xl` uses the Figma two-layer icon treatment: Neutral/200 outer area, a 2px white-bordered 76px inner gradient surface, and Black Alpha/64 for the icon and title. Existing tiers use `black-alpha-4` for the icon area background and `black-alpha-48` for the icon and title. Every tier uses `black-alpha-36` for descriptions. `xl` actions are 32px high; one action uses the outline button treatment, and two actions render outline secondary first and dark primary second with an 8px gap.
+The icon artwork is supplied by the caller/current motion-icon mapping; Figma defines the slot and tone, not a required asset. `xl` uses the Figma two-layer icon treatment: Neutral/200 outer area, a 2px white-bordered 76px inner gradient surface, and Black Alpha/64 for the icon and title. Existing tiers use `black-alpha-4` for the icon area background, `black-alpha-48` for the icon (3.69:1, non-text graphic) and `black-alpha-64` for the title (6.69:1). Every tier uses `emr-text-tertiary` (4.8:1) for descriptions and the eyebrow. Text colors meet 4.5:1 on white; the earlier `black-alpha-48` title (3.69:1) and `black-alpha-36` description (2.52:1) were raised for contrast on 2026-11-28. `xl` actions are 32px high; one action uses the outline button treatment, and two actions render outline secondary first and dark primary second with an 8px gap.
 
 ### Side-panel queue coverage
 
@@ -255,7 +255,7 @@ This inventory is the pre-implementation checkpoint for `DESIGN-SYSTEM-PR-070`. 
 - Hospital Admin audit review and workspace membership directory now use the shared `md` table state for resolved empty results. Their loading, permission, and read-failure states are intentionally not converted.
 - Operating-hours exceptions, role-assignment members, personal schedule requests, and staff-detail pending requests use `size="sm"` with no icon/action reservation because they are nested lists inside cards or drawers.
 - The schedule data-source `empty` branch uses the `lg` content tier because it owns the schedule workspace status panel; loading, error, and read-only branches remain feature-local status treatments.
-- Shared icon and typography colors continue to come from the existing alpha tokens: `black-alpha-4` icon area background, `black-alpha-48` icon/title, and `black-alpha-36` description.
+- Shared icon and typography colors: `black-alpha-4` icon area background, `black-alpha-48` icon, `black-alpha-64` title, and `emr-text-tertiary` description.
 
 ## 2026-07-18 Whole-content Read Error Contract
 

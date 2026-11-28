@@ -120,7 +120,7 @@ async function getMdContract(state: Locator) {
       titleColor: getComputedStyle(title).color,
       titleFontSize: getComputedStyle(title).fontSize,
       expectedIconAreaBackground: resolveToken("--clair-color-atomic-black-alpha-4"),
-      expectedTitleColor: resolveToken("--clair-color-atomic-black-alpha-48"),
+      expectedTitleColor: resolveToken("--clair-color-atomic-black-alpha-64"),
     };
   });
 }
