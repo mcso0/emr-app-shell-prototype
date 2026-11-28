@@ -70,7 +70,8 @@ begin
   return total;
 end $fn$;
 
--- Visit fields: pat, vet (uuid), at (timestamptz), purpose, cc, vit {weightKg, temperatureC, ...},
+-- Visit fields: pat, vet (uuid), at (timestamptz), purpose (the reception RPC stores it as both
+-- visit_purpose and chief_complaint, like the reception form), vit {weightKg, temperatureC, ...},
 -- S/O/A/P, dx [[text, kind]], draft (bool), pay, orders [
 --   {id: "<catalog id suffix>", did?, out?, in?, inputs?}   individual order (in = merge into catalog defaults, inputs = replace)
 --   {set: "<order set name>", vals?: {analyte: value}}
@@ -110,7 +111,6 @@ begin
       'primaryVeterinarianId', vet, 'plannedStartAt', v->>'at', 'durationMinutes', 30,
       'visitPurpose', v->>'purpose', 'vitals', v->'vit'));
     e := (r #>> '{encounter,id}')::uuid;
-    if v ? 'cc' then update public.encounters set chief_complaint = v->>'cc' where id = e; end if;
     perform private.clair_demo_replay_shift(t0, t_visit, null);
 
     step := 'call';

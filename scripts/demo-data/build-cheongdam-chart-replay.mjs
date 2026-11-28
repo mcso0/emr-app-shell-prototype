@@ -107,7 +107,7 @@ const replay = [...visits].sort((a, b) => a.at.localeCompare(b.at)).map((v) => {
   };
   return {
     pat: `49121000-0000-4000-8000-${String(v.p).padStart(12, "0")}`,
-    vet: vets[v.vet], at: `${(v.at.slice(11) > "18:30" ? `${v.at.slice(0, 11)}18:30` : v.at).replace(" ", "T")}:00+09:00`, purpose: v.purpose, cc: v.cc, vit,
+    vet: vets[v.vet], at: `${(v.at.slice(11) > "18:30" ? `${v.at.slice(0, 11)}18:30` : v.at).replace(" ", "T")}:00+09:00`, purpose: v.purpose, vit,
     S: v.S, O: v.O, A: v.A, P: v.P, dx: v.dx,
     ...(v.status === "draft" ? { draft: true } : {}),
     orders: orders(v, species, weight),
